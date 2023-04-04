@@ -1,0 +1,11 @@
+idf_component_register(SRCS "app_main.c" 
+                            "$ENV{VSCP_FIRMWARE_COMMON}/vscp-firmware-helper.c"
+                            "$ENV{VSCP_FIRMWARE_COMMON}/vscp-firmware-level2.c"
+                            "$ENV{VSCP_FIRMWARE_COMMON}/vscp-aes.c"
+                            "../../common/vscp-espnow.c"
+                            "callbacks-vscp-protocol.c"
+                       INCLUDE_DIRS "." 
+                            "../../common"
+                            "$ENV{VSCP_COMMON}" 
+                            "$ENV{VSCP_ROOT}"
+                            "$ENV{VSCP_FIRMWARE_COMMON}")

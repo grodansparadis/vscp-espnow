@@ -1,0 +1,10 @@
+dependencies:
+  espressif/led_indicator: "^0.3.0"
+  esp-now:
+    version: 2.*
+  espressif/button:
+    version: ==2.5.0
+  idf:
+    version: '>=5.0'
+  qrcode:
+    version: ^0.1.0

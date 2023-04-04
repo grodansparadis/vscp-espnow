@@ -1,0 +1,68 @@
+[1/5] cd /usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/provisioning/build/esp-idf/esptool_py && /home/akhe/.espressif/python_env/idf5.0_py3.10_env/bin/python /usr/local/src/esp/esp-idf-v5.0.1/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/provisioning/build/partition_table/partition-table.bin /usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/provisioning/build/provisioning.bin
+provisioning.bin binary size 0xb6c90 bytes. Smallest app partition is 0x100000 bytes. 0x49370 bytes (29%) free.
+[2/5] Performing build step for 'bootloader'
+[1/1] cd /usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/provisioning/build/bootloader/esp-idf/esptool_py && /home/akhe/.espressif/python_env/idf5.0_py3.10_env/bin/python /usr/local/src/esp/esp-idf-v5.0.1/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x1000 /usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/provisioning/build/bootloader/bootloader.bin
+Bootloader binary size 0x6700 bytes. 0x900 bytes (8%) free.
+[2/3] cd /usr/local/src/esp/esp-idf-v5.0.1/components/esptool_py && /usr/bin/cmake -D IDF_PATH=/usr/local/src/esp/esp-idf-v5.0.1 -D "SERIAL_TOOL=/home/akhe/.espressif/python_env/idf5.0_py3.10_env/bin/python;;/usr/local/src/esp/esp-idf-v5.0.1/components/esptool_py/esptool/esptool.py;--chip;esp32" -D "SERIAL_TOOL_ARGS=--before=default_reset;--after=hard_reset;write_flash;@flash_args" -D WORKING_DIRECTORY=/usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/provisioning/build -P /usr/local/src/esp/esp-idf-v5.0.1/components/esptool_py/run_serial_tool.cmake
+esptool esp32 -p /dev/ttyUSB2 -b 460800 --before=default_reset --after=hard_reset write_flash --flash_mode dio --flash_freq 40m --flash_size 2MB 0x1000 bootloader/bootloader.bin 0x10000 provisioning.bin 0x8000 partition_table/partition-table.bin
+esptool.py v4.5
+Serial port /dev/ttyUSB2
+Connecting.........
+Chip is ESP32-D0WDQ6 (revision v1.0)
+Features: WiFi, BT, Dual Core, 240MHz, VRef calibration in efuse, Coding Scheme None
+Crystal is 40MHz
+MAC: cc:50:e3:80:10:bc
+Uploading stub...
+Running stub...
+Stub running...
+Changing baud rate to 460800
+Changed.
+Configuring flash size...
+Flash will be erased from 0x00001000 to 0x00007fff...
+Flash will be erased from 0x00010000 to 0x000c6fff...
+Flash will be erased from 0x00008000 to 0x00008fff...
+Compressed 26368 bytes to 16442...
+Writing at 0x00001000... (50 %)
+Writing at 0x000076b2... (100 %)
+Wrote 26368 bytes (16442 compressed) at 0x00001000 in 0.8 seconds (effective 260.1 kbit/s)...
+Hash of data verified.
+Compressed 748688 bytes to 482433...
+Writing at 0x00010000... (3 %)
+Writing at 0x0001b952... (6 %)
+Writing at 0x00024639... (10 %)
+Writing at 0x00029b45... (13 %)
+Writing at 0x00031dd1... (16 %)
+Writing at 0x000375ee... (20 %)
+Writing at 0x0003cd2f... (23 %)
+Writing at 0x00042748... (26 %)
+Writing at 0x00048552... (30 %)
+Writing at 0x0004dfb5... (33 %)
+Writing at 0x000531a1... (36 %)
+Writing at 0x0005857d... (40 %)
+Writing at 0x0005d8be... (43 %)
+Writing at 0x00063001... (46 %)
+Writing at 0x0006877f... (50 %)
+Writing at 0x0006e47c... (53 %)
+Writing at 0x00073a02... (56 %)
+Writing at 0x000790f5... (60 %)
+Writing at 0x0007e975... (63 %)
+Writing at 0x00084284... (66 %)
+Writing at 0x00089be3... (70 %)
+Writing at 0x0008f748... (73 %)
+Writing at 0x00095a63... (76 %)
+Writing at 0x0009b2c8... (80 %)
+Writing at 0x000a3de6... (83 %)
+Writing at 0x000ac109... (86 %)
+Writing at 0x000b3b6e... (90 %)
+Writing at 0x000b9411... (93 %)
+Writing at 0x000bf22f... (96 %)
+Writing at 0x000c4382... (100 %)
+Wrote 748688 bytes (482433 compressed) at 0x00010000 in 10.9 seconds (effective 550.5 kbit/s)...
+Hash of data verified.
+Compressed 3072 bytes to 103...
+Writing at 0x00008000... (100 %)
+Wrote 3072 bytes (103 compressed) at 0x00008000 in 0.1 seconds (effective 378.0 kbit/s)...
+Hash of data verified.
+
+Leaving...
+Hard resetting via RTS pin...

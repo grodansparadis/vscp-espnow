@@ -1,0 +1,13 @@
+# Target labels
+ bootloader
+# Source files and their labels
+/usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/provisioning/build/CMakeFiles/bootloader
+/usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/provisioning/build/CMakeFiles/bootloader.rule
+/usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/provisioning/build/CMakeFiles/bootloader-complete.rule
+/usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/provisioning/build/bootloader-prefix/src/bootloader-stamp/bootloader-build.rule
+/usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/provisioning/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure.rule
+/usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/provisioning/build/bootloader-prefix/src/bootloader-stamp/bootloader-download.rule
+/usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/provisioning/build/bootloader-prefix/src/bootloader-stamp/bootloader-install.rule
+/usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/provisioning/build/bootloader-prefix/src/bootloader-stamp/bootloader-mkdir.rule
+/usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/provisioning/build/bootloader-prefix/src/bootloader-stamp/bootloader-patch.rule
+/usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/provisioning/build/bootloader-prefix/src/bootloader-stamp/bootloader-update.rule

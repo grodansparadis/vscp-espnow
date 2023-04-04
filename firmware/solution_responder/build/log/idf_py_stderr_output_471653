@@ -1,0 +1,9 @@
+CMake Error at /usr/local/src/esp/esp-idf-v5.0.1/tools/cmake/build.cmake:519 (message):
+  ERROR: The override_path you're using is pointing to directory
+  "/usr/local/src/VSCP/can4vscp-frankfurt-wifi" that is not a component.
+
+Call Stack (most recent call first):
+  /usr/local/src/esp/esp-idf-v5.0.1/tools/cmake/project.cmake:440 (idf_build_process)
+  CMakeLists.txt:19 (project)
+
+

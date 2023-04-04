@@ -1,0 +1,764 @@
+/* Beta node
+
+   This example code is in the Public Domain (or CC0 licensed, at your option.)
+
+   Unless required by applicable law or agreed to in writing, this
+   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+   CONDITIONS OF ANY KIND, either express or implied.
+*/
+
+#include <stdio.h>
+#include <string.h>
+#include <dirent.h>
+
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#include <freertos/timers.h>
+#include <freertos/event_groups.h>
+#include <freertos/queue.h>
+#include <freertos/task.h>
+
+#include <driver/ledc.h>
+#include <driver/gpio.h>
+
+#include "esp_log.h"
+#include "esp_netif.h"
+#include "esp_system.h"
+#include "esp_wifi.h"
+#include <nvs_flash.h>
+#include "esp_mac.h"
+#include <wifi_provisioning/manager.h>
+
+#include <espnow.h>
+// #include <espnow_prov.h>
+#include <espnow_log.h>
+#include <espnow_log_flash.h>
+#include <espnow_security.h>
+#include <espnow_security_handshake.h>
+#include <espnow_storage.h>
+#include <espnow_utils.h>
+
+#include "espnow_console.h"
+#include "espnow_log.h"
+
+#include "espnow_ota.h"
+
+#include <iot_button.h>
+
+// https://docs.espressif.com/projects/espressif-esp-iot-solution/en/latest/display/led_indicator.html
+#include "led_indicator.h"
+#include "led_indicator_blink_default.h"
+
+#include <vscp.h>
+#include <vscp-firmware-helper.h>
+#include <vscp_class.h>
+#include <vscp_type.h>
+
+#include "beta.h"
+
+#ifndef CONFIG_ESPNOW_VERSION
+#define ESPNOW_VERSION 2
+#else
+#define ESPNOW_VERSION CONFIG_ESPNOW_VERSION
+#endif
+
+static espnow_addr_t ESPNOW_ADDR_SELF = { 0 };
+
+static const char *TAG = "app";
+static const char *POP = VSCP_PROJDEF_ESPNOW_SESSION_POP;
+
+// All the default GPIOs are based on ESP32 series DevKitC boards, for other boards, please modify them accordingly.
+#ifdef CONFIG_IDF_TARGET_ESP32C2
+#define LED_RED_GPIO   GPIO_NUM_0
+#define LED_GREEN_GPIO GPIO_NUM_1
+#define LED_BLUE_GPIO  GPIO_NUM_8
+#elif CONFIG_IDF_TARGET_ESP32C3
+#define LED_STRIP_GPIO GPIO_NUM_8
+#elif CONFIG_IDF_TARGET_ESP32
+// There is not LED module in ESP32 DevKitC board, so you need to connect one by yourself.
+#define LED_STRIP_GPIO GPIO_NUM_18
+#elif CONFIG_IDF_TARGET_ESP32S2
+#define LED_STRIP_GPIO GPIO_NUM_18
+#elif CONFIG_IDF_TARGET_ESP32S3
+// For old version board, the number is 48.
+#define LED_STRIP_GPIO GPIO_NUM_38
+#endif
+
+beta_node_states_t s_stateNode = BETA_STATE_VIRGIN;
+
+led_indicator_handle_t s_led_handle_red;
+led_indicator_handle_t s_led_handle_green;
+
+// Last blink state
+static int s_blink_last = 0;
+
+// Handle for the security task
+static TaskHandle_t s_sec_task;
+
+/*
+ *
+ */
+static EventGroupHandle_t s_node_event_group;
+
+#define KEY_SET_BIT     BIT0 // Key is set by alpha node
+#define CHANNEL_SET_BIT BIT1 // Channel set by alpha node
+
+///////////////////////////////////////////////////////////
+//                   P E R S I S T A N T
+///////////////////////////////////////////////////////////
+
+// Set default configuration
+
+node_persistent_config_t g_persistent = {
+
+  // General
+  .nodeName   = "Beta Node",
+  .pmk        = { 0 },
+  .lmk        = { 0 },
+  .nodeGuid   = { 0 }, // GUID for unit
+  .startDelay = 2,
+  .bootCnt    = 0,
+  .queueSize  = CONFIG_APP_ESPNOW_QUEUE_SIZE,
+
+  // espnow
+  .espnowLongRange             = false,
+  .espnowChannel               = 0, // Use wifi channel
+  .espnowTtl                   = 32,
+  .espnowSizeQueue             = 32,    // Size fo input queue
+  .espnowForwardEnable         = true,  // Forward when packets are received
+  .espnowFilterAdjacentChannel = true,  // Don't receive if from other channel
+  .espnowForwardSwitchChannel  = false, // Allow switchin gchannel on forward
+  .espnowFilterWeakSignal      = -55,   // Filter onm RSSI (zero is no rssi filtering)
+};
+
+#define CONTROL_KEY_GPIO GPIO_NUM_0
+
+typedef enum { APP_ESPNOW_CTRL_INIT, APP_ESPNOW_CTRL_BOUND, APP_ESPNOW_CTRL_MAX } app_espnow_ctrl_status_t;
+
+static app_espnow_ctrl_status_t s_espnow_ctrl_status = APP_ESPNOW_CTRL_INIT;
+
+#define WIFI_PROV_KEY_GPIO GPIO_NUM_0
+
+// Handle for nvs storage
+nvs_handle_t g_nvsHandle = 0;
+
+///////////////////////////////////////////////////////////
+//        F O R W A R D  D E C L A R A T I O N S
+///////////////////////////////////////////////////////////
+
+void
+sec_probe_task(void *arg);
+
+///////////////////////////////////////////////////////////////////////////////
+// app_led_switch_blink_type
+//
+
+void
+app_led_switch_blink_type(led_indicator_handle_t h, int type)
+{
+  led_indicator_preempt_stop(h, s_blink_last);
+  led_indicator_preempt_start(s_led_handle_green, type);
+  s_blink_last = type;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// get_device_guid
+//
+
+bool
+get_device_guid(uint8_t *pguid)
+{
+  esp_err_t rv;
+  size_t length = 16;
+
+  // Check pointer
+  if (NULL == pguid) {
+    return false;
+  }
+
+  rv = nvs_get_blob(g_nvsHandle, "guid", pguid, &length);
+  switch (rv) {
+
+    case ESP_OK:
+      break;
+
+    case ESP_ERR_NVS_NOT_FOUND:
+      printf("GUID not found in nvs\n");
+      return false;
+
+    default:
+      printf("Error (%s) reading GUID from nvs!\n", esp_err_to_name(rv));
+      return false;
+  }
+
+  return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// app_led_init
+//
+
+static void
+app_led_init(void)
+{
+  led_indicator_gpio_config_t led_indicator_gpio_red_config = {
+    .gpio_num             = PRJDEF_INDICATOR_LED_PIN_RED, /**< num of GPIO */
+    .is_active_level_high = 1,
+  };
+
+  // Initialize red LED indicator
+  led_indicator_config_t indicator_config_red = {
+    .mode                      = LED_GPIO_MODE,
+    .led_indicator_gpio_config = &led_indicator_gpio_red_config,
+    .blink_lists               = default_led_indicator_blink_lists,
+    .blink_list_num            = DEFAULT_BLINK_LIST_NUM,
+  };
+
+  // s_led_handle_green = led_indicator_create(PRJDEF_INDICATOR_LED_PIN_GREEN, &indicator_config_green);
+  s_led_handle_red = led_indicator_create(&indicator_config_red);
+  if (NULL == s_led_handle_green) {
+    ESP_LOGE(TAG, "Failed to create LED indicator red");
+  }
+
+  led_indicator_gpio_config_t led_indicator_gpio_green_config = {
+    .gpio_num             = PRJDEF_INDICATOR_LED_PIN_GREEN, /**< num of GPIO */
+    .is_active_level_high = 1,
+  };
+
+  // Initialize green LED indicator
+  led_indicator_config_t indicator_config_green = {
+    .mode                      = LED_GPIO_MODE,
+    .led_indicator_gpio_config = &led_indicator_gpio_green_config,
+    .blink_lists               = default_led_indicator_blink_lists,
+    .blink_list_num            = DEFAULT_BLINK_LIST_NUM,
+  };
+  // led_indicator_config_t indicator_config_red = {
+  //   .off_level = 0, // if zero, attach led positive side to esp32 gpio pin
+  //   .mode      = LED_GPIO_MODE,
+  // };
+
+  // s_led_handle_red = led_indicator_create(PRJDEF_INDICATOR_LED_PIN_RED, &indicator_config_red);
+  s_led_handle_green = led_indicator_create(&indicator_config_green);
+  if (NULL == s_led_handle_red) {
+    ESP_LOGE(TAG, "Failed to create LED indicator green");
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// setPersistenDefaults
+//
+
+static void
+setPersistenDefaults(void)
+{
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// readPersistentConfigs
+//
+
+static esp_err_t
+readPersistentConfigs(void)
+{
+  esp_err_t rv;
+  char buf[80];
+  size_t length = sizeof(buf);
+  uint8_t val;
+
+  // boot counter
+  rv = nvs_get_u32(g_nvsHandle, "boot_counter", &g_persistent.bootCnt);
+  switch (rv) {
+
+    case ESP_OK:
+      ESP_LOGI(TAG, "Boot counter = %d", (int) g_persistent.bootCnt);
+      break;
+
+    case ESP_ERR_NVS_NOT_FOUND:
+      ESP_LOGE(TAG, "The boot counter is not initialized yet!");
+      break;
+
+    default:
+      ESP_LOGE(TAG, "Error (%s) reading boot counter!", esp_err_to_name(rv));
+      break;
+  }
+
+  // Update and write back boot counter
+  g_persistent.bootCnt++;
+  rv = nvs_set_u32(g_nvsHandle, "boot_counter", g_persistent.bootCnt);
+  if (rv != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to update boot counter");
+  }
+
+  // Node name
+  rv = nvs_get_str(g_nvsHandle, "node_name", buf, &length);
+  switch (rv) {
+    case ESP_OK:
+      strncpy(g_persistent.nodeName, buf, sizeof(g_persistent.nodeName));
+      ESP_LOGI(TAG, "Node Name = %s", g_persistent.nodeName);
+      break;
+
+    case ESP_ERR_NVS_NOT_FOUND:
+      rv = nvs_set_str(g_nvsHandle, "node_name", g_persistent.nodeName);
+      if (rv != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to update node name");
+      }
+      break;
+
+    default:
+      ESP_LOGE(TAG, "Error (%s) reading 'node_name'!", esp_err_to_name(rv));
+      break;
+  }
+
+  // Start Delay (seconds)
+  rv = nvs_get_u8(g_nvsHandle, "start_delay", &g_persistent.startDelay);
+  switch (rv) {
+
+    case ESP_OK:
+      ESP_LOGI(TAG, "Start delay = %d", g_persistent.startDelay);
+      break;
+
+    case ESP_ERR_NVS_NOT_FOUND:
+      rv = nvs_set_u8(g_nvsHandle, "start_delay", 2);
+      if (rv != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to update start delay");
+      }
+      break;
+
+    default:
+      ESP_LOGE(TAG, "Error (%s) reading!", esp_err_to_name(rv));
+      break;
+  }
+
+  // pmk (Primary key)
+  length = 16;
+  rv     = nvs_get_blob(g_nvsHandle, "pmk", g_persistent.pmk, &length);
+  if (rv != ESP_OK) {
+    const char key[] = VSCP_DEFAULT_KEY16;
+    const char *pos  = key;
+    for (int i = 0; i < 16; i++) {
+      sscanf(pos, "%2hhx", &g_persistent.pmk[i]);
+      pos += 2;
+    }
+    rv = nvs_set_blob(g_nvsHandle, "pmk", g_persistent.pmk, 16);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to write node pmk to nvs. rv=%d", rv);
+    }
+  }
+
+  // lmk (Local key)
+  length = 16;
+  rv     = nvs_get_blob(g_nvsHandle, "lmk", g_persistent.lmk, &length);
+  if (rv != ESP_OK) {
+    const char key[] = VSCP_DEFAULT_KEY32;
+    const char *pos  = key + 16;
+    for (int i = 0; i < 16; i++) {
+      sscanf(pos, "%2hhx", &g_persistent.lmk[i]);
+      pos += 2;
+    }
+    rv = nvs_set_blob(g_nvsHandle, "lmk", g_persistent.lmk, 16);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to write node lmk to nvs. rv=%d", rv);
+    }
+  }
+
+  // GUID
+  length = 16;
+  rv     = nvs_get_blob(g_nvsHandle, "guid", g_persistent.nodeGuid, &length);
+
+  if (rv != ESP_OK) {
+    // FF:FF:FF:FF:FF:FF:FF:FE:MAC1:MAC2:MAC3:MAC4:MAC5:MAC6:NICKNAME1:NICKNAME2
+    memset(g_persistent.nodeGuid, 0xff, 7);
+    g_persistent.nodeGuid[7] = 0xfe;
+    // rv                       = esp_efuse_mac_get_default(g_persistent.nodeGuid + 8);
+    //  ESP_MAC_WIFI_STA
+    //  ESP_MAC_WIFI_SOFTAP
+    rv = esp_read_mac(g_persistent.nodeGuid + 8, ESP_MAC_WIFI_STA);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "esp_efuse_mac_get_default failed to get GUID. rv=%d", rv);
+    }
+
+    rv = nvs_set_blob(g_nvsHandle, "guid", g_persistent.nodeGuid, 16);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to write node GUID to nvs. rv=%d", rv);
+    }
+  }
+  ESP_LOGI(TAG,
+           "GUID for node: %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X",
+           g_persistent.nodeGuid[0],
+           g_persistent.nodeGuid[1],
+           g_persistent.nodeGuid[2],
+           g_persistent.nodeGuid[3],
+           g_persistent.nodeGuid[4],
+           g_persistent.nodeGuid[5],
+           g_persistent.nodeGuid[6],
+           g_persistent.nodeGuid[7],
+           g_persistent.nodeGuid[8],
+           g_persistent.nodeGuid[9],
+           g_persistent.nodeGuid[10],
+           g_persistent.nodeGuid[11],
+           g_persistent.nodeGuid[12],
+           g_persistent.nodeGuid[13],
+           g_persistent.nodeGuid[14],
+           g_persistent.nodeGuid[15]);
+
+  // espnow queueSize
+  rv = nvs_get_u8(g_nvsHandle, "queue_size", &g_persistent.queueSize);
+  if (ESP_OK != rv) {
+    rv = nvs_set_u8(g_nvsHandle, "queue_size", g_persistent.queueSize);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to update queue_size");
+    }
+  }
+
+  // Long Range
+  rv = nvs_get_u8(g_nvsHandle, "longr", &val);
+  if (ESP_OK != rv) {
+    val = (uint8_t) g_persistent.espnowLongRange;
+    rv  = nvs_set_u8(g_nvsHandle, "longr", g_persistent.espnowLongRange);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to update espnow long range");
+    }
+  }
+  else {
+    g_persistent.espnowLongRange = (bool) val;
+  }
+
+  // Channel
+  rv = nvs_get_u8(g_nvsHandle, "channel", &g_persistent.espnowChannel);
+  if (ESP_OK != rv) {
+    rv = nvs_set_u8(g_nvsHandle, "channel", g_persistent.espnowChannel);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to update espnow channel");
+    }
+  }
+
+  // Default ttl
+  rv = nvs_get_u8(g_nvsHandle, "ttl", &g_persistent.espnowTtl);
+  if (ESP_OK != rv) {
+    rv = nvs_set_u8(g_nvsHandle, "ttl", g_persistent.espnowTtl);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to update espnow ttl");
+    }
+  }
+
+  // Forward
+  rv = nvs_get_u8(g_nvsHandle, "fw", &val);
+  if (ESP_OK != rv) {
+    val = (uint8_t) g_persistent.espnowForwardEnable;
+    rv  = nvs_set_u8(g_nvsHandle, "fw", g_persistent.espnowForwardEnable);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to update espnow forward");
+    }
+  }
+  else {
+    g_persistent.espnowForwardEnable = (bool) val;
+  }
+
+  // Adj filter channel
+  rv = nvs_get_u8(g_nvsHandle, "adjchfilt", &val);
+  if (ESP_OK != rv) {
+    val = (uint8_t) g_persistent.espnowFilterAdjacentChannel;
+    rv  = nvs_set_u8(g_nvsHandle, "adjchfilt", g_persistent.espnowFilterAdjacentChannel);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to update espnow adj channel filter");
+    }
+  }
+  else {
+    g_persistent.espnowFilterAdjacentChannel = (bool) val;
+  }
+
+  // Allow switching channel on forward
+  rv = nvs_get_u8(g_nvsHandle, "swchf", &val);
+  if (ESP_OK != rv) {
+    val = (uint8_t) g_persistent.espnowForwardSwitchChannel;
+    rv  = nvs_set_u8(g_nvsHandle, "swchf", g_persistent.espnowForwardSwitchChannel);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to update espnow switch channel on forward");
+    }
+  }
+  else {
+    g_persistent.espnowFilterAdjacentChannel = (bool) val;
+  }
+
+  // RSSI limit
+  rv = nvs_get_i8(g_nvsHandle, "rssi", &g_persistent.espnowFilterWeakSignal);
+  if (ESP_OK != rv) {
+    rv = nvs_set_u8(g_nvsHandle, "rssi", g_persistent.espnowFilterWeakSignal);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to update espnow RSSI");
+    }
+  }
+
+  rv = nvs_commit(g_nvsHandle);
+  if (rv != ESP_OK) {
+    ESP_LOGI(TAG, "Failed to commit updates to nvs\n");
+  }
+
+  return ESP_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// app_sec_init_press_cb
+//
+
+static void
+app_sec_init_press_cb(void *arg, void *usr_data)
+{
+  ESP_ERROR_CHECK(!(BUTTON_SINGLE_CLICK == iot_button_get_event(arg)));
+
+  uint8_t key_info[APP_KEY_LEN];
+  if (espnow_get_key(key_info) == ESP_OK) {
+    ESP_LOGW(TAG, "Security key is already set.");
+    return;
+  }
+
+  app_led_switch_blink_type(s_led_handle_green, BLINK_UPDATING);
+
+  ESP_LOGI(TAG, "Starting sec init");
+  s_sec_task = (TaskHandle_t) xTaskCreate(sec_probe_task, "sec_probe", 3072, NULL, tskIDLE_PRIORITY + 1, NULL);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// app_wifi_prov_start_press_cb
+//
+
+static void
+app_wifi_prov_start_press_cb(void *arg, void *usr_data)
+{
+  ESP_ERROR_CHECK(!(BUTTON_DOUBLE_CLICK == iot_button_get_event(arg)));
+
+  ESP_LOGI(TAG, "No functionality");
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// app_restore_factory_defaults_press_cb
+//
+
+static void
+app_restore_factory_defaults_press_cb(void *arg, void *usr_data)
+{
+  esp_err_t ret;
+
+  ESP_ERROR_CHECK(!(BUTTON_LONG_PRESS_START == iot_button_get_event(arg)));
+
+  ESP_LOGI(TAG, "Restore factory settings");
+
+  app_led_switch_blink_type(s_led_handle_green, BLINK_CONNECTED);
+  led_indicator_preempt_stop(s_led_handle_green, s_blink_last);
+
+  // Erase all settings
+  ret = nvs_erase_all(g_nvsHandle);
+  if (ESP_OK != ret) {
+    ESP_LOGE(TAG, "Unable to erase configuration area");
+  }
+
+  // Unbound device
+  espnow_erase_key();
+
+  nvs_commit(g_nvsHandle);
+
+  // set defaults
+  setPersistenDefaults();
+
+  // Disconnect from wifi
+  ret = esp_wifi_disconnect();
+  if (ESP_OK != ret) {
+    ESP_LOGE(TAG, "Failed to disconnect from wifi %X", ret);
+  }
+
+  // Restart system (set defaults)
+  espnow_reboot(pdMS_TO_TICKS(2000));
+  // esp_restart();
+}
+
+//-----------------------------------------------------------------------------
+//                                  Wifi
+//-----------------------------------------------------------------------------
+
+///////////////////////////////////////////////////////////////////////////////
+// app_wifi_init
+//
+
+static void
+app_wifi_init()
+{
+  ESP_ERROR_CHECK(esp_netif_init());
+
+  ESP_ERROR_CHECK(esp_event_loop_create_default());
+  esp_netif_create_default_wifi_sta();
+
+  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+
+  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+  ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+  ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
+  ESP_ERROR_CHECK(esp_wifi_start());
+}
+
+//-----------------------------------------------------------------------------
+//                                  SEC
+//-----------------------------------------------------------------------------
+
+///////////////////////////////////////////////////////////////////////////////
+// sec_probe_task
+//
+
+void
+sec_probe_task(void *arg)
+{
+  int rv;
+
+  espnow_sec_responder_start(POP);
+
+  if (VSCP_ERROR_SUCCESS != (rv = vscp_espnow_probe())) {
+    ESP_LOGE(TAG, "[%s, %d]: <Probe failed> !(%x)", __func__, __LINE__, rv);
+    // goto EXIT;
+  }
+
+  // espnow_sec_responder_start(POP);
+
+  // vTaskDelay(pdMS_TO_TICKS(100));
+  // EXIT:
+  vTaskDelete(NULL);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// app_main
+//
+
+void
+app_main()
+{
+  esp_err_t ret;
+
+  s_node_event_group = xEventGroupCreate();
+
+  espnow_storage_init();
+  app_wifi_init();
+
+  app_led_init();
+  app_led_switch_blink_type(s_led_handle_green, BLINK_CONNECTING);
+
+  // ----------------------------------------------------------------------------
+  //                        NVS - Persistent storage
+  // ----------------------------------------------------------------------------
+
+  // Init persistent storage
+  ESP_LOGI(TAG, "Read persistent storage ... ");
+
+  ret = nvs_open("cfgbeta", NVS_READWRITE, &g_nvsHandle);
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG, "Error (%s) opening NVS handle!\n", esp_err_to_name(ret));
+  }
+  else {
+    // Read (or set to defaults) persistent values
+    readPersistentConfigs();
+  }
+
+  // Set the probed channel
+  if (g_persistent.espnowChannel) {
+    esp_wifi_set_channel(g_persistent.espnowChannel, WIFI_SECOND_CHAN_NONE);
+  }
+
+  espnow_config_t espnow_config = ESPNOW_INIT_CONFIG_DEFAULT();
+  memcpy((uint8_t *) espnow_config.pmk, g_persistent.pmk, 16);
+  espnow_config.qsize                  = CONFIG_APP_ESPNOW_QUEUE_SIZE;
+  espnow_config.sec_enable             = true;
+  espnow_config.forward_enable         = true;
+  espnow_config.forward_switch_channel = false;
+  espnow_config.send_retry_num         = 10;
+
+  espnow_init(&espnow_config);
+
+  uint8_t key_info[APP_KEY_LEN];
+  if (ESP_OK == espnow_get_key(key_info)) {
+
+    // Set the key permanently
+    espnow_set_key(key_info);
+
+    // Initializing logging
+    espnow_log_config_t log_config = {
+      .log_level_uart   = ESP_LOG_INFO,
+      .log_level_espnow = ESP_LOG_INFO,
+      .log_level_flash  = ESP_LOG_INFO,
+    };
+    if (ESP_OK != (ret = espnow_log_init(&log_config))) {
+      ESP_LOGE(TAG, "Failed to init espnow logging");
+    }
+    esp_log_level_set("*", ESP_LOG_INFO);
+
+    // Initializing OTA
+    espnow_ota_config_t ota_config = {
+      .skip_version_check       = true,
+      .progress_report_interval = 10,
+    };
+
+    ESP_LOGI(TAG, "Starting ota");
+    ret = espnow_ota_responder_start(&ota_config);
+    if (ESP_OK != ret) {
+      ESP_LOGE(TAG, "Failed to start OTA responder");
+    }
+  }
+  else {
+    ESP_LOGW(TAG, "Security key is not set");
+  }
+
+  // esp_wifi_set_channel(3, WIFI_SECOND_CHAN_NONE);
+
+  button_config_t button_config = {
+        .type = BUTTON_TYPE_GPIO,
+        .long_press_time = 3000,
+        .gpio_button_config = {
+            .gpio_num = WIFI_PROV_KEY_GPIO,
+            .active_level = 0,
+        },
+    };
+
+  button_handle_t button_handle = iot_button_create(&button_config);
+
+  iot_button_register_cb(button_handle, BUTTON_SINGLE_CLICK, app_sec_init_press_cb, NULL);
+  iot_button_register_cb(button_handle, BUTTON_DOUBLE_CLICK, app_wifi_prov_start_press_cb, NULL);
+  iot_button_register_cb(button_handle, BUTTON_LONG_PRESS_START, app_restore_factory_defaults_press_cb, NULL);
+
+  // esp_event_handler_register(ESP_EVENT_ESPNOW, ESP_EVENT_ANY_ID, app_espnow_event_handler, NULL);
+
+  // Setup VSCP esp-now
+
+  vscp_espnow_config_t vscp_espnow_conf;
+  vscp_espnow_conf.pguid = g_persistent.nodeGuid;
+
+  // Set default primary key
+  // uint8_t pmk[16];
+  // vscp_fwhlp_hex2bin(pmk, 16, VSCP_DEFAULT_KEY16);
+  // vscp_espnow_conf.pmk = pmk;
+
+  // Initialize VSCP espnow
+  if (ESP_OK != vscp_espnow_init(&vscp_espnow_conf)) {
+    ESP_LOGI(TAG, "Failed to initialize VSCP espnow");
+  }
+
+  esp_wifi_get_mac(ESP_IF_WIFI_STA, ESPNOW_ADDR_SELF);
+  ESP_LOGI(TAG, "mac: " MACSTR ", version: %d", MAC2STR(ESPNOW_ADDR_SELF), ESPNOW_VERSION);
+
+  while (1) {
+    if ((BETA_STATE_VIRGIN == s_stateNode) && (ESP_OK == espnow_get_key(key_info))) {
+      app_led_switch_blink_type(s_led_handle_green, BLINK_CONNECTED);
+      s_stateNode = BETA_STATE_IDLE;
+    }
+
+    // esp_task_wdt_reset();
+    // ESP_LOGI(TAG, "heap %lu kB (%lu)",esp_get_minimum_free_heap_size()/1024,esp_get_minimum_free_heap_size());
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    taskYIELD();
+
+    // ESP_LOG_BUFFER_HEXDUMP(TAG, g_persistent.pmk, 16, ESP_LOG_INFO);
+    // ESP_LOG_BUFFER_HEXDUMP(TAG, g_persistent.lmk, 16, ESP_LOG_INFO);
+
+    if (0) {
+      uint32_t free_heap = esp_get_free_heap_size() / 1024;
+      uint32_t min_heap  = esp_get_minimum_free_heap_size() / 1024;
+      printf("Free heap: %ld kB Min heap = %ld kB\n", free_heap, min_heap);
+    }
+  }
+}

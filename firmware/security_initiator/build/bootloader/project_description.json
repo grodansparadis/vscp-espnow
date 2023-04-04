@@ -1,0 +1,25 @@
+{
+    "project_name":       "bootloader",
+    "project_path":       "/usr/local/src/esp/esp-idf-v5.0.1/components/bootloader/subproject",
+    "build_dir":          "/usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/security_initiator/build/bootloader",
+    "config_file":        "/usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/security_initiator/sdkconfig",
+    "config_defaults":    "",
+    "bootloader_elf":     "",
+    "app_elf":            "bootloader.elf",
+    "app_bin":            "bootloader.bin",
+    "git_revision":       "v5.0.1",
+    "target":             "esp32",
+    "rev":                "0",
+    "min_rev":            "0",
+    "max_rev":            "399",
+    "phy_data_partition": "",
+    "monitor_baud" :      "115200",
+    "monitor_toolprefix": "xtensa-esp32-elf-",
+    "config_environment" : {
+        "COMPONENT_KCONFIGS" : "/usr/local/src/esp/esp-idf-v5.0.1/components/efuse/Kconfig;/usr/local/src/esp/esp-idf-v5.0.1/components/esp_common/Kconfig;/usr/local/src/esp/esp-idf-v5.0.1/components/esp_hw_support/Kconfig;/usr/local/src/esp/esp-idf-v5.0.1/components/esp_system/Kconfig;/usr/local/src/esp/esp-idf-v5.0.1/components/freertos/Kconfig;/usr/local/src/esp/esp-idf-v5.0.1/components/hal/Kconfig;/usr/local/src/esp/esp-idf-v5.0.1/components/log/Kconfig;/usr/local/src/esp/esp-idf-v5.0.1/components/newlib/Kconfig;/usr/local/src/esp/esp-idf-v5.0.1/components/spi_flash/Kconfig",
+        "COMPONENT_KCONFIGS_PROJBUILD" : "/usr/local/src/esp/esp-idf-v5.0.1/components/bootloader/Kconfig.projbuild;/usr/local/src/esp/esp-idf-v5.0.1/components/esp_app_format/Kconfig.projbuild;/usr/local/src/esp/esp-idf-v5.0.1/components/esp_rom/Kconfig.projbuild;/usr/local/src/esp/esp-idf-v5.0.1/components/esptool_py/Kconfig.projbuild;/usr/local/src/esp/esp-idf-v5.0.1/components/partition_table/Kconfig.projbuild"
+    },
+    "build_components" : [ "bootloader", "bootloader_support", "efuse", "esp_app_format", "esp_common", "esp_hw_support", "esp_rom", "esp_system", "esptool_py", "freertos", "hal", "log", "main", "micro-ecc", "newlib", "partition_table", "soc", "spi_flash", "xtensa", "" ],
+    "build_component_paths" : [ "/usr/local/src/esp/esp-idf-v5.0.1/components/bootloader", "/usr/local/src/esp/esp-idf-v5.0.1/components/bootloader_support", "/usr/local/src/esp/esp-idf-v5.0.1/components/efuse", "/usr/local/src/esp/esp-idf-v5.0.1/components/esp_app_format", "/usr/local/src/esp/esp-idf-v5.0.1/components/esp_common", "/usr/local/src/esp/esp-idf-v5.0.1/components/esp_hw_support", "/usr/local/src/esp/esp-idf-v5.0.1/components/esp_rom", "/usr/local/src/esp/esp-idf-v5.0.1/components/esp_system", "/usr/local/src/esp/esp-idf-v5.0.1/components/esptool_py", "/usr/local/src/esp/esp-idf-v5.0.1/components/freertos", "/usr/local/src/esp/esp-idf-v5.0.1/components/hal", "/usr/local/src/esp/esp-idf-v5.0.1/components/log", "/usr/local/src/esp/esp-idf-v5.0.1/components/bootloader/subproject/main", "/usr/local/src/esp/esp-idf-v5.0.1/components/bootloader/subproject/components/micro-ecc", "/usr/local/src/esp/esp-idf-v5.0.1/components/newlib", "/usr/local/src/esp/esp-idf-v5.0.1/components/partition_table", "/usr/local/src/esp/esp-idf-v5.0.1/components/soc", "/usr/local/src/esp/esp-idf-v5.0.1/components/spi_flash", "/usr/local/src/esp/esp-idf-v5.0.1/components/xtensa", "" ],
+    "debug_prefix_map_gdbinit": ""
+}

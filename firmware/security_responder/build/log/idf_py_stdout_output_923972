@@ -1,0 +1,47 @@
+-- Found Git: /usr/bin/git (found version "2.37.2") 
+-- The C compiler identification is GNU 11.2.0
+-- The CXX compiler identification is GNU 11.2.0
+-- The ASM compiler identification is GNU
+-- Found assembler: /home/akhe/.espressif/tools/xtensa-esp32-elf/esp-2022r1-11.2.0/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /home/akhe/.espressif/tools/xtensa-esp32-elf/esp-2022r1-11.2.0/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /home/akhe/.espressif/tools/xtensa-esp32-elf/esp-2022r1-11.2.0/xtensa-esp32-elf/bin/xtensa-esp32-elf-g++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Building ESP-IDF components for target esp32
+Processing 2 dependencies:
+[1/2] espressif/esp-now (2.0.0)
+[2/2] idf (5.0.1)
+-- Project sdkconfig file /usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/security_responder/sdkconfig
+Loading defaults file /usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/security_responder/sdkconfig.defaults...
+-- Looking for sys/types.h
+-- Looking for sys/types.h - found
+-- Looking for stdint.h
+-- Looking for stdint.h - found
+-- Looking for stddef.h
+-- Looking for stddef.h - found
+-- Check size of time_t
+-- Check size of time_t - done
+-- Found Python3: /home/akhe/.espressif/python_env/idf5.0_py3.10_env/bin/python (found version "3.10.7") found components: Interpreter 
+-- Performing Test C_COMPILER_SUPPORTS_WFORMAT_SIGNEDNESS
+-- Performing Test C_COMPILER_SUPPORTS_WFORMAT_SIGNEDNESS - Success
+-- App "security_responder" version: bfb47a3-dirty
+-- Adding linker script /usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/security_responder/build/esp-idf/esp_system/ld/memory.ld
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/esp_system/ld/esp32/sections.ld.in
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/esp_rom/esp32/ld/esp32.rom.ld
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/esp_rom/esp32/ld/esp32.rom.api.ld
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/esp_rom/esp32/ld/esp32.rom.libgcc.ld
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/esp_rom/esp32/ld/esp32.rom.newlib-data.ld
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/esp_rom/esp32/ld/esp32.rom.syscalls.ld
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/esp_rom/esp32/ld/esp32.rom.newlib-funcs.ld
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/soc/esp32/ld/esp32.peripherals.ld
+-- Components: app_trace app_update bootloader bootloader_support bt cmock console cxx driver efuse esp-tls esp_adc esp_app_format esp_common esp_eth esp_event esp_gdbstub esp_hid esp_http_client esp_http_server esp_https_ota esp_https_server esp_hw_support esp_lcd esp_local_ctrl esp_netif esp_partition esp_phy esp_pm esp_psram esp_ringbuf esp_rom esp_system esp_timer esp_wifi espcoredump espressif__esp-now esptool_py fatfs freertos hal heap http_parser idf_test ieee802154 json log lwip main mbedtls mqtt newlib nvs_flash openthread partition_table perfmon protobuf-c protocomm pthread sdmmc soc spi_flash spiffs tcp_transport ulp unity usb vfs wear_levelling wifi_provisioning wpa_supplicant xtensa
+-- Component paths: /usr/local/src/esp/esp-idf-v5.0.1/components/app_trace /usr/local/src/esp/esp-idf-v5.0.1/components/app_update /usr/local/src/esp/esp-idf-v5.0.1/components/bootloader /usr/local/src/esp/esp-idf-v5.0.1/components/bootloader_support /usr/local/src/esp/esp-idf-v5.0.1/components/bt /usr/local/src/esp/esp-idf-v5.0.1/components/cmock /usr/local/src/esp/esp-idf-v5.0.1/components/console /usr/local/src/esp/esp-idf-v5.0.1/components/cxx /usr/local/src/esp/esp-idf-v5.0.1/components/driver /usr/local/src/esp/esp-idf-v5.0.1/components/efuse /usr/local/src/esp/esp-idf-v5.0.1/components/esp-tls /usr/local/src/esp/esp-idf-v5.0.1/components/esp_adc /usr/local/src/esp/esp-idf-v5.0.1/components/esp_app_format /usr/local/src/esp/esp-idf-v5.0.1/components/esp_common /usr/local/src/esp/esp-idf-v5.0.1/components/esp_eth /usr/local/src/esp/esp-idf-v5.0.1/components/esp_event /usr/local/src/esp/esp-idf-v5.0.1/components/esp_gdbstub /usr/local/src/esp/esp-idf-v5.0.1/components/esp_hid /usr/local/src/esp/esp-idf-v5.0.1/components/esp_http_client /usr/local/src/esp/esp-idf-v5.0.1/components/esp_http_server /usr/local/src/esp/esp-idf-v5.0.1/components/esp_https_ota /usr/local/src/esp/esp-idf-v5.0.1/components/esp_https_server /usr/local/src/esp/esp-idf-v5.0.1/components/esp_hw_support /usr/local/src/esp/esp-idf-v5.0.1/components/esp_lcd /usr/local/src/esp/esp-idf-v5.0.1/components/esp_local_ctrl /usr/local/src/esp/esp-idf-v5.0.1/components/esp_netif /usr/local/src/esp/esp-idf-v5.0.1/components/esp_partition /usr/local/src/esp/esp-idf-v5.0.1/components/esp_phy /usr/local/src/esp/esp-idf-v5.0.1/components/esp_pm /usr/local/src/esp/esp-idf-v5.0.1/components/esp_psram /usr/local/src/esp/esp-idf-v5.0.1/components/esp_ringbuf /usr/local/src/esp/esp-idf-v5.0.1/components/esp_rom /usr/local/src/esp/esp-idf-v5.0.1/components/esp_system /usr/local/src/esp/esp-idf-v5.0.1/components/esp_timer /usr/local/src/esp/esp-idf-v5.0.1/components/esp_wifi /usr/local/src/esp/esp-idf-v5.0.1/components/espcoredump /usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/security_responder/managed_components/espressif__esp-now /usr/local/src/esp/esp-idf-v5.0.1/components/esptool_py /usr/local/src/esp/esp-idf-v5.0.1/components/fatfs /usr/local/src/esp/esp-idf-v5.0.1/components/freertos /usr/local/src/esp/esp-idf-v5.0.1/components/hal /usr/local/src/esp/esp-idf-v5.0.1/components/heap /usr/local/src/esp/esp-idf-v5.0.1/components/http_parser /usr/local/src/esp/esp-idf-v5.0.1/components/idf_test /usr/local/src/esp/esp-idf-v5.0.1/components/ieee802154 /usr/local/src/esp/esp-idf-v5.0.1/components/json /usr/local/src/esp/esp-idf-v5.0.1/components/log /usr/local/src/esp/esp-idf-v5.0.1/components/lwip /usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/security_responder/main /usr/local/src/esp/esp-idf-v5.0.1/components/mbedtls /usr/local/src/esp/esp-idf-v5.0.1/components/mqtt /usr/local/src/esp/esp-idf-v5.0.1/components/newlib /usr/local/src/esp/esp-idf-v5.0.1/components/nvs_flash /usr/local/src/esp/esp-idf-v5.0.1/components/openthread /usr/local/src/esp/esp-idf-v5.0.1/components/partition_table /usr/local/src/esp/esp-idf-v5.0.1/components/perfmon /usr/local/src/esp/esp-idf-v5.0.1/components/protobuf-c /usr/local/src/esp/esp-idf-v5.0.1/components/protocomm /usr/local/src/esp/esp-idf-v5.0.1/components/pthread /usr/local/src/esp/esp-idf-v5.0.1/components/sdmmc /usr/local/src/esp/esp-idf-v5.0.1/components/soc /usr/local/src/esp/esp-idf-v5.0.1/components/spi_flash /usr/local/src/esp/esp-idf-v5.0.1/components/spiffs /usr/local/src/esp/esp-idf-v5.0.1/components/tcp_transport /usr/local/src/esp/esp-idf-v5.0.1/components/ulp /usr/local/src/esp/esp-idf-v5.0.1/components/unity /usr/local/src/esp/esp-idf-v5.0.1/components/usb /usr/local/src/esp/esp-idf-v5.0.1/components/vfs /usr/local/src/esp/esp-idf-v5.0.1/components/wear_levelling /usr/local/src/esp/esp-idf-v5.0.1/components/wifi_provisioning /usr/local/src/esp/esp-idf-v5.0.1/components/wpa_supplicant /usr/local/src/esp/esp-idf-v5.0.1/components/xtensa
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /usr/local/src/VSCP/can4vscp-frankfurt-wifi/firmware/security_responder/build

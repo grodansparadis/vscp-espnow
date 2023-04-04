@@ -1,0 +1,67 @@
+diff --git a/src/espnow/src/espnow.c b/src/espnow/src/espnow.c
+index d42c0d8..dbfb46c 100644
+--- a/src/espnow/src/espnow.c
++++ b/src/espnow/src/espnow.c
+@@ -502,7 +502,7 @@ esp_err_t espnow_send(espnow_data_type_t type, const espnow_addr_t dest_addr, co
+     espnow_data_t *espnow_data = NULL;
+     bool enc = false;
+ 
+-    if (g_espnow_config->sec_enable
++    if (g_espnow_config->sec_enable && data_head->security
+         && type != ESPNOW_DATA_TYPE_ACK && type != ESPNOW_DATA_TYPE_FORWARD
+         && type != ESPNOW_DATA_TYPE_SECURITY_STATUS && type != ESPNOW_DATA_TYPE_SECURITY) {
+         ESP_ERROR_RETURN(!(g_espnow_sec && g_espnow_sec->state == ESPNOW_SEC_OVER), ESP_FAIL, "Security key is not set");
+diff --git a/src/security/src/espnow_security_initiator.c b/src/security/src/espnow_security_initiator.c
+index 71cdfbb..367e688 100644
+--- a/src/security/src/espnow_security_initiator.c
++++ b/src/security/src/espnow_security_initiator.c
+@@ -146,6 +146,7 @@ esp_err_t espnow_sec_initiator_scan(espnow_sec_responder_t **info_list, size_t *
+     espnow_frame_head_t frame_head = {
+         .retransmit_count = 10,
+         .broadcast        = true,
++        .security         = true,
+         .magic            = esp_random(),
+         .filter_adjacent_channel = true,
+         .forward_ttl      = CONFIG_ESPNOW_SEC_SEND_FORWARD_TTL,
+@@ -248,6 +249,7 @@ static esp_err_t protocomm_espnow_initiator_start(const protocomm_security_t *pr
+     uint8_t *outbuf = NULL;
+     int32_t session_id = 0;
+     espnow_frame_head_t frame_head = {
++        .security         = true,
+         .retransmit_count = CONFIG_ESPNOW_SEC_SEND_RETRY_NUM,
+         .filter_adjacent_channel = true,
+         .forward_ttl      = CONFIG_ESPNOW_SEC_SEND_FORWARD_TTL,
+diff --git a/src/security/src/espnow_security_responder.c b/src/security/src/espnow_security_responder.c
+index 859c3a9..7057d27 100644
+--- a/src/security/src/espnow_security_responder.c
++++ b/src/security/src/espnow_security_responder.c
+@@ -34,17 +34,19 @@ static const char* TAG = "espnow_sec_resp";
+ static uint8_t app_key[APP_KEY_LEN] = { 0 };
+ static protocomm_t *g_espnow_pc = NULL;
+ static espnow_sec_info_t g_sec_info = { 0 };
+-static espnow_frame_head_t g_frame_config = { 0 };
+ 
+ static esp_err_t espnow_sec_info(const uint8_t *src_addr)
+ {
+     esp_err_t ret = ESP_OK;
+     size_t size = sizeof(espnow_sec_info_t);
+     espnow_sec_info_t *info = &g_sec_info;
++    espnow_frame_head_t frame_head = {
++        .security         = true,
++    };
+ 
+     info->type = ESPNOW_SEC_TYPE_INFO;
+ 
+-    ret = espnow_send(ESPNOW_DATA_TYPE_SECURITY_STATUS, src_addr, info, size, &g_frame_config, portMAX_DELAY);
++    ret = espnow_send(ESPNOW_DATA_TYPE_SECURITY_STATUS, src_addr, info, size, &frame_head, portMAX_DELAY);
+ 
+     ESP_ERROR_RETURN(ret != ESP_OK, ret, "espnow_write");
+ 
+@@ -76,6 +78,7 @@ static esp_err_t espnow_sec_handle(const char *ep_name, uint8_t resp_type, const
+     espnow_frame_head_t frame_head = {
+         .retransmit_count = 1,
+         .broadcast        = false,
++        .security         = true,
+         .filter_adjacent_channel = true,
+         .forward_ttl      = 0,
+     };

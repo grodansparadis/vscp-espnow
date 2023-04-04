@@ -1,0 +1,111 @@
+{
+  "idf.adapterTargetName": "esp32",
+  "idf.flashType": "JTAG",
+  "idf.port": "/dev/ttyUSB0",
+  "esp32.port": "-p ${config:idf.port}",
+  // Use board or interface as needed for openocd functionality
+  "esp32.openocd.board":"esp32c3-builtin.cfg",
+  "esp32.openocd.interface":"esp_usb_jtag.cfg",
+  //"esp32.openocd.interface":"esp32_devkitj_v1.cfg", // Espressif JTAG 
+  // The debugger to use (see ~/.espressif/tools/) "xtensa-esp32s2-elf-gdb"
+  // for the esp32-s2 etc
+  "esp32.debugger":"riscv32-esp-elf-gdb",
+  "esp32.firmware":"build/vscp-dropplet-alpha.bin",
+  // Extension by Seun LanLege
+  "actionButtons": {
+
+    "defaultColor": "#ff0034", // Can also use string color names.
+    "loadNpmCommands":false, // Disables automatic generation of actions for npm commands.
+    "reloadButton":"♻️", // Custom reload button text or icon (default ↻). null value enables automatic reload on configuration change
+        
+    // Icons here: https://code.visualstudio.com/api/references/icons-in-labels
+    // "-p /dev/ttyUSB0" may need to be changed below to your port. Sadly the idf.port
+    // configuration setting can't be read here.
+    "commands": [
+      {
+        "name": "$(circle-filled)Build",
+        "color": "yellow",
+        "singleInstance": true,
+        "tooltip": "Build project",
+        "command": "idf.py build"
+      },
+      {
+        "name": "$(circle-filled)Clean",
+        "color": "yellow",
+        "singleInstance": true,        
+        "command": "idf.py clean"
+      },
+      {
+        "name": "$(circle-filled)FullClean",
+        "color": "yellow",
+        "singleInstance": true,
+        "command": "idf.py fullclean"
+      },
+      {
+        "name": "$(circle-filled)Flash",
+        "color": "yellow",
+        "singleInstance": true,
+        "command": "idf.py -p /dev/ttyUSB0 flash"
+      },
+      {
+        "name": "$(circle-filled)Monitor",
+        "color": "yellow",
+        "singleInstance": true,
+        "command": "idf.py -p /dev/ttyUSB0 monitor"
+      },
+      {
+        "name": "$(circle-filled)Menu",
+        "color": "yellow",
+        "singleInstance": true,
+        "command": "idf.py menuconfig"
+      }
+    ] 
+  },
+  "files.associations": {
+    "espnow_ctrl.h": "c",
+    "espnow.h": "c",
+    "iot_button.h": "c",
+    "*.ipp": "c",
+    "esp_crc.h": "c",
+    "esp_now.h": "c",
+    "esp_task_wdt.h": "c",
+    "vscp-firmware-level2.h": "c",
+    "tcpsrv.h": "c",
+    "vscp-firmware-helper.h": "c",
+    "*.inc": "c",
+    "any": "c",
+    "esp_event_base.h": "c",
+    "array": "c",
+    "charconv": "c",
+    "chrono": "c",
+    "compare": "c",
+    "functional": "c",
+    "ratio": "c",
+    "tuple": "c",
+    "type_traits": "c",
+    "utility": "c",
+    "variant": "c",
+    "istream": "c",
+    "ostream": "c",
+    "ranges": "c",
+    "aes.h": "c",
+    "vscp_aes.h": "c",
+    "string": "c",
+    "string_view": "c",
+    "span": "c",
+    "bitset": "c",
+    "initializer_list": "c",
+    "regex": "c",
+    "valarray": "c",
+    "esp_https_ota.h": "c",
+    "esp_wifi.h": "c",
+    "esp_wifi_types.h": "c",
+    "urldecode.h": "c",
+    "vscp-projdefs.h": "c",
+    "vscp-droplet.h": "c",
+    "vscp-compiler.h": "c",
+    "esp_random.h": "c",
+    "vscp.h": "c",
+    "initiator.h": "c"
+  }
+}

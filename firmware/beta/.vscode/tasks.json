@@ -1,0 +1,127 @@
+{
+  // Use ctrl + alt + T to select a task to run
+  // Use ctrl 0 shift + B top build
+  "tasks": [
+    // Start openocd
+    {
+      "label": "openocd",
+      "type": "shell",
+      "isBackground": true,
+      "command": "openocd",
+      "isShellCommand": true,    
+      "args": [
+        "-c", "set ESP_RTOS none",
+        "-f", "board/${config:esp32.openocd.board}"
+      ]      
+    },
+    {
+      "label": "ESP32: Build Firmware",
+      "type": "shell",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "options": {
+        "cwd": "${workspaceRoot}",
+      },
+      "command": "idf.py build",
+      "problemMatcher": [
+        "$gcc"
+      ]
+    },
+    {
+      "label": "ESP32: FullClean",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceRoot}",
+      },
+      "command": "idf.py fullclean",
+      "problemMatcher": []
+    },
+    {
+      "label": "ESP32: Flash app via OpenOCD (ESP32-JTAG (C3))",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceRoot}",
+      },
+      "command": "openocd -f board/${config:esp32.openocd.board} -c \"program_esp build/blink.bin 0x10000 verify exit\" ",
+      "problemMatcher": []
+    },
+    {
+      "label": "ESP32: Flash partion-table via OpenOCD (ESP32-JTAG (C3))",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceRoot}",
+      },
+      "command": "openocd -f board/${config:esp32.openocd.board} -c \"program_esp build/partition_table/partition-table.bin 0x8000  verify exit\" ",
+      "problemMatcher": []
+    },
+    {
+      "label": "ESP32: Flash bootloader via OpenOCD (ESP32-JTAG (C3))",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceRoot}",
+      },
+      "command": "openocd -f board/${config:esp32.openocd.board} -c \"program_esp build/bootloader/bootloader.bin 0x1000 verify exit\" ",
+      "problemMatcher": []
+    },
+    {
+      "label": "ESP32: Flash via OpenOCD (ESP-Prog)",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceRoot}",
+      },
+      "command": "openocd -f interface/ftdi/${config:esp32.openocd.interface}  -f target/${config:idf.adapterTargetName}.cfg -c \"program_esp build/blink.bin 0x10000 verify reset exit\" ",
+      "problemMatcher": []
+    },
+    {
+      "label": "ESP32: Flash all",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceRoot}",
+      },
+      "command": "idf.py ${config:esp32.port} flash",
+      "problemMatcher": []
+    },
+    {
+      "label": "ESP32: Monitor",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceRoot}",
+      },
+      "command": "idf.py ${config:esp32.port} monitor",
+      "problemMatcher": []
+    },
+    {
+      "label": "ESP32: Flash & Monitor",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceRoot}",
+      },
+      "command": "idf.py ${config:esp32.port} flash monitor",
+      "problemMatcher": []
+    },
+    {
+      "label": "ESP32: Environment Check",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceRoot}",
+      },
+      "command": "printenv",
+      "problemMatcher": []
+    },
+    {
+      "label": "ESP32: Menu Config",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceRoot}",
+        "env": {
+            "LC_ALL": "C",
+        }
+      },
+      "command": "idf.py menuconfig",
+      "problemMatcher": []
+    }
+  ],
+  "version": "2.0.0"
+}
