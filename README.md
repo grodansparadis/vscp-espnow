@@ -5,7 +5,7 @@
 [![Release](https://img.shields.io/github/release/grodansparadis/vscp-espnow.svg)](https://github.com/grodansparadis/vscp-espnow/releases)
 
 
-# VSCP over [Espressif esp-now protocol](https://github.com/espressif/esp-now)
+# VSCP over Espressif esp-now protocol
 
 - [Overview](#Overview)
 - [License](#license)
