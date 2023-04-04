@@ -29,13 +29,11 @@
 #include "esp_system.h"
 #include "esp_wifi.h"
 #include <nvs_flash.h>
-// #include "sdcard.h"
 #include <esp_spiffs.h>
 #include <esp_event_base.h>
 #include <esp_event.h>
 #include "esp_mac.h"
 #include <esp_https_ota.h>
-// #include <lwip/sockets.h>
 #include <esp_http_server.h>
 
 #include <wifi_provisioning/manager.h>
@@ -76,7 +74,7 @@
 #include "alpha.h"
 
 static const char *TAG = "app";
-static const char *POP = VSCP_PROJDEF_ESPNOW_SESSION_POP;
+//static const char *POP = VSCP_PROJDEF_ESPNOW_SESSION_POP;
 
 #ifndef CONFIG_ESPNOW_VERSION
 #define ESPNOW_VERSION 2
@@ -94,33 +92,12 @@ QueueHandle_t g_event_queue;
 
 static espnow_addr_t ESPNOW_ADDR_SELF = { 0 };
 
-#define KEYSTR                                                                                                         \
-  "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x%02x:%02x:%02x:%02x:%02x:%02x:%02x:%" \
-  "02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x"
-#define KEY2STR(a)                                                                                                     \
-  (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5], (a)[6], (a)[7], (a)[8], (a)[9], (a)[10], (a)[11], (a)[12], (a)[13],  \
-    (a)[14], (a)[15], (a)[16], (a)[17], (a)[18], (a)[19], (a)[20], (a)[21], (a)[22], (a)[23], (a)[24], (a)[25],        \
-    (a)[26], (a)[27], (a)[28], (a)[29], (a)[30], (a)[31]
 
-// All the default GPIOs are based on ESP32 series DevKitC boards, for other boards, please modify them accordingly.
-#ifdef CONFIG_IDF_TARGET_ESP32C2
-#define LED_RED_GPIO   GPIO_NUM_0
-#define LED_GREEN_GPIO GPIO_NUM_1
-#define LED_BLUE_GPIO  GPIO_NUM_8
-#elif CONFIG_IDF_TARGET_ESP32C3
-#define LED_STRIP_GPIO GPIO_NUM_8
-#elif CONFIG_IDF_TARGET_ESP32
-// There is not LED module in ESP32 DevKitC board, so you need to connect one by yourself.
-#define LED_STRIP_GPIO GPIO_NUM_18
-#elif CONFIG_IDF_TARGET_ESP32S2
-#define LED_STRIP_GPIO GPIO_NUM_18
-#elif CONFIG_IDF_TARGET_ESP32S3
-// For old version board, the number is 48.
-#define LED_STRIP_GPIO GPIO_NUM_38
-#endif
 
-led_indicator_handle_t s_led_handle_red;
-led_indicator_handle_t s_led_handle_green;
+static button_handle_t s_button_handle;
+
+static led_indicator_handle_t s_led_handle_red;
+static led_indicator_handle_t s_led_handle_green;
 
 const blink_step_t alpha_blink[] = {
   { LED_BLINK_HOLD, LED_STATE_ON, 50 },   // step1: turn on LED 50 ms
@@ -130,6 +107,7 @@ const blink_step_t alpha_blink[] = {
   { LED_BLINK_STOP, 0, 0 },               // step5: stop blink (off)
 };
 
+static uint32_t s_main_timer;   // timing for main working loop
 static int s_retry_num           = 0;
 static bool s_sta_connected_flag = false;
 
@@ -140,26 +118,6 @@ static EventGroupHandle_t s_wifi_event_group;
 #define WIFI_FAIL_BIT      BIT1
 
 QueueHandle_t g_event_queue;
-
-/*
-  Used to count the time factory default storage button is down
-  If > 10 seconds defaults will be restored.
-*/
-static uint32_t s_restore_defaults_timer;
-
-// const char *pop_data = VSCP_PROJDEF_ESPNOW_SESSION_POP;
-static TaskHandle_t s_sec_task;
-static TaskHandle_t s_prov_task;
-
-/* clang-format off */
-typedef enum { 
-  APP_ESPNOW_CTRL_INIT, 
-  APP_ESPNOW_CTRL_BOUND, 
-  APP_ESPNOW_CTRL_MAX 
-} app_espnow_ctrl_status_t;
-/* clang-format on */
-
-static app_espnow_ctrl_status_t s_espnow_ctrl_status = APP_ESPNOW_CTRL_INIT;
 
 typedef enum {
   APP_WIFI_PROV_INIT,
@@ -406,7 +364,6 @@ app_espnow_debug_recv_process(uint8_t *src_addr, void *data, size_t size, wifi_p
 static void
 app_wifi_prov_over_espnow_start_press_cb(void *arg, void *usr_data)
 {
-  int rv;
   ESP_ERROR_CHECK(!(BUTTON_SINGLE_CLICK == iot_button_get_event(arg)));
 
   ESP_LOGI(TAG, "espnow security provisioning");
@@ -480,7 +437,7 @@ static void
 app_long_press_start_cb(void *arg, void *usr_data)
 {
   ESP_ERROR_CHECK(!(BUTTON_LONG_PRESS_START == iot_button_get_event(arg)));
-  // s_restore_defaults_timer = getMilliSeconds();
+  s_main_timer = getMilliSeconds();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -565,12 +522,12 @@ app_button_init(void)
         },
     };
 
-  button_handle_t button_handle = iot_button_create(&button_config);
+  s_button_handle = iot_button_create(&button_config);
 
-  iot_button_register_cb(button_handle, BUTTON_SINGLE_CLICK, app_wifi_prov_over_espnow_start_press_cb, NULL);
-  iot_button_register_cb(button_handle, BUTTON_DOUBLE_CLICK, app_wifi_prov_start_press_cb, NULL);
-  iot_button_register_cb(button_handle, BUTTON_LONG_PRESS_START, app_long_press_start_cb, NULL);
-  iot_button_register_cb(button_handle, BUTTON_LONG_PRESS_HOLD, app_factory_reset_press_cb, NULL);
+  iot_button_register_cb(s_button_handle, BUTTON_SINGLE_CLICK, app_wifi_prov_over_espnow_start_press_cb, NULL);
+  iot_button_register_cb(s_button_handle, BUTTON_DOUBLE_CLICK, app_wifi_prov_start_press_cb, NULL);
+  iot_button_register_cb(s_button_handle, BUTTON_LONG_PRESS_START, app_long_press_start_cb, NULL);
+  iot_button_register_cb(s_button_handle, BUTTON_LONG_PRESS_HOLD, app_factory_reset_press_cb, NULL);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1368,32 +1325,20 @@ app_main()
   espnow_config.qsize          = g_persistent.queueSize; // CONFIG_APP_ESPNOW_QUEUE_SIZE;
   espnow_config.sec_enable     = true;
   espnow_config.forward_enable = true;
-  // espnow_config.forward_switch_channel = 1;
+  espnow_config.forward_switch_channel = 0;
+  espnow_config.send_retry_num = 10;
+  espnow_config.send_max_timeout = pdMS_TO_TICKS(3000);
 
   espnow_init(&espnow_config);
 
-  // xTaskCreate(app_espnow_prov_responder_task, "PROV_resp", 3072, NULL, tskIDLE_PRIORITY + 1, NULL);
-
   // Init web file system
   app_init_spiffs();
-
-  // Set channel
-  // if (g_persistent.espnowChannel) {
-  //   ret = esp_wifi_set_channel(g_persistent.espnowChannel, WIFI_SECOND_CHAN_NONE);
-  //   if (ESP_OK != ret) {
-  //     ESP_LOGE(TAG, "Failed to set wifi channel from persistent storage (last session). ret=%X", ret);
-  //   }
-  // }
-
-  // uint8_t mac[6] = { 0xA4, 0xA8, 0x6F, 0x7D, 0x7E, 0x11 };
-  // espnow_add_peer(mac, g_persistent.pmk);
 
   // Register our event handler for Wi-Fi, IP and Provisioning related events
   ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &app_system_event_handler, NULL));
   ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &app_system_event_handler, NULL));
   // ESP_ERROR_CHECK(esp_event_handler_register(ALPHA_EVENT, ESP_EVENT_ANY_ID, &system_event_handler, NULL));
   ESP_ERROR_CHECK(esp_event_handler_register(ESP_HTTPS_OTA_EVENT, ESP_EVENT_ANY_ID, &app_system_event_handler, NULL));
-  // ESP_ERROR_CHECK(esp_event_handler_register(WIFI_PROV_EVENT, ESP_EVENT_ANY_ID, &app_system_event_handler, NULL));
   ESP_ERROR_CHECK(esp_event_handler_register(ESP_EVENT_ESPNOW, ESP_EVENT_ANY_ID, &app_system_event_handler, NULL));
 
   // --------------------------------------------------------------------------
@@ -1404,7 +1349,7 @@ app_main()
   //                     Wait for Wi-Fi connection | WIFI_FAIL_BIT
   // --------------------------------------------------------------------------
 
-  ESP_LOGI(TAG, "Wait for wifi connection...");
+  ESP_LOGI(TAG, "Waiting for wifi connection...");
   {
     EventBits_t bits;
     while (
@@ -1425,7 +1370,7 @@ app_main()
       break;
 
     case ALPHA_LOG_UDP:
-      // ESP_ERROR_CHECK(udp_logging_init(g_persistent.logUrl, g_persistent.logPort, g_persistent.logwrite2Stdout));
+      ESP_ERROR_CHECK(udp_logging_init(g_persistent.logUrl, g_persistent.logPort, g_persistent.logwrite2Stdout));
       break;
 
     case ALPHA_LOG_TCP:
@@ -1522,9 +1467,9 @@ app_main()
   }
 
   // Start web server
-  httpd_handle_t server;
+  httpd_handle_t h_webserver;
   if (g_persistent.webEnable) {
-    server = start_webserver();
+    h_webserver = start_webserver();
   }
 
   // Start MQTT client
@@ -1608,12 +1553,7 @@ app_main()
 
   // app_led_switch_blink_type(s_led_handle_green, BLINK_FACTORY_RESET);
 
-  // if (!s_sec_task) {
-  //   ESP_LOGI(TAG, "Starting sec task");
-  //   xTaskCreate(app_espnow_initiator_sec_task, "sec", 3072, NULL, tskIDLE_PRIORITY + 1, &s_sec_task);
-  // }
-
-  //vscp_espnow_sec_initiator();
+ 
 
   esp_wifi_get_mac(ESP_IF_WIFI_STA, ESPNOW_ADDR_SELF);
   ESP_LOGI(TAG, "mac: " MACSTR ", version: %d", MAC2STR(ESPNOW_ADDR_SELF), ESPNOW_VERSION);
@@ -1634,34 +1574,19 @@ app_main()
       vscp_espnow_sec_initiator();
       g_vscp_espnow_probe = false;
     }
-
-    espnow_frame_head_t espnowhead = {
-      .security                = false,
-      .broadcast               = true,
-      .retransmit_count        = 10,
-      .filter_adjacent_channel = true,
-      .channel                 = 0,
-      .forward_ttl             = 10,
-      .forward_rssi            = -55,
-      .filter_weak_signal      = true,
-    };
-
-    // printf("send\n");
-    // espnow_send(ESPNOW_DATA_TYPE_DATA,
-    //             addr,
-    //             "This is the test of all tests and 123456789",
-    //             43,
-    //             &espnowhead,
-    //             pdMS_TO_TICKS(1000));
   }
 
+  // We should not reach here but works the same as cosmetics
+
+  stop_webserver(h_webserver);
+
   // Unmount web spiffs partition and disable SPIFFS
-  // esp_vfs_spiffs_unregister(spiffsconf.partition_label);
-  // ESP_LOGI(TAG, "web SPIFFS unmounted");
+  //esp_vfs_spiffs_unregister(spiffsconf.partition_label);
+  //ESP_LOGI(TAG, "web SPIFFS unmounted");
 
   // Clean up
-  // iot_button_delete(g_btns[0]);
+  iot_button_delete(s_button_handle);
 
   // Close
-  // nvs_close(g_nvsHandle);
+  nvs_close(g_nvsHandle);
 }

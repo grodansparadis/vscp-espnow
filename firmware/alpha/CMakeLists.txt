@@ -15,7 +15,7 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 if(DEFINED ENV{PROJECT_NAME})
   set(PROJECT_NAME $ENV{PROJECT_NAME})
 else()
-  set(PROJECT_NAME "Frankfurt_wifi_alpha")
+  set(PROJECT_NAME "vscp_espnow_alpha")
 endif(DEFINED ENV{PROJECT_NAME})
 
 project(${PROJECT_NAME})

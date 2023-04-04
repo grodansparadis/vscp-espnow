@@ -74,7 +74,7 @@ typedef struct {
   uint8_t pmk[16];      // Primary key (This key is static and set to VSCP default. Dont change!)
   uint8_t lmk[16];      // Local key (This key is static and set to VSCP default)
   uint8_t nodeGuid[16]; // GUID for node (default: Constructed from MAC address)
-  uint32_t queueSize;   // espnow queue size
+  uint8_t queueSize;   // espnow queue size
   uint8_t startDelay;   // Delay before wifi is enabled (to charge cap)
   uint32_t bootCnt;     // Number of restarts (not editable)
 

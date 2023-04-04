@@ -15,7 +15,7 @@ set(PROJECT_VER "0.0.1")
 if(DEFINED ENV{PROJECT_NAME})
   set(PROJECT_NAME $ENV{PROJECT_NAME})
 else()
-  set(PROJECT_NAME "Frankfurt_wifi_beta")
+  set(PROJECT_NAME "vscp_espnow_beta")
 endif(DEFINED ENV{PROJECT_NAME})
 
 project(${PROJECT_NAME})

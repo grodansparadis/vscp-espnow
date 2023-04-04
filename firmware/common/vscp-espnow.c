@@ -166,7 +166,6 @@ static vscp_espnow_stats_t s_vscpEspNowStats;
 
 // Forward declarations
 
-
 ///////////////////////////////////////////////////////////////////////////////
 // vscp_espnow_sec_initiator
 //
@@ -213,7 +212,7 @@ vscp_espnow_sec_initiator(void)
   espnow_sec_initiator_scan_result_free();
 
   uint32_t start_time2 = xTaskGetTickCount();
-  ret                  = espnow_sec_initiator_start(key_info, VSCP_PROJDEF_ESPNOW_SESSION_POP, dest_addr_list, num, &espnow_sec_result);
+  ret = espnow_sec_initiator_start(key_info, VSCP_PROJDEF_ESPNOW_SESSION_POP, dest_addr_list, num, &espnow_sec_result);
   ESP_ERROR_GOTO(ret != ESP_OK, EXIT, "<%s> espnow_sec_initiator_start", esp_err_to_name(ret));
 
   ESP_LOGI(TAG,
@@ -229,7 +228,6 @@ EXIT:
   ESP_FREE(dest_addr_list);
   return espnow_sec_initiator_result_free(&espnow_sec_result);
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // vscp_espnow_build_guid_from_mac
@@ -573,14 +571,11 @@ writeRegister(uint8_t *dest_addr, uint32_t address, uint8_t *value, uint32_t wai
 //
 
 int
-vscp_espnow_sendEvent(const uint8_t *destAddr,
-                      const vscpEvent *pev,
-                      bool bSec,
-                      uint32_t wait_ms)
+vscp_espnow_sendEvent(const uint8_t *destAddr, const vscpEvent *pev, bool bSec, uint32_t wait_ms)
 {
   esp_err_t rv;
-  uint8_t *pbuf    = NULL;
-  size_t len       = vscp_espnow_getMinBufSizeEv(pev);
+  uint8_t *pbuf = NULL;
+  size_t len    = vscp_espnow_getMinBufSizeEv(pev);
 
   // Need dest address
   if (NULL == destAddr) {
@@ -613,14 +608,17 @@ vscp_espnow_sendEvent(const uint8_t *destAddr,
 
   ESP_LOGD(TAG, "Send mac: " MACSTR ", version: %d", MAC2STR(destAddr), VSCP_ESPNOW_VERSION);
 
-
-
   espnow_frame_head_t espnowhead     = ESPNOW_FRAME_CONFIG_DEFAULT();
   espnowhead.security                = bSec;
-  espnowhead.broadcast               = true;
-  espnowhead.filter_adjacent_channel = false;
+  espnowhead.channel                 = ESPNOW_CHANNEL_CURRENT;
+  espnowhead.filter_adjacent_channel = true;
+
+  espnowhead.broadcast = true;
+  espnowhead.ack       = true;
+  espnowhead.magic = esp_random(); 
+  espnowhead.retransmit_count = 10;
   espnowhead.forward_ttl        = 10;
-  espnowhead.forward_rssi       = -55;
+  espnowhead.forward_rssi       = -80;
   espnowhead.filter_weak_signal = true;
 
   esp_err_t ret = espnow_send(ESPNOW_DATA_TYPE_DATA, destAddr, pbuf, len, &espnowhead, pdMS_TO_TICKS(wait_ms));
@@ -660,14 +658,11 @@ ERROR:
 //
 
 esp_err_t
-vscp_espnow_sendEventEx(const uint8_t *destAddr,
-                        const vscpEventEx *pex,
-                        const uint8_t *pkey,
-                        uint8_t nEncryption,
-                        uint32_t wait_ms)
+vscp_espnow_sendEventEx(const uint8_t *destAddr, const vscpEventEx *pex, bool bSec, uint32_t wait_ms)
 {
   esp_err_t rv;
   uint8_t *pbuf;
+  size_t len = vscp_espnow_getMinBufSizeEx(pex);
 
   ESP_LOGI(TAG, "Send Event");
 
@@ -683,41 +678,66 @@ vscp_espnow_sendEventEx(const uint8_t *destAddr,
     return VSCP_ERROR_INVALID_POINTER;
   }
 
-  // Need key
-  if (NULL == pkey) {
-    ESP_LOGE(TAG, "Pointer to key is NULL");
-    return VSCP_ERROR_INVALID_POINTER;
-  }
-
-  pbuf = VSCP_MALLOC(VSCP_ESPNOW_MIN_FRAME + pex->sizeData);
+  pbuf = VSCP_MALLOC(len);
   if (NULL == pbuf) {
     return ESP_ERR_NO_MEM;
   }
 
-  if (VSCP_ERROR_SUCCESS != (rv = vscp_espnow_exToFrame(pbuf, VSCP_ESPNOW_MIN_FRAME + pex->sizeData, pex))) {
+  if (VSCP_ERROR_SUCCESS != (rv = vscp_espnow_exToFrame(pbuf, len, pex))) {
     VSCP_FREE(pbuf);
     ESP_LOGE(TAG, "Failed to convert event to frame. rv=%d", rv);
     return ESP_ERR_INVALID_ARG;
   }
-
   // Set encryption
-  pbuf[VSCP_ESPNOW_POS_TYPE_VER] = (PRJDEF_NODE_TYPE << 6) + (VSCP_ESPNOW_VERSION << 4) + (nEncryption & 0x0f);
+  pbuf[VSCP_ESPNOW_POS_TYPE_VER] = (PRJDEF_NODE_TYPE << 6) + (VSCP_ESPNOW_VERSION << 4) + (0 & 0x0f);
 
-  // if (ESP_OK != (rv = vscp_espnow_send(destAddr, //  VSCP_ESPNOW_ADDR_BROADCAST,
-  //                                  false,
-  //                                  s_vscp_espnow_config.nEncryption,
-  //                                  (pkey != NULL) ? pkey : s_vscp_espnow_config.pmk,
-  //                                  s_vscp_espnow_config.ttl,
-  //                                  pbuf,
-  //                                  VSCP_ESPNOW_MIN_FRAME + pex->sizeData,
-  //                                  wait_ms))) {
-  //   ESP_LOGE(TAG, "Failed to send event. rv=%X", rv);
-  //   VSCP_FREE(pbuf);
-  //   return rv;
-  // }
+  // ESP_LOG_BUFFER_HEXDUMP(TAG, pbuf, len, ESP_LOG_DEBUG);
 
+  ESP_LOGD(TAG, "Send mac: " MACSTR ", version: %d", MAC2STR(destAddr), VSCP_ESPNOW_VERSION);
+
+  espnow_frame_head_t espnowhead     = ESPNOW_FRAME_CONFIG_DEFAULT();
+  espnowhead.security                = bSec;
+  espnowhead.channel                 = ESPNOW_CHANNEL_CURRENT;
+  espnowhead.filter_adjacent_channel = true;
+
+  espnowhead.broadcast = true;
+  espnowhead.ack       = true;
+  espnowhead.magic = esp_random(); 
+  espnowhead.retransmit_count = 10;
+  espnowhead.forward_ttl        = 10;
+  espnowhead.forward_rssi       = -80;
+  espnowhead.filter_weak_signal = true;
+
+  esp_err_t ret = espnow_send(ESPNOW_DATA_TYPE_DATA, destAddr, pbuf, len, &espnowhead, pdMS_TO_TICKS(wait_ms));
+  if (ESP_OK != ret) {
+
+    if (ESP_ERR_INVALID_ARG == ret) {
+      ESP_LOGE(TAG, "Invalid parameter");
+      rv = VSCP_ERROR_PARAMETER;
+      goto ERROR;
+    }
+    else if (ESP_ERR_TIMEOUT == ret) {
+      ESP_LOGE(TAG, "Timeout");
+      rv = VSCP_ERROR_TIMEOUT;
+      goto ERROR;
+    }
+    else if (ESP_ERR_WIFI_TIMEOUT == ret) {
+      ESP_LOGE(TAG, "Wifi timeout");
+      rv = VSCP_ERROR_TIMEOUT;
+      goto ERROR;
+    }
+    else {
+      ESP_LOGE(TAG, "Unknow error %X", ret);
+      rv = VSCP_ERROR_ERROR;
+      goto ERROR;
+    }
+  }
+
+  rv = VSCP_ERROR_SUCCESS;
+
+ERROR:
   VSCP_FREE(pbuf);
-  return ESP_OK;
+  return rv;
 }
 
 // void
@@ -753,6 +773,7 @@ int
 vscp_espnow_send_probe_event(const uint8_t *dest_addr, uint8_t channel, TickType_t wait_ticks)
 {
   int rv = VSCP_ERROR_SUCCESS;
+  esp_err_t ret = ESP_OK;
 
   vscpEvent *pev = vscp_fwhlp_newEvent();
   if (NULL == pev) {
@@ -799,34 +820,37 @@ vscp_espnow_send_probe_event(const uint8_t *dest_addr, uint8_t channel, TickType
     .filter_adjacent_channel = true,
     .channel                 = channel,
     .forward_ttl             = 10,
-    .forward_rssi            = -55,
-    .filter_weak_signal      = true,
+    .forward_rssi            = -85,
+    .filter_weak_signal      = false,
   };
 
-  esp_err_t ret = espnow_send(ESPNOW_DATA_TYPE_DATA, dest_addr, pbuf, len, &espnowhead, pdMS_TO_TICKS(wait_ticks));
-  if (ESP_OK != ret) {
+  for (int count = 0; count < 3; ++count) {
+    ret = espnow_send(ESPNOW_DATA_TYPE_DATA, dest_addr, pbuf, len, &espnowhead, pdMS_TO_TICKS(wait_ticks));
+    if (ESP_OK != ret) {
 
-    if (ESP_ERR_INVALID_ARG == ret) {
-      ESP_LOGE(TAG, "Invalid parameter sending probe event");
-      rv = VSCP_ERROR_PARAMETER;
-      goto EXIT;
-    }
-    else if (ESP_ERR_TIMEOUT == ret) {
-      ESP_LOGE(TAG, "Timeout sending probe event");
-      rv = VSCP_ERROR_TIMEOUT;
-      goto EXIT;
-    }
-    else if (ESP_ERR_WIFI_TIMEOUT == ret) {
-      ESP_LOGE(TAG, "Wifi timeout sending probe event");
-      rv = VSCP_ERROR_TIMEOUT;
-      goto EXIT;
-    }
-    else {
-      ESP_LOGE(TAG, "Unknow error %X  sending probe event", ret);
-      rv = VSCP_ERROR_ERROR;
-      goto EXIT;
+      if (ESP_ERR_INVALID_ARG == ret) {
+        ESP_LOGE(TAG, "Invalid parameter sending probe event");
+        rv = VSCP_ERROR_PARAMETER;
+        goto EXIT;
+      }
+      else if (ESP_ERR_TIMEOUT == ret) {
+        ESP_LOGE(TAG, "Timeout sending probe event");
+        rv = VSCP_ERROR_TIMEOUT;
+        goto EXIT;
+      }
+      else if (ESP_ERR_WIFI_TIMEOUT == ret) {
+        ESP_LOGE(TAG, "Wifi timeout sending probe event");
+        rv = VSCP_ERROR_TIMEOUT;
+        goto EXIT;
+      }
+      else {
+        ESP_LOGE(TAG, "Unknow error %X  sending probe event", ret);
+        rv = VSCP_ERROR_ERROR;
+        goto EXIT;
+      }
     }
   }
+
 EXIT:
   vscp_fwhlp_deleteEvent(&pev);
   VSCP_FREE(pbuf);
@@ -876,7 +900,7 @@ vscp_espnow_probe(void)
     if (bits & VSCP_ESPNOW_WAIT_PROBE_RESPONSE_BIT) {
       break;
     }
-    //taskYIELD();
+    // taskYIELD();
   }
 
   EventBits_t bits = xEventGroupWaitBits(s_vscp_espnow_event_group,
@@ -902,6 +926,9 @@ vscp_espnow_probe(void)
 
 ///////////////////////////////////////////////////////////////////////////////
 // vscp_espnow_data_cb
+//
+// Network cluster data is received here. If the data is valid (as far as we can tell)
+// it is sent to the application event receive callback,
 //
 
 static void
@@ -967,28 +994,16 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
 
     ESP_LOGI(TAG, "Probe: New node on-line");
 
-    espnow_frame_head_t espnowhead = {
-      .security                = false,
-      .broadcast               = true,
-      .retransmit_count        = 10,
-      .filter_adjacent_channel = true,
-      .channel                 = rx_ctrl->channel,
-      .forward_ttl             = 10,
-      .forward_rssi            = -55,
-      .filter_weak_signal      = true,
-    };
-
     // Send probe response if probe node is all zero or same as probing
     if (!memcmp(VSCP_ESPNOW_ADDR_PROBE_NODE, VSCP_ESPNOW_ADDR_NONE, 6)) {
-      printf("---------------------> 1  %d\n", rx_ctrl->channel);
+      printf("---------------------> 1  channel = %d\n", rx_ctrl->channel);
       rv = vscp_espnow_send_probe_event(ESPNOW_ADDR_BROADCAST, rx_ctrl->channel, 1000);
-      // espnow_send(ESPNOW_DATA_TYPE_DATA, ESPNOW_ADDR_BROADCAST, "test", 4, &espnowhead, pdMS_TO_TICKS(100));
       xEventGroupSetBits(s_vscp_espnow_event_group, VSCP_ESPNOW_WAIT_PROBE_RESPONSE_BIT);
-      s_stateVscpEspNow = VSCP_ESPNOW_STATE_IDLE;
+      s_stateVscpEspNow   = VSCP_ESPNOW_STATE_IDLE;
       g_vscp_espnow_probe = true;
     }
     else if (!memcmp(VSCP_ESPNOW_ADDR_PROBE_NODE, src_addr, 6)) {
-      printf("---------------------> 2\n");
+      printf("--------------------->  channel = %d\n", rx_ctrl->channel);
       rv = vscp_espnow_send_probe_event(src_addr, rx_ctrl->channel, 1000);
       xEventGroupSetBits(s_vscp_espnow_event_group, VSCP_ESPNOW_WAIT_PROBE_RESPONSE_BIT);
       s_stateVscpEspNow = VSCP_ESPNOW_STATE_IDLE;
@@ -996,9 +1011,6 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
     else {
       ESP_LOGI(TAG, "Strange probe address: " MACSTR, MAC2STR(VSCP_ESPNOW_ADDR_PROBE_NODE));
     }
-
-    // We set it to a random value now so it can't be misused
-    // esp_fill_random(VSCP_ESPNOW_ADDR_PROBE_NODE, 6);
   }
 #elif (PRJDEF_NODE_TYPE == VSCP_DROPLET_BETA)
   if ((VSCP_ESPNOW_STATE_PROBE == s_stateVscpEspNow) && (VSCP_CLASS1_PROTOCOL == pev->vscp_class) &&
@@ -1090,10 +1102,7 @@ vscp_espnow_heartbeat_task(void *pvParameter)
 
       ESP_LOGI(TAG, "Sending heartbeat ch=%d (%d).", ch, second);
 
-      vscp_espnow_sendEvent(ESPNOW_ADDR_BROADCAST,
-                            pev,
-                            false,
-                            pdMS_TO_TICKS(1000));
+      vscp_espnow_sendEvent(ESPNOW_ADDR_BROADCAST, pev, false, pdMS_TO_TICKS(1000));
     }
 
     vTaskDelay(pdMS_TO_TICKS(VSCP_ESPNOW_HEART_BEAT_INTERVAL));

@@ -175,36 +175,18 @@ typedef struct {
   int8_t espnowFilterWeakSignal;       // Filter on RSSI (zero is no rssi filtering)
 } vscp_espnow_prov_data_t;
 
+#define KEYSTR                                                                                                         \
+  "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x%02x:%02x:%02x:%02x:%02x:%02x:%02x" \
+  ":%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x"
+#define KEY2STR(a)                                                                                                     \
+  (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5], (a)[6], (a)[7], (a)[8], (a)[9], (a)[10], (a)[11], (a)[12], (a)[13],  \
+    (a)[14], (a)[15], (a)[16], (a)[17], (a)[18], (a)[19], (a)[20], (a)[21], (a)[22], (a)[23], (a)[24], (a)[25],        \
+    (a)[26], (a)[27], (a)[28], (a)[29], (a)[30], (a)[31]
+
 #define VSCP_ESPNOW_MSG_CACHE_SIZE           32    // Size for magic cache
-#define VSCP_ESPNOW_HEART_BEAT_INTERVAL      30000 // Milliseconds between heartbeat events
-#define VSCP_ESPNOW_INIT_LOOPS               2     // Number of all channel loops
-#define VSCP_ESPNOW_INIT_HEART_BEAT_INTERVAL 200   // Milliseconds between heartbeat probe events
-#define VSCP_ESPNOW_SET_KEY_INTERVAL         100   // Provisioning interval in ms between set key events
-#define VSCP_ESPNOW_SRV_SEND_KEY_CNT         3
+#define VSCP_ESPNOW_HEART_BEAT_INTERVAL      30000 // Milliseconds between heartbeat events (30 seconds)
 
 ESP_EVENT_DECLARE_BASE(VSCP_ESPNOW_EVENT); // declaration of the vscp espnow events family
-
-// Control states for esp-now provisioning
-// typedef enum { VSCP_ESPNOW_CTRL_INIT, VSCP_ESPNOW_CTRL_BOUND, DROPLET_CTRL_MAX } vscp_espnow_ctrl_status_t;
-
-/**
- * @brief The channel on which the device sends packets
- */
-// #define VSCP_ESPNOW_CHANNEL_CURRENT 0x0  // Only in the current channel
-// #define VSCP_ESPNOW_CHANNEL_ALL     0x0f // All supported channels
-
-#define VSCP_ESPNOW_FORWARD_MAX_COUNT 0xff // Maximum number of forwards
-
-/*
-// #define VSCP_ESPNOW_ADDR_LEN                  (6)
-// #define VSCP_ESPNOW_DECLARE_COMMON_ADDR(addr) extern const uint8_t addr[6];
-// #define VSCP_ESPNOW_ADDR_IS_EMPTY(addr)       (((addr)[0] | (addr)[1] | (addr)[2] | (addr)[3] | (addr)[4] |
-(addr)[5]) == 0x0)
-// #define VSCP_ESPNOW_ADDR_IS_BROADCAST(addr) \
-//   (((addr)[0] & (addr)[1] & (addr)[2] & (addr)[3] & (addr)[4] & (addr)[5]) == 0xFF)
-// #define VSCP_ESPNOW_ADDR_IS_SELF(addr)          !memcmp(addr, VSCP_ESPNOW_ADDR_SELF, 6)
-// #define VSCP_ESPNOW_ADDR_IS_EQUAL(addr1, addr2) !memcmp(addr1, addr2, 6)
-*/
 
 // Callback functions
 
@@ -249,6 +231,10 @@ vscp_espnow_init(const vscp_espnow_config_t *pconfig);
  * @brief Send alpha probe
  *
  * @return int VSCP_ERROR_SUCCESS if all is OK
+ * 
+ * A Beta/Gamma node send a VSCP probe on all channels until it get a 
+ * response from an alpha node. If it does it starts security key 
+ * exchange with that node. The node use the channel it received the probe on.
  */
 
 int
@@ -272,7 +258,7 @@ vscp_espnow_build_guid_from_mac(uint8_t *pguid, const uint8_t *pmac, uint16_t ni
  * @param destAddr Destination address. Can be NULL in which case the event
  *  is sent to all hosts in table.
  * @param pev Event to send
- * @param bSec Set to true to send encrypted
+ * @param bSec Set to true to send encrypted.
  * @param wait_ms Time in milliseconds to wait for send
  * @return int Error code. VSCP_ERROR_SUCCESS if all is OK.
  */
@@ -290,14 +276,14 @@ vscp_espnow_sendEvent(const uint8_t *destAddr,
  * @param destAddr Destination address. Can be NULL in which case the event
  *  is sent to all hosts in table.
  * @param pex Pointer to event ex to send.
- * @param wait_ms Time in milliseconds to wait for send
+ * @param bSec Set to true to send encrypted.
+ * @param wait_ms Time in milliseconds to wait for send.
  * @return int Error code. VSCP_ERROR_SUCCESS if all is OK.
  */
 int
 vscp_espnow_sendEventEx(const uint8_t *destAddr,
                         const vscpEventEx *pex,
-                        const uint8_t *pkey,
-                        uint8_t nEncryption,
+                        bool bSec,
                         uint32_t wait_ms);
 
 /**

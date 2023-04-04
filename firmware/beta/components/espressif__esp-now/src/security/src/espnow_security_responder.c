@@ -50,9 +50,9 @@ static esp_err_t espnow_sec_info(const uint8_t *src_addr)
 
     ESP_ERROR_RETURN(ret != ESP_OK, ret, "espnow_write");
 
-    ESP_LOGI(TAG, "Security information:");
-    ESP_LOGI(TAG, "Version:          %d", info->sec_ver);
-    ESP_LOGI(TAG, "Client MAC:       " MACSTR "", MAC2STR(info->client_mac));
+    ESP_LOGD(TAG, "Security information:");
+    ESP_LOGD(TAG, "Version:          %d", info->sec_ver);
+    ESP_LOGD(TAG, "Client MAC:       " MACSTR "", MAC2STR(info->client_mac));
 
     return ESP_OK;
 }
@@ -135,22 +135,22 @@ static esp_err_t espnow_sec_responder_process(uint8_t *src_addr, void *data,
 
     switch (data_type) {
     case ESPNOW_SEC_TYPE_REQUEST:
-        ESP_LOGI(TAG, "ESPNOW_SEC_TYPE_INFO  channel=%d", rx_ctrl->channel);
+        ESP_LOGD(TAG, "ESPNOW_SEC_TYPE_INFO  channel=%d", rx_ctrl->channel);
         ret = espnow_sec_info(src_addr);
         break;
 
     case ESPNOW_SEC_TYPE_REST:
-        ESP_LOGI(TAG, "ESPNOW_SEC_TYPE_REST  channel=%d", rx_ctrl->channel);
+        ESP_LOGD(TAG, "ESPNOW_SEC_TYPE_REST  channel=%d", rx_ctrl->channel);
         ret = espnow_sec_reset_info(src_addr);
         break;
 
     case ESPNOW_SEC_TYPE_HANDSHAKE:
-        ESP_LOGI(TAG, "ESPNOW_SEC_TYPE_HANDSHAKE  channel=%d", rx_ctrl->channel);
+        ESP_LOGD(TAG, "ESPNOW_SEC_TYPE_HANDSHAKE  channel=%d", rx_ctrl->channel);
         ret = espnow_sec_handle("espnow-session", ESPNOW_SEC_TYPE_HANDSHAKE, src_addr, data, size);
         break;
 
     case ESPNOW_SEC_TYPE_KEY:
-        ESP_LOGI(TAG, "ESPNOW_SEC_TYPE_KEY  channel=%d", rx_ctrl->channel);
+        ESP_LOGD(TAG, "ESPNOW_SEC_TYPE_KEY  channel=%d", rx_ctrl->channel);
         ret = espnow_sec_handle("espnow-config", ESPNOW_SEC_TYPE_KEY_RESP, src_addr, data, size);
         break;
 
