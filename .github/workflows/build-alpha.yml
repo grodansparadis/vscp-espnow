@@ -32,6 +32,9 @@ jobs:
 
     - name: esp-idf build
       uses: espressif/esp-idf-ci-action@v1
+      env:
+        VSCP_FIRMWARE: $GITHUB_WORKSPACE/vscp-firmware/
+        VSCP_FIRMWARE_COMMON: $GITHUB_WORKSPACE/vscp-firmware/common/
       with:
         esp_idf_version: v5.0
         target: esp32
