@@ -14,7 +14,7 @@ jobs:
 
     steps:
     - name: Checkout repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: 'recursive'
 
@@ -31,5 +31,5 @@ jobs:
     - uses: actions/upload-artifact@v3
       with:
         name: vscp_espnow_alpha.bin
-        path: build/vscp_espnow_alpha.bin
+        path: ./firmware/alpha/build/vscp_espnow_alpha.bin
         retention-days: 7
