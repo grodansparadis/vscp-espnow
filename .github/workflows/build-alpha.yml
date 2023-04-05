@@ -20,6 +20,9 @@ jobs:
       run: git clone https://github.com/grodansparadis/vscp-firmware.git
 
     - name: Set environment variables 
+      env:
+        VSCP_FIRMWARE: $GITHUB_WORKSPACE/vscp-firmware/
+        VSCP_FIRMWARE_COMMON: $GITHUB_WORKSPACE/vscp-firmware/common/
       run: |
         echo "VSCP_FIRMWARE=$GITHUB_WORKSPACE/vscp-firmware/" >> $GITHUB_ENV
         echo "VSCP_FIRMWARE_COMMON=$GITHUB_WORKSPACE/vscp-firmware/common/" >> $GITHUB_ENV
