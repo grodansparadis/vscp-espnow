@@ -10,9 +10,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      VSCP_FIRMWARE: {$GITHUB_WORKSPACE}/vscp-firmware/
+      VSCP_FIRMWARE: "{$GITHUB_WORKSPACE}/vscp-firmware/"
     env:  
-      VSCP_FIRMWARE_COMMON: {$GITHUB_WORKSPACE}/vscp-firmware/common/
+      VSCP_FIRMWARE_COMMON: "{$GITHUB_WORKSPACE}/vscp-firmware/common/"
 
     steps:
     - name: Checkout repo
