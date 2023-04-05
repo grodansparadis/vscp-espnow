@@ -20,12 +20,15 @@ jobs:
       run: sudo apt-get update
 
     - name: Checkout vscp-firmware
-      run: git clone https://github.com/grodansparadis/vscp-firmware.git
+      uses: actions/checkout@v2
+      with: 
+        submodules: 'recursive'
+        repository: 'grodansparadis/vscp-firmware'
 
-    - name: export path
-      run: |
-        export VSCP_FIRMWARE=./vscp-firmware/
-        export VSCP_FIRMWARE_COMMON=./vscp-firmware/common/   
+    - name: Set environment variables for VSCP firmware lib
+      env:
+        VSCP_FIRMWARE: {$GITHUB_WORKSPACE}/vscp-firmware/
+        VSCP_FIRMWARE_COMMON: {$GITHUB_WORKSPACE}/vscp-firmware/common/
       
     - name: Install pandoc manually
       run: sudo apt-get install pandoc
