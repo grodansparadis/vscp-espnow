@@ -72,6 +72,8 @@
 // #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 // #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
+void startOTA(void);
+
 // External from main
 extern nvs_handle_t g_nvsHandle;
 extern node_persistent_config_t g_persistent;
@@ -839,7 +841,7 @@ upgrade_get_handler(httpd_req_t *req)
   sprintf(buf, "<div><form id=but3 class=\"button\" action='/upgrdsrv' method='get'><fieldset>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf, "OTA URL:<input type=\"text\"  value=\"%s\" >", PRJDEF_FIRMWARE_UPGRADE_URL);
+  sprintf(buf, "OTA URL:<input type=\"text\"  id=\"url\" name=\"url\" value=\"%s\" >", PRJDEF_FIRMWARE_UPGRADE_URL);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   sprintf(buf, "<button class=\"bgrn bgrn:hover\" >Start Upgrade</button></fieldset></form></div>");
@@ -875,7 +877,11 @@ upgrade_get_handler(httpd_req_t *req)
   return ESP_OK;
 }
 
-// httpd_uri_t upgrade = { .uri = "/upgrade", .method = HTTP_GET, .handler = upgrade_get_handler, .user_ctx = NULL };
+//httpd_uri_t upgrade = { .uri = "/upgrade", .method = HTTP_GET, .handler = upgrade_get_handler, .user_ctx = NULL };
+
+///////////////////////////////////////////////////////////////////////////////
+// upgrdsrv_get_handler
+//
 
 static esp_err_t
 upgrdsrv_get_handler(httpd_req_t *req)
@@ -904,7 +910,7 @@ upgrdsrv_get_handler(httpd_req_t *req)
         VSCP_FREE(buf);
         return ESP_ERR_ESPNOW_NO_MEM;
       }
-
+     
       // URL
       if (ESP_OK == (ret = httpd_query_key_value(req_buf, "url", param, WEBPAGE_PARAM_SIZE))) {
         ESP_LOGI(TAG, "Found query parameter => url=%s", param);
@@ -928,8 +934,10 @@ upgrdsrv_get_handler(httpd_req_t *req)
   // Let content render
   vTaskDelay(2000 / portTICK_PERIOD_MS);
 
+  printf("Start OTA\n");
+
   // Start the OTA task
-  // startOTA();
+  startOTA();
 
   return ESP_OK;
 }
@@ -952,21 +960,25 @@ upgrdlocal_post_handler(httpd_req_t *req)
   ESP_ERROR_CHECK(esp_ota_begin(ota_partition, OTA_SIZE_UNKNOWN, &ota_handle));
 
   while (remaining > 0) {
+
+    ESP_LOGI(TAG, "OTA remaining %d", remaining);
+
     int recv_len = httpd_req_recv(req, buf, MIN(remaining, sizeof(buf)));
 
     // Timeout Error: Just retry
     if (recv_len == HTTPD_SOCK_ERR_TIMEOUT) {
-      continue;
-
-      // Serious Error: Abort OTA
+      continue;      
     }
     else if (recv_len <= 0) {
+      // Serious Error: Abort OTA
+      ESP_LOGE(TAG, "OTA aborted due to protocol error");
       httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Protocol Error");
       return ESP_FAIL;
     }
 
     // Successful Upload: Flash firmware chunk
     if (esp_ota_write(ota_handle, (const void *) buf, recv_len) != ESP_OK) {
+      ESP_LOGE(TAG, "OTA aborted due to flash error");
       httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Flash Error");
       return ESP_FAIL;
     }
@@ -976,9 +988,12 @@ upgrdlocal_post_handler(httpd_req_t *req)
 
   // Validate and switch to new OTA image and reboot
   if (esp_ota_end(ota_handle) != ESP_OK || esp_ota_set_boot_partition(ota_partition) != ESP_OK) {
+    ESP_LOGE(TAG, "OTA failed due to image activation error");
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Validation / Activation Error");
     return ESP_FAIL;
   }
+
+  ESP_LOGI(TAG, "OTA finished");
 
   // httpd_resp_sendstr(req, "Firmware update complete, rebooting now!\n");
   const char *resp_str = "<html><head><meta charset='utf-8'><meta http-equiv=\"refresh\" content=\"2;url=index.html\" "
@@ -3818,6 +3833,9 @@ start_webserver(void)
 {
   httpd_handle_t srv        = NULL;
   httpd_config_t dfltconfig = HTTPD_DEFAULT_CONFIG();
+
+  // 4096 is to low for OTA
+  dfltconfig.stack_size = 1024*5;
 
   dfltconfig.lru_purge_enable = true;
   // Use the URI wildcard matching function in order to

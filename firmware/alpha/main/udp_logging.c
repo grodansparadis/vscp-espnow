@@ -114,7 +114,7 @@ udp_client(void *pvParameters)
       */
 
       ret = lwip_sendto(fd, buffer, received, 0, (struct sockaddr *) &addr, sizeof(addr));
-      LWIP_ASSERT("ret == received", ret == received);
+      //LWIP_ASSERT("ret == received", ret == received);
     }
     else {
       printf("xMessageBufferReceive fail\n");

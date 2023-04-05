@@ -59,7 +59,7 @@
 // ESPNOW_OTA_INITATOR or ESPNOW_OTA_RESPONDEDER
 #define ESPNOW_OTA_MODE ESPNOW_OTA_INITATOR
 // URL of server which hosts the firmware image.
-#define PRJDEF_FIRMWARE_UPGRADE_URL "https://193.188.2.51:443/downloads/alpha/hello_world.bin"
+#define PRJDEF_FIRMWARE_UPGRADE_URL "https://eurosource.se:443/download/alpha/vscp_espnow_alpha.bin"
 
 // This allows you to skip the validation of OTA server certificate CN field.
 #define PRJDEF_SKIP_COMMON_NAME_CHECK false

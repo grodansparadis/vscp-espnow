@@ -42,9 +42,11 @@ logging_vprintf(const char *fmt, va_list l)
   if (buffer_len > 0) {
     // Send MessageBuffer
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    size_t sended = xMessageBufferSendFromISR(xMessageBufferTrans, &buffer, buffer_len, &xHigherPriorityTaskWoken);
+    size_t nsent = xMessageBufferSendFromISR(xMessageBufferTrans, &buffer, buffer_len, &xHigherPriorityTaskWoken);
     // printf("logging_vprintf sended=%d\n",sended);
-    assert(sended == buffer_len);
+    if (nsent != buffer_len) {
+      //ESP_LOG(TAG, "Unable to send full buffer");
+    }
   }
 
   // Write to stdout
