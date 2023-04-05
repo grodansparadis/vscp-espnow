@@ -9,10 +9,6 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      VSCP_FIRMWARE: {$GITHUB_WORKSPACE}/vscp-firmware/
-    env:  
-      VSCP_FIRMWARE_COMMON: {$GITHUB_WORKSPACE}/vscp-firmware/common/
 
     steps:
     - name: Checkout repo
@@ -29,6 +25,11 @@ jobs:
         submodules: 'recursive'
         repository: 'grodansparadis/vscp-firmware'
 
+    - name: Set environment variables 
+      run: |
+        export VSCP_FIRMWARE = "$GITHUB_WORKSPACE/vscp-firmware/"
+        export VSCP_FIRMWARE_COMMON = "$GITHUB_WORKSPACE/vscp-firmware/common/"
+  
     - name: Install pandoc manually
       run: sudo apt-get install pandoc
 

@@ -19,6 +19,11 @@ jobs:
     - name: Checkout vscp-firmware
       run: git clone https://github.com/grodansparadis/vscp-firmware.git
 
+    - name: Set environment variables 
+      run: |
+        export VSCP_FIRMWARE = "$GITHUB_WORKSPACE/vscp-firmware/"
+        export VSCP_FIRMWARE_COMMON = "$GITHUB_WORKSPACE/vscp-firmware/common/"
+
     - name: Update before installing packages
       run: sudo apt-get update
       
