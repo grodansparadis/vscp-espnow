@@ -26,5 +26,5 @@ jobs:
     - uses: actions/upload-artifact@v3
       with:
         name: vscp_espnow_beta.bin
-        path: main/build/vscp_espnow_beta.bin
+        path: build/vscp_espnow_beta.bin
         retention-days: 7
