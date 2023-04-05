@@ -21,8 +21,8 @@ jobs:
 
     - name: Set environment variables 
       run: |
-        export VSCP_FIRMWARE = "$GITHUB_WORKSPACE/vscp-firmware/"
-        export VSCP_FIRMWARE_COMMON = "$GITHUB_WORKSPACE/vscp-firmware/common/"
+        echo "VSCP_FIRMWARE=$GITHUB_WORKSPACE/vscp-firmware/" >> $GITHUB_ENV
+        echo "VSCP_FIRMWARE_COMMON=$GITHUB_WORKSPACE/vscp-firmware/common/" >> $GITHUB_ENV
 
     - name: Update before installing packages
       run: sudo apt-get update
@@ -35,5 +35,5 @@ jobs:
       with:
         esp_idf_version: v5.0
         target: esp32
-        path: 'firmware/alpha'
+        path: './firmware/alpha/'
     
