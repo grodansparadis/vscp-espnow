@@ -15,24 +15,7 @@ jobs:
       uses: actions/checkout@v2
       with:
         submodules: 'recursive'
-     
-    - name: Update before installing packages
-      run: sudo apt-get update
-
-    - name: Checkout vscp-firmware
-      uses: actions/checkout@v2
-      with: 
-        submodules: 'recursive'
-        repository: 'grodansparadis/vscp-firmware'
-
-    - name: Set environment variables 
-      run: |
-        echo "VSCP_FIRMWARE=$GITHUB_WORKSPACE/vscp-firmware/" >> $GITHUB_ENV
-        echo "VSCP_FIRMWARE_COMMON=$GITHUB_WORKSPACE/vscp-firmware/common/" >> $GITHUB_ENV
   
-    - name: Install pandoc manually
-      run: sudo apt-get install pandoc
-
     - name: esp-idf build
       uses: espressif/esp-idf-ci-action@v1
       with:
