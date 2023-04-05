@@ -1,4 +1,4 @@
-name: Build
+name: Build Beta ESP32
 
 on: [push]
 
@@ -18,6 +18,14 @@ jobs:
      
     - name: Update before installing packages
       run: sudo apt-get update
+
+    - name: Checkout vscp-firmware
+      run: git clone https://github.com/grodansparadis/vscp-firmware.git
+
+    - name: export path
+      run: |
+        export VSCP_FIRMWARE=./vscp-firmware/
+        export VSCP_FIRMWARE_COMMON=./vscp-firmware/common/   
       
     - name: Install pandoc manually
       run: sudo apt-get install pandoc
