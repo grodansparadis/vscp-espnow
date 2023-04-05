@@ -19,25 +19,16 @@ jobs:
     - name: Checkout vscp-firmware
       run: git clone https://github.com/grodansparadis/vscp-firmware.git
 
-    - name: Set environment variables 
-      env:
-        VSCP_FIRMWARE: $GITHUB_WORKSPACE/vscp-firmware/
-        VSCP_FIRMWARE_COMMON: $GITHUB_WORKSPACE/vscp-firmware/common/
+    - name: Set environment variables       
       run: |
-        echo "VSCP_FIRMWARE=$GITHUB_WORKSPACE/vscp-firmware/" >> $GITHUB_ENV
-        echo "VSCP_FIRMWARE_COMMON=$GITHUB_WORKSPACE/vscp-firmware/common/" >> $GITHUB_ENV
+        echo "VSCP_FIRMWARE=./vscp-firmware/" >> $GITHUB_ENV
+        echo "VSCP_FIRMWARE_COMMON=./vscp-firmware/common/" >> $GITHUB_ENV
 
     - name: Update before installing packages
       run: sudo apt-get update
       
-    - name: Install pandoc manually
-      run: sudo apt-get install pandoc
-
     - name: esp-idf build
       uses: espressif/esp-idf-ci-action@v1
-      env:
-        VSCP_FIRMWARE: $GITHUB_WORKSPACE/vscp-firmware/
-        VSCP_FIRMWARE_COMMON: $GITHUB_WORKSPACE/vscp-firmware/common/
       with:
         esp_idf_version: v5.0
         target: esp32
