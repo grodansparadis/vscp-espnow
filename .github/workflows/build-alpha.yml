@@ -23,6 +23,9 @@ jobs:
       run: |
         echo "VSCP_FIRMWARE=./vscp-firmware/" >> $GITHUB_ENV
         echo "VSCP_FIRMWARE_COMMON=./vscp-firmware/common/" >> $GITHUB_ENV
+    
+    - name: test
+      run: echo $VSCP_FIRMWARE
 
     - name: Update before installing packages
       run: sudo apt-get update
