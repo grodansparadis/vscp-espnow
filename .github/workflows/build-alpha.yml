@@ -28,3 +28,8 @@ jobs:
         target: esp32
         path: './firmware/alpha/'
     
+    - uses: actions/upload-artifact@v3
+      with:
+        name: vscp_espnow_alpha.bin
+        path: main/build/vscp_espnow_alpha.bin
+        retention-days: 7
