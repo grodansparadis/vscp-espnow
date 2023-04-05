@@ -9,6 +9,10 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      VSCP_FIRMWARE: {$GITHUB_WORKSPACE}/vscp-firmware/
+    env:  
+      VSCP_FIRMWARE_COMMON: {$GITHUB_WORKSPACE}/vscp-firmware/common/
 
     steps:
     - name: Checkout repo
@@ -18,12 +22,6 @@ jobs:
 
     - name: Checkout vscp-firmware
       run: git clone https://github.com/grodansparadis/vscp-firmware.git
-
-    - name: Set environment variables for VSCP firmware lib
-      env:
-        VSCP_FIRMWARE: {$GITHUB_WORKSPACE}/vscp-firmware/
-      env:  
-        VSCP_FIRMWARE_COMMON: {$GITHUB_WORKSPACE}/vscp-firmware/common/  
 
     - name: Update before installing packages
       run: sudo apt-get update
