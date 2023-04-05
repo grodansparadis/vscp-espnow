@@ -7,6 +7,8 @@
 #ifndef _VSCP_PROJDEFS_H_
 #define _VSCP_PROJDEFS_H_
 
+#include <vscp.h>
+
 // Define one of
 // #define VSCP_PROJDEF_LED_STRIP
 #define VSCP_PROJDEF_LED_SIMPLE

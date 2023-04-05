@@ -37,8 +37,7 @@
  * ******************************************************************************
  */
 
-#include "vscp-compiler.h"
-#include "vscp-projdefs.h"
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,13 +70,14 @@
 
 #include <cJSON.h>
 
-#include "vscp-compiler.h"
-#include "vscp-projdefs.h"
-
 #include <vscp-firmware-helper.h>
 #include <vscp.h>
 
 #include "vscp-espnow.h"
+
+#include "vscp-compiler.h"
+#include "vscp-projdefs.h"
+
 
 static const char *TAG = "vscpnow";
 

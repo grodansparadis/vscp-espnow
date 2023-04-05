@@ -71,6 +71,9 @@
 #include "mqtt.h"
 #include "tcpsrv.h"
 
+#include "vscp-compiler.h"
+#include "vscp-projdefs.h"
+
 #include "alpha.h"
 
 static const char *TAG = "app";
