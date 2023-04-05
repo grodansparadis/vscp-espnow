@@ -18,9 +18,6 @@ jobs:
       with:
         submodules: 'recursive'
 
-    - name: Checkout vscp-firmware
-      run: git clone https://github.com/grodansparadis/vscp-firmware.git
-
     - name: Set environment variables       
       run: |
         echo "VSCP_FIRMWARE=./vscp-firmware/" >> $GITHUB_ENV
