@@ -17,14 +17,14 @@ jobs:
       uses: actions/checkout@v2
       with:
         submodules: 'recursive'
-            
+
     - name: test
       run: echo $VSCP_FIRMWARE
       
     - name: esp-idf build
       uses: espressif/esp-idf-ci-action@v1
       with:
-        esp_idf_version: v5.0
+        esp_idf_version: latest
         target: esp32
         path: './firmware/alpha/'
     
