@@ -53,6 +53,8 @@
 #include <esp_http_server.h>
 #include <wifi_provisioning/manager.h>
 
+#include <espnow_ota.h>
+
 #include <vscp.h>
 #include <vscp-firmware-helper.h>
 
@@ -72,7 +74,9 @@
 // #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 // #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
+// From app_main
 void startOTA(void);
+int app_initiate_firmware_upload(const char *url);
 
 // External from main
 extern nvs_handle_t g_nvsHandle;
@@ -866,6 +870,39 @@ upgrade_get_handler(httpd_req_t *req)
           "Upgrade</button></fieldset></fform></div>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
+  // ----- siblings server -----
+
+  sprintf(buf, "<br><hr><hr><br><h3>Upgrade Beta/Gamma node(s) from web server</h3>");
+  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+
+  sprintf(buf, "<div><form id=but3 class=\"button\" action='/upgrdSibling' method='get'><fieldset>");
+  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+
+  sprintf(buf, "OTA URL:<input type=\"text\"  id=\"url\" name=\"url\" value=\"%s\" >", PRJDEF_BETA_FIRMWARE_UPGRADE_URL);
+  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+
+  sprintf(buf, "<button class=\"bgrn bgrn:hover\" >Start Upgrade</button></fieldset></form></div>");
+  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);  
+
+  // ----- Local Siblings -----
+
+  sprintf(buf,
+          "<h3>Upgrade Beta/Gamma node(s) from local file</h3><div> <span style=\"color:red;font-family:verdana;font-size:300%%;\" "
+          "id=\"progress_sib\" /></div>");
+  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+
+  sprintf(buf, "<div><fform id=but4 class=\"button\" action='/upgrdSiblingLocal' method='post'><fieldset>");
+  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+
+  sprintf(buf,
+          "<label for=\"otafile\">OTA firmware file:</label><input type=\"file\" id=\"otafile_sib\" name=\"otafile_sib\" />");
+  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+
+  sprintf(buf,
+          "<button class=\"bgrn bgrn:hover\" id=\"upload_sib\" onclick=\"startUploadSibLocal();\">Start "
+          "Upgrade</button></fieldset></fform></div>");
+  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+
   sprintf(buf, WEBPAGE_END_TEMPLATE, appDescr->version, g_persistent.nodeName);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
@@ -1013,34 +1050,160 @@ static const httpd_uri_t upgrdlocal = { .uri      = "/upgrdlocal",
                                         .user_ctx = NULL };
 
 ///////////////////////////////////////////////////////////////////////////////
-// upgrdlocal_get_handler
+// upgrdsibling_get_handler
 //
-// HTTP GET handler for update of firmware
+static esp_err_t
+upgrdsibling_get_handler(httpd_req_t *req)
+{
+  esp_err_t ret;
+  char *buf = NULL;
+  char *req_buf;
+  size_t req_buf_len;
+  char url[PRJDEF_OTA_URL_SIZE];
+
+  buf = (char *) VSCP_CALLOC(CHUNK_BUFSIZE);
+  if (NULL == buf) {
+    return ESP_ERR_NO_MEM;
+  }
+
+  // Read URL query string length and allocate memory for length + 1,
+  // extra byte for null termination
+  req_buf_len = httpd_req_get_url_query_len(req) + 1;
+  if (req_buf_len > 1) {
+    req_buf = VSCP_MALLOC(req_buf_len);
+    if (httpd_req_get_url_query_str(req, req_buf, req_buf_len) == ESP_OK) {
+
+      ESP_LOGI(TAG, "Found URL query => %s", req_buf);
+      char *param = VSCP_MALLOC(WEBPAGE_PARAM_SIZE);
+      if (NULL == param) {
+        VSCP_FREE(req_buf);
+        VSCP_FREE(buf);
+        return ESP_ERR_ESPNOW_NO_MEM;
+      }
+     
+      // URL
+      if (ESP_OK == (ret = httpd_query_key_value(req_buf, "url", param, WEBPAGE_PARAM_SIZE))) {
+        
+        char *pdecoded = urlDecode(param);
+        if (NULL == pdecoded) {
+          VSCP_FREE(param);
+          VSCP_FREE(req_buf);
+          VSCP_FREE(buf);
+          return ESP_ERR_ESPNOW_NO_MEM;
+        }
+
+        memset(url, 0, PRJDEF_OTA_URL_SIZE); 
+        strncpy(url, pdecoded, MIN(strlen(pdecoded), (PRJDEF_OTA_URL_SIZE - 1)));
+
+        ESP_LOGI(TAG, "Found query parameter => url=%s", url);
+
+        VSCP_FREE(pdecoded);
+      }
+      else {
+        ESP_LOGE(TAG, "Error getting url => rv=%d", ret);
+      }
+
+      VSCP_FREE(param);
+    }
+
+    VSCP_FREE(req_buf);
+  }
+
+  VSCP_FREE(buf);
+
+  const char *resp_str = "<html><head><meta charset='utf-8'><meta http-equiv=\"refresh\" content=\"10;url=index.html\" "
+                         "/></head><body><h1>Firmware upgrade of sibling in progress...</h1></body></html>";
+  httpd_resp_send(req, resp_str, HTTPD_RESP_USE_STRLEN);
+
+  // Let content render
+  vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+  printf("Start OTA update of beta/gamma node(s)  url=%s\n", url);
+
+  // Start the OTA task
+
+  ret = app_initiate_firmware_upload(url);
+  if (ESP_OK != ret) {
+    ESP_LOGE(TAG, "Initiation of sibling firmware upload failed ret=%x", ret);
+    return ret;
+  }
+
+  return ESP_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// upgrdlocal_post_handler
 //
-// static esp_err_t
-// upgrdlocal_get_handler(httpd_req_t *req)
-// {
-//   const char *resp_str =
-//     "<html><head><meta charset='utf-8'><meta name=\"viewport\" "
-//     "content=\"width=device-width,initial-scale=1,user-scalable=no\" /><link rel=\"icon\" "
-//     "href=\"favicon-32x32.png\"><title>espnow Alpha node - Update</title><link rel=\"stylesheet\" href=\"style.css\"
-//     "
-//     "/><meta http-equiv=\"refresh\" content=\"5;url=index.html\" /></head><body><div "
-//     "style='text-align:left;display:inline-block;color:#eaeaea;min-width:340px;'><div "
-//     "style='text-align:center;color:#eaeaea;'><h1>Upgrade local...</h1></div></div></body></html>";
-//   httpd_resp_send(req, resp_str, HTTPD_RESP_USE_STRLEN);
+// Handle OTA file upload
+// https://github.com/Jeija/esp32-softap-ota
+//
 
-//   // Let content render
-//   vTaskDelay(2000 / portTICK_PERIOD_MS);
+esp_err_t
+upgrdSiblingslocal_post_handler(httpd_req_t *req)
+{
+  char buf[1000];
+  uint8_t sha_256[32]                   = { 0 };
+  esp_ota_handle_t ota_handle;
+  int remaining = req->content_len;
 
-//   // esp_restart();
-//   return ESP_OK;
-// }
+  const esp_partition_t *ota_partition = esp_ota_get_next_update_partition(NULL);
+  ESP_ERROR_CHECK(esp_ota_begin(ota_partition, OTA_SIZE_UNKNOWN, &ota_handle));
 
-// httpd_uri_t upgrade_local = { .uri      = "/upgrade-local",
-//                               .method   = HTTP_GET,
-//                               .handler  = upgrdlocal_get_handler,
-//                               .user_ctx = NULL };
+  while (remaining > 0) {
+
+    ESP_LOGI(TAG, "OTA remaining %d", remaining);
+
+    int recv_len = httpd_req_recv(req, buf, MIN(remaining, sizeof(buf)));
+
+    // Timeout Error: Just retry
+    if (recv_len == HTTPD_SOCK_ERR_TIMEOUT) {
+      continue;      
+    }
+    else if (recv_len <= 0) {
+      // Serious Error: Abort OTA
+      ESP_LOGE(TAG, "OTA aborted due to protocol error");
+      httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Protocol Error");
+      return ESP_FAIL;
+    }
+
+    // Successful Upload: Flash firmware chunk
+    if (esp_ota_write(ota_handle, (const void *) buf, recv_len) != ESP_OK) {
+      ESP_LOGE(TAG, "OTA aborted due to flash error");
+      httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Flash Error");
+      return ESP_FAIL;
+    }
+
+    remaining -= recv_len;
+  }
+
+  // Validate and switch to new OTA image and reboot
+  if (esp_ota_end(ota_handle) != ESP_OK /*|| esp_ota_set_boot_partition(ota_partition) != ESP_OK*/) {
+    ESP_LOGE(TAG, "OTA failed due to image activation error");
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Validation / Activation Error");
+    return ESP_FAIL;
+  }
+
+  ESP_LOGI(TAG, "Send OTA to sibling(s)");
+
+  esp_partition_get_sha256(ota_partition, sha_256);
+
+  // Send new firmware to clients
+  app_firmware_send(req->content_len, sha_256);
+
+  ESP_LOGI(TAG, "Images sent to sibling(s)");
+
+  // httpd_resp_sendstr(req, "Firmware update complete, rebooting now!\n");
+  const char *resp_str = "<html><head><meta charset='utf-8'><meta http-equiv=\"refresh\" content=\"2;url=index.html\" "
+                         "/></head><body><h1>Firmware update complete, rebooting now!...</h1></body></html>";
+  httpd_resp_send(req, resp_str, HTTPD_RESP_USE_STRLEN);
+
+  return ESP_OK;
+}
+
+static const httpd_uri_t upgrdsiblinglocal = { .uri      = "/upgrdSiblingLocal",
+                                        .method   = HTTP_POST,
+                                        .handler  = upgrdSiblingslocal_post_handler,
+                                        .user_ctx = NULL };
 
 ///////////////////////////////////////////////////////////////////////////////
 // provisioning_get_handler
@@ -1182,7 +1345,6 @@ doprov_get_handler(httpd_req_t *req)
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
           VSCP_FREE(param);
-          VSCP_FREE(buf);
           VSCP_FREE(buf);
           VSCP_FREE(pmac);
           return ESP_ERR_ESPNOW_NO_MEM;
@@ -3734,6 +3896,17 @@ default_get_handler(httpd_req_t *req)
     return upgrdlocal_post_handler(req);
   }
 
+  if (0 == strncmp(req->uri, "/upgrdSibling", 13)) {
+    ESP_LOGV(TAG, "--------- Upgrade sibling(s) from server ---------\n");
+    return upgrdsibling_get_handler(req);
+  }
+
+  if (0 == strncmp(req->uri, "/upgrdSiblingLocal", 18)) {
+    ESP_LOGV(TAG, "--------- Upgrade sibling(s) local ---------\n");
+    return upgrdSiblingslocal_post_handler(req);
+  }
+  
+
   if (0 == strncmp(req->uri, "/provisioning", 13)) {
     ESP_LOGV(TAG, "--------- Provisioning ---------\n");
     return provisioning_get_handler(req);
@@ -3870,6 +4043,7 @@ start_webserver(void)
     httpd_register_uri_handler(srv, &dflt);
 
     httpd_register_uri_handler(srv, &upgrdlocal);
+    httpd_register_uri_handler(srv, &upgrdsiblinglocal);
 
     // httpd_register_uri_handler(srv, &config);
     //  httpd_register_uri_handler(srv, &cfgModule);

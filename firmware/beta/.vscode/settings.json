@@ -104,6 +104,7 @@
     "vscp-projdefs.h": "c",
     "vscp-droplet.h": "c",
     "esp_sleep.h": "c",
-    "esp_err.h": "c"
+    "esp_err.h": "c",
+    "espnow_security_handshake.h": "c"
   }
 }

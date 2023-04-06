@@ -33,7 +33,9 @@
 #include <freertos/queue.h>
 
 #include <esp_log.h>
-#include "esp_now.h"
+#include <esp_now.h>
+
+#include <espnow_ota.h>
 
 #include <vscp.h>
 #include <vscp-espnow.h>
@@ -232,5 +234,38 @@ receive_cb(const vscpEvent *pev, void *userdata);
  */
 esp_err_t
 app_sec_initiator(void);
+
+/**
+ * @fn app_initiate_firmware_upload(const char *url)
+ * @brief Initiate espnow firmware update
+ * 
+ * @param url Pointer to string for url to binary that should be uploaded to remote node.
+ *  If url is set to NULL the project configured file PRJDEF_FIRMWARE_UPGRADE_URL is used.
+ * @return int ESP_OK is returned if all is OK. Else error code.
+ */
+
+int
+app_initiate_firmware_upload(const char *url);
+
+
+/**
+ * @brief 
+ * 
+ * @param firmware_size 
+ * @param sha 
+ */
+
+void
+app_firmware_send(size_t firmware_size, uint8_t sha[ESPNOW_OTA_HASH_LEN]);
+
+/**
+ * @brief Download firmware form server
+ * 
+ * @param url Url to resource
+ * @return size_t Size of downloaded image
+ */
+
+size_t
+app_firmware_download(const char *url);
 
 #endif

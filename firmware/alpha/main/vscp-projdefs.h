@@ -58,8 +58,16 @@
 // OTA mode
 // ESPNOW_OTA_INITATOR or ESPNOW_OTA_RESPONDEDER
 #define ESPNOW_OTA_MODE ESPNOW_OTA_INITATOR
+
+// OTA url max size
+#define PRJDEF_OTA_URL_SIZE 256
+
 // URL of server which hosts the firmware image.
 #define PRJDEF_FIRMWARE_UPGRADE_URL "https://eurosource.se:443/download/alpha/vscp_espnow_alpha.bin"
+
+#define PRJDEF_BETA_FIRMWARE_UPGRADE_URL "https://eurosource.se:443/download/beta/vscp_espnow_beta.bin"
+
+#define PRJDEF_GAMMA_FIRMWARE_UPGRADE_URL "https://eurosource.se:443/download/gamma/vscp_espnow_gamma.bin"
 
 // This allows you to skip the validation of OTA server certificate CN field.
 #define PRJDEF_SKIP_COMMON_NAME_CHECK false

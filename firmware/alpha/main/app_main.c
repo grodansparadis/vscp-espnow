@@ -82,7 +82,6 @@
 #include "alpha.h"
 
 static const char *TAG = "app";
-#define HASH_LEN   32
 
 #ifndef CONFIG_ESPNOW_VERSION
 #define ESPNOW_VERSION 2
@@ -113,7 +112,7 @@ const blink_step_t alpha_blink[] = {
   { LED_BLINK_STOP, 0, 0 },               // step5: stop blink (off)
 };
 
-static uint32_t s_main_timer;   // timing for main working loop
+static uint32_t s_main_timer; // timing for main working loop
 static int s_retry_num           = 0;
 static bool s_sta_connected_flag = false;
 
@@ -357,13 +356,9 @@ app_espnow_debug_recv_process(uint8_t *src_addr, void *data, size_t size, wifi_p
   return ESP_OK;
 }
 
-
 //-----------------------------------------------------------------------------
 //                                    OTA
 //-----------------------------------------------------------------------------
-
-
-#define OTA_URL_SIZE 256
 
 ///////////////////////////////////////////////////////////////////////////////
 // _http_event_handler
@@ -374,28 +369,28 @@ _http_event_handler(esp_http_client_event_t *evt)
 {
   switch (evt->event_id) {
     case HTTP_EVENT_ERROR:
-      ESP_LOGD(TAG, "HTTP_EVENT_ERROR");
+      ESP_LOGI(TAG, "HTTP_EVENT_ERROR");
       break;
     case HTTP_EVENT_ON_CONNECTED:
-      ESP_LOGD(TAG, "HTTP_EVENT_ON_CONNECTED");
+      ESP_LOGI(TAG, "HTTP_EVENT_ON_CONNECTED");
       break;
     case HTTP_EVENT_HEADER_SENT:
-      ESP_LOGD(TAG, "HTTP_EVENT_HEADER_SENT");
+      ESP_LOGI(TAG, "HTTP_EVENT_HEADER_SENT");
       break;
     case HTTP_EVENT_ON_HEADER:
-      ESP_LOGD(TAG, "HTTP_EVENT_ON_HEADER, key=%s, value=%s", evt->header_key, evt->header_value);
+      ESP_LOGI(TAG, "HTTP_EVENT_ON_HEADER, key=%s, value=%s", evt->header_key, evt->header_value);
       break;
     case HTTP_EVENT_ON_DATA:
-      ESP_LOGD(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
+      ESP_LOGI(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
       break;
     case HTTP_EVENT_ON_FINISH:
-      ESP_LOGD(TAG, "HTTP_EVENT_ON_FINISH");
+      ESP_LOGI(TAG, "HTTP_EVENT_ON_FINISH");
       break;
     case HTTP_EVENT_DISCONNECTED:
-      ESP_LOGD(TAG, "HTTP_EVENT_DISCONNECTED");
+      ESP_LOGI(TAG, "HTTP_EVENT_DISCONNECTED");
       break;
     case HTTP_EVENT_REDIRECT:
-      ESP_LOGD(TAG, "HTTP_EVENT_REDIRECT");
+      ESP_LOGI(TAG, "HTTP_EVENT_REDIRECT");
       break;
   }
 
@@ -421,11 +416,7 @@ ota_task(void *pvParameter)
   ESP_LOGI(TAG, "Bind interface name is %s", ifr.ifr_name);
 #endif
   esp_http_client_config_t config_http = {
-    //.url               = "http://192.168.1.7:80/hello_world.bin", //
-    //"https://eurosource.se:443/download/alpha/hello-world.bin", // CONFIG_FIRMWARE_UPGRADE_URL,
-    //.url = "http://185.144.156.45:80/hello_world.bin", // vscp1
-    .url = "https://eurosource.se:443/download/alpha/vscp_espnow_alpha.bin",
-    //.url               = "https://185.144.156.54:443/hello_world.bin", // vscp2
+    .url = PRJDEF_FIRMWARE_UPGRADE_URL,
     //.cert_pem          = (char *) server_cert_pem_start,
     .crt_bundle_attach = esp_crt_bundle_attach,
     .event_handler     = _http_event_handler,
@@ -475,9 +466,9 @@ startOTA(void)
 static void
 print_sha256(const uint8_t *image_hash, const char *label)
 {
-  char hash_print[HASH_LEN * 2 + 1];
-  hash_print[HASH_LEN * 2] = 0;
-  for (int i = 0; i < HASH_LEN; ++i) {
+  char hash_print[ESPNOW_OTA_HASH_LEN * 2 + 1];
+  hash_print[ESPNOW_OTA_HASH_LEN * 2] = 0;
+  for (int i = 0; i < ESPNOW_OTA_HASH_LEN; ++i) {
     sprintf(&hash_print[i * 2], "%02x", image_hash[i]);
   }
   ESP_LOGI(TAG, "%s %s", label, hash_print);
@@ -490,7 +481,7 @@ print_sha256(const uint8_t *image_hash, const char *label)
 static void
 get_sha256_of_partitions(void)
 {
-  uint8_t sha_256[HASH_LEN] = { 0 };
+  uint8_t sha_256[ESPNOW_OTA_HASH_LEN] = { 0 };
   esp_partition_t partition;
 
   // get sha256 digest for bootloader
@@ -509,13 +500,12 @@ get_sha256_of_partitions(void)
 //                                 espnow OTA
 //-----------------------------------------------------------------------------
 
-
 ///////////////////////////////////////////////////////////////////////////////
 // firmware_download
 //
 
-static size_t
-firmware_download(const char *url)
+size_t
+app_firmware_download(const char *url)
 {
 #define OTA_DATA_PAYLOAD_LEN 1024
 
@@ -526,8 +516,14 @@ firmware_download(const char *url)
   uint32_t start_time         = xTaskGetTickCount();
 
   esp_http_client_config_t config = {
-    .url            = url,
-    .transport_type = HTTP_TRANSPORT_UNKNOWN,
+    .url               = url,
+    .transport_type    = HTTP_TRANSPORT_UNKNOWN,
+    .crt_bundle_attach = esp_crt_bundle_attach,
+    .event_handler     = _http_event_handler,
+    .keep_alive_enable = true,
+#ifdef CONFIG_EXAMPLE_FIRMWARE_UPGRADE_BIND_IF
+    .if_name = &ifr,
+#endif
   };
 
   /**
@@ -608,11 +604,11 @@ EXIT:
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// ota_initator_data_cb
+// ota_initiator_data_cb
 //
 
 esp_err_t
-ota_initator_data_cb(size_t src_offset, void *dst, size_t size)
+app_ota_initiator_data_cb(size_t src_offset, void *dst, size_t size)
 {
   static const esp_partition_t *data_partition = NULL;
 
@@ -627,88 +623,98 @@ ota_initator_data_cb(size_t src_offset, void *dst, size_t size)
 // firmware_send
 //
 
-// static void
-// firmware_send(size_t firmware_size, uint8_t sha[ESPNOW_OTA_HASH_LEN])
-// {
-//   esp_err_t ret                         = ESP_OK;
-//   uint32_t start_time                   = xTaskGetTickCount();
-//   espnow_ota_result_t espnow_ota_result = { 0 };
-//   espnow_ota_responder_t *info_list     = NULL;
-//   size_t num                            = 0;
+void
+app_firmware_send(size_t firmware_size, uint8_t sha[ESPNOW_OTA_HASH_LEN])
+{
+  esp_err_t ret                         = ESP_OK;
+  uint32_t start_time                   = xTaskGetTickCount();
+  espnow_ota_result_t espnow_ota_result = { 0 };
+  espnow_ota_responder_t *info_list     = NULL;
+  espnow_addr_t *dest_addr_list         = NULL;
+  size_t num                            = 0;
 
-//   espnow_ota_initator_scan(&info_list, &num, pdMS_TO_TICKS(3000));
-//   ESP_LOGW(TAG, "espnow wait ota num: %d", num);
+  espnow_ota_initiator_scan(&info_list, &num, pdMS_TO_TICKS(3000));
+  ESP_LOGW(TAG, "espnow wait ota num: %u", num);
 
-//   espnow_addr_t *dest_addr_list = ESP_MALLOC(num * ESPNOW_ADDR_LEN);
+  if (!num) {
+    goto EXIT;
+  }
 
-//   for (size_t i = 0; i < num; i++) {
-//     memcpy(dest_addr_list[i], info_list[i].mac, ESPNOW_ADDR_LEN);
-//   }
+  dest_addr_list = ESP_MALLOC(num * ESPNOW_ADDR_LEN);
 
-//   ESP_FREE(info_list);
+  for (size_t i = 0; i < num; i++) {
+    memcpy(dest_addr_list[i], info_list[i].mac, ESPNOW_ADDR_LEN);
+  }
 
-//   ret = espnow_ota_initator_send(dest_addr_list, num, sha, firmware_size, ota_initator_data_cb, &espnow_ota_result);
-//   ESP_GOTO_ON_ERROR(ret != ESP_OK, EXIT, TAG, "<%s> espnow_ota_initator_send", esp_err_to_name(ret));
+  espnow_ota_initiator_scan_result_free();
 
-//   if (espnow_ota_result.successed_num == 0) {
-//     ESP_LOGW(TAG, "Devices upgrade failed, unfinished_num: %d", espnow_ota_result.unfinished_num);
-//     goto EXIT;
-//   }
+  ret =
+    espnow_ota_initiator_send(dest_addr_list, num, sha, firmware_size, app_ota_initiator_data_cb, &espnow_ota_result);
+  ESP_ERROR_GOTO(ret != ESP_OK, EXIT, "<%s> espnow_ota_initiator_send", esp_err_to_name(ret));
 
-//   ESP_LOGI(TAG,
-//            "Firmware is sent to the device to complete, Spend time: %ds",
-//            (xTaskGetTickCount() - start_time) * portTICK_PERIOD_MS / 1000);
-//   ESP_LOGI(TAG,
-//            "Devices upgrade completed, successed_num: %d, unfinished_num: %d",
-//            espnow_ota_result.successed_num,
-//            espnow_ota_result.unfinished_num);
+  if (espnow_ota_result.successed_num == 0) {
+    ESP_LOGW(TAG, "Devices upgrade failed, unfinished_num: %u", espnow_ota_result.unfinished_num);
+    goto EXIT;
+  }
 
-// EXIT:
-//   espnow_ota_initator_result_free(&espnow_ota_result);
-// }
+  ESP_LOGI(TAG,
+           "Firmware is sent to the device to complete, Spend time: %" PRIu32 "s",
+           (xTaskGetTickCount() - start_time) * portTICK_PERIOD_MS / 1000);
+  ESP_LOGI(TAG,
+           "Devices upgrade completed, successed_num: %u, unfinished_num: %u",
+           espnow_ota_result.successed_num,
+           espnow_ota_result.unfinished_num);
 
-// ///////////////////////////////////////////////////////////////////////////////
-// // initiateFirmwareUpload
-// //
+EXIT:
+  ESP_FREE(dest_addr_list);
+  espnow_ota_initiator_result_free(&espnow_ota_result);
+}
 
-// int
-// initiateFirmwareUpload(void)
-// {
-//   uint8_t sha_256[32]                   = { 0 };
-//   const esp_partition_t *data_partition = esp_ota_get_next_update_partition(NULL);
+///////////////////////////////////////////////////////////////////////////////
+// app_initiate_firmware_upload
+//
 
-//   size_t firmware_size = firmware_download(CONFIG_FIRMWARE_UPGRADE_URL);
-//   esp_partition_get_sha256(data_partition, sha_256);
+int
+app_initiate_firmware_upload(const char *url)
+{
+  const char *url_to_upload             = url;
+  uint8_t sha_256[32]                   = { 0 };
+  const esp_partition_t *data_partition = esp_ota_get_next_update_partition(NULL);
 
-//   // Send new firmware to clients
-//   firmware_send(firmware_size, sha_256);
+  if (NULL == url) {
+    url_to_upload = PRJDEF_FIRMWARE_UPGRADE_URL;
+  }
 
-//   return VSCP_ERROR_SUCCESS;
-// }
+  size_t firmware_size = app_firmware_download(url_to_upload);
+  esp_partition_get_sha256(data_partition, sha_256);
 
-// ///////////////////////////////////////////////////////////////////////////////
-// // respondToFirmwareUpload
-// //
+  // Send new firmware to clients
+  app_firmware_send(firmware_size, sha_256);
 
-// int
-// respondToFirmwareUpload(void)
-// {
-//   espnow_ota_config_t ota_config = {
-//     .skip_version_check       = true,
-//     .progress_report_interval = 10,
-//   };
+  return VSCP_ERROR_SUCCESS;
+}
 
-//   // Take care of firmware update of out node
-//   espnow_ota_responder_start(&ota_config);
+///////////////////////////////////////////////////////////////////////////////
+// respondToFirmwareUpload
+//
 
-//   return VSCP_ERROR_SUCCESS;
-// }
+int
+respondToFirmwareUpload(void)
+{
+  espnow_ota_config_t ota_config = {
+    .skip_version_check       = true,
+    .progress_report_interval = 10,
+  };
+
+  // Take care of firmware update of out node
+  espnow_ota_responder_start(&ota_config);
+
+  return VSCP_ERROR_SUCCESS;
+}
 
 // ----------------------------------------------------------------------------
 //                               Key handlers
 // ----------------------------------------------------------------------------
-
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // app_wifi_prov_over_espnow_start_press_cb
@@ -722,7 +728,7 @@ app_wifi_prov_over_espnow_start_press_cb(void *arg, void *usr_data)
   ESP_LOGI(TAG, "espnow security provisioning");
 
   // app_prov_responder_init();
-  //vscp_espnow_sec_initiator();
+  // vscp_espnow_sec_initiator();
 
   app_led_switch_blink_type(s_led_handle_green, BLINK_PROVISIONING);
 
@@ -1675,12 +1681,12 @@ app_main()
   s_wifi_event_group = xEventGroupCreate();
 
   memcpy(espnow_config.pmk, g_persistent.pmk, 16);
-  espnow_config.qsize          = g_persistent.queueSize; // CONFIG_APP_ESPNOW_QUEUE_SIZE;
-  espnow_config.sec_enable     = true;
-  espnow_config.forward_enable = true;
+  espnow_config.qsize                  = g_persistent.queueSize; // CONFIG_APP_ESPNOW_QUEUE_SIZE;
+  espnow_config.sec_enable             = true;
+  espnow_config.forward_enable         = true;
   espnow_config.forward_switch_channel = 0;
-  espnow_config.send_retry_num = 10;
-  espnow_config.send_max_timeout = pdMS_TO_TICKS(3000);
+  espnow_config.send_retry_num         = 10;
+  espnow_config.send_max_timeout       = pdMS_TO_TICKS(3000);
 
   espnow_init(&espnow_config);
 
@@ -1752,12 +1758,11 @@ app_main()
 
   if (espnow_get_key(key_info) != ESP_OK) {
     ESP_LOGW(TAG, "Generate new security key");
-    esp_fill_random(key_info, APP_KEY_LEN);    
+    esp_fill_random(key_info, APP_KEY_LEN);
   }
 
   ESP_LOGI(TAG, "Security Key: " KEYSTR, KEY2STR(key_info));
   espnow_set_key(key_info);
-  
 
   // Simple test to set a common key
   // uint8_t key[32];
@@ -1907,8 +1912,6 @@ app_main()
 
   // app_led_switch_blink_type(s_led_handle_green, BLINK_FACTORY_RESET);
 
- 
-
   esp_wifi_get_mac(ESP_IF_WIFI_STA, ESPNOW_ADDR_SELF);
   ESP_LOGI(TAG, "mac: " MACSTR ", version: %d", MAC2STR(ESPNOW_ADDR_SELF), ESPNOW_VERSION);
 
@@ -1935,8 +1938,8 @@ app_main()
   stop_webserver(h_webserver);
 
   // Unmount web spiffs partition and disable SPIFFS
-  //esp_vfs_spiffs_unregister(spiffsconf.partition_label);
-  //ESP_LOGI(TAG, "web SPIFFS unmounted");
+  // esp_vfs_spiffs_unregister(spiffsconf.partition_label);
+  // ESP_LOGI(TAG, "web SPIFFS unmounted");
 
   // Clean up
   iot_button_delete(s_init_button_handle);

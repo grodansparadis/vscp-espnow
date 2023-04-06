@@ -597,6 +597,24 @@ app_wifi_init()
 }
 
 //-----------------------------------------------------------------------------
+//                                  OTA
+//-----------------------------------------------------------------------------
+
+///////////////////////////////////////////////////////////////////////////////
+// app_ota_responder_start
+//
+
+void
+app_ota_responder_start()
+{
+  espnow_ota_config_t ota_config = {
+    .skip_version_check       = true,
+    .progress_report_interval = 10,
+  };
+  espnow_ota_responder_start(&ota_config);
+}
+
+//-----------------------------------------------------------------------------
 //                                  SEC
 //-----------------------------------------------------------------------------
 
@@ -621,6 +639,67 @@ sec_probe_task(void *arg)
   // vTaskDelay(pdMS_TO_TICKS(100));
   // EXIT:
   vTaskDelete(NULL);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// app_system_event_handler
+//
+// Event handler for catching system events
+//
+
+static void
+app_system_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
+{
+  esp_err_t ret;
+
+  // if (event_base == ESP_EVENT_ESPNOW_OTA_BASE) {
+
+  //   switch (event_id) {
+
+  //     default:
+  //       break;
+  //   }
+  // }
+  if (event_base == ESP_EVENT_ESPNOW) {
+
+    switch (event_id) {
+
+      case ESP_EVENT_ESPNOW_LOG_FLASH_FULL:
+        ESP_LOGI(TAG, "ESP_EVENT_ESPNOW_LOG_FLASH_FULL");
+        ESP_LOGI(TAG, "The flash partition that stores the log is full, size: %d", espnow_log_flash_size());
+        break;
+
+      case ESP_EVENT_ESPNOW_OTA_STARTED:
+        ESP_LOGI(TAG, "ESP_EVENT_ESPNOW_OTA_STARTED");
+        app_led_switch_blink_type(s_led_handle_green, BLINK_UPDATING);
+        break;
+
+      case ESP_EVENT_ESPNOW_OTA_STATUS: {
+        uint32_t write_percentage = *((uint32_t *) event_data);
+        ESP_LOGI(TAG, "ESP_EVENT_ESPNOW_OTA_STATUS  %ld", write_percentage);
+      } break;
+
+      case ESP_EVENT_ESPNOW_OTA_FINISH:
+        ESP_LOGI(TAG, "ESP_EVENT_ESPNOW_OTA_FINISH");
+        app_led_switch_blink_type(s_led_handle_green, BLINK_CONNECTED);
+        vTaskDelay(pdMS_TO_TICKS(2000));
+        esp_restart();
+        break;
+
+      case ESP_EVENT_ESPNOW_OTA_STOPED:
+        ESP_LOGI(TAG, "ESP_EVENT_ESPNOW_OTA_STOPED");
+        app_led_switch_blink_type(s_led_handle_green, BLINK_CONNECTED);
+        break;
+
+      case ESP_EVENT_ESPNOW_OTA_FIRMWARE_DOWNLOAD:
+        ESP_LOGI(TAG, "ESP_EVENT_ESPNOW_OTA_FIRMWARE_DOWNLOAD");
+        break;
+
+      case ESP_EVENT_ESPNOW_OTA_SEND_FINISH:
+        ESP_LOGI(TAG, "ESP_EVENT_ESPNOW_OTA_SEND_FINISH");
+        break;
+    }
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -663,12 +742,12 @@ app_main()
 
   espnow_config_t espnow_config = ESPNOW_INIT_CONFIG_DEFAULT();
   memcpy((uint8_t *) espnow_config.pmk, g_persistent.pmk, 16);
-  espnow_config.qsize          = g_persistent.queueSize;
-  espnow_config.sec_enable     = true;
-  espnow_config.forward_enable = true;
+  espnow_config.qsize                  = g_persistent.queueSize;
+  espnow_config.sec_enable             = true;
+  espnow_config.forward_enable         = true;
   espnow_config.forward_switch_channel = 0;
-  espnow_config.send_retry_num = 10;
-  espnow_config.send_max_timeout = pdMS_TO_TICKS(3000);
+  espnow_config.send_retry_num         = 10;
+  espnow_config.send_max_timeout       = pdMS_TO_TICKS(3000);
 
   espnow_init(&espnow_config);
 
@@ -722,7 +801,9 @@ app_main()
   iot_button_register_cb(button_handle, BUTTON_DOUBLE_CLICK, app_wifi_prov_start_press_cb, NULL);
   iot_button_register_cb(button_handle, BUTTON_LONG_PRESS_START, app_restore_factory_defaults_press_cb, NULL);
 
-  // esp_event_handler_register(ESP_EVENT_ESPNOW, ESP_EVENT_ANY_ID, app_espnow_event_handler, NULL);
+  esp_event_handler_register(ESP_EVENT_ESPNOW, ESP_EVENT_ANY_ID, app_system_event_handler, NULL);
+  esp_event_handler_register(ESP_EVENT_ESPNOW_OTA_BASE, ESP_EVENT_ANY_ID, app_system_event_handler, NULL);
+  esp_event_handler_register(ESP_EVENT_ESPNOW_DEBUG_BASE, ESP_EVENT_ANY_ID, app_system_event_handler, NULL);
 
   // Setup VSCP esp-now
 

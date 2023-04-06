@@ -177,7 +177,8 @@ function startUpload() {
 */
 
 
-#define WEBPAGE_JS "function startUpload(){var e,t=document.getElementById(\"otafile\").files;0==t.length?alert(\"No file selected!\"):(document.getElementById(\"otafile\").disabled=!0,document.getElementById(\"upload\").disabled=!0,t=t[0],(e=new XMLHttpRequest).onreadystatechange=function(){4==e.readyState&&(200==e.status?(document.open(),document.write(e.responseText),document.close()):(0==e.status?alert(\"Server closed the connection abruptly!\"):alert(e.status+\" Error!\"+e.responseText),location.reload()))},e.upload.onprogress=function(e){document.getElementById(\"progress\").textContent=\"Progress: \"+(e.loaded/e.total*100).toFixed(0)+\"%%\"},e.open(\"POST\",\"/upgrdlocal\",!0),e.send(t))}"
+#define WEBPAGE_JS1 "function startUpload(){var e,t=document.getElementById(\"otafile\").files;0==t.length?alert(\"No file selected!\"):(document.getElementById(\"otafile\").disabled=!0,document.getElementById(\"upload\").disabled=!0,t=t[0],(e=new XMLHttpRequest).onreadystatechange=function(){4==e.readyState&&(200==e.status?(document.open(),document.write(e.responseText),document.close()):(0==e.status?alert(\"Server closed the connection abruptly!\"):alert(e.status+\" Error!\"+e.responseText),location.reload()))},e.upload.onprogress=function(e){document.getElementById(\"progress\").textContent=\"Progress: \"+(e.loaded/e.total*100).toFixed(0)+\"%%\"},e.open(\"POST\",\"/upgrdlocal\",!0),e.send(t))}"
+#define WEBPAGE_JS2 "function startUploadSibLocal(){var e,t=document.getElementById(\"otafile_sib\").files;0==t.length?alert(\"No file selected!\"):(document.getElementById(\"otafile_sib\").disabled=!0,document.getElementById(\"upload_sib\").disabled=!0,t=t[0],(e=new XMLHttpRequest).onreadystatechange=function(){4==e.readyState&&(200==e.status?(document.open(),document.write(e.responseText),document.close()):(0==e.status?alert(\"Server closed the connection abruptly!\"):alert(e.status+\" Error!\"+e.responseText),location.reload()))},e.upload.onprogress=function(e){document.getElementById(\"progress_sib\").textContent=\"Progress: \"+(e.loaded/e.total*100).toFixed(0)+\"%%\"},e.open(\"POST\",\"/upgrdSiblingLocal\",!0),e.send(t))}"
 
 /*>>
   Page start HTML
@@ -190,7 +191,8 @@ function startUpload() {
 "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,user-scalable=no\" />" \
 "<title>Droplet Alpha node - Main Menu</title>"\
 "<script>" \
-WEBPAGE_JS \
+WEBPAGE_JS1 \
+WEBPAGE_JS2 \
 "</script>" \
 "<style>" \
 WEBPAGE_STYLE_CSS \
