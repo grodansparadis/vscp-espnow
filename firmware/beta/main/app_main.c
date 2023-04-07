@@ -67,24 +67,10 @@ static espnow_addr_t ESPNOW_ADDR_SELF = { 0 };
 static const char *TAG = "app";
 static const char *POP = VSCP_PROJDEF_ESPNOW_SESSION_POP;
 
-// All the default GPIOs are based on ESP32 series DevKitC boards, for other boards, please modify them accordingly.
-#ifdef CONFIG_IDF_TARGET_ESP32C2
-#define LED_RED_GPIO   GPIO_NUM_0
-#define LED_GREEN_GPIO GPIO_NUM_1
-#define LED_BLUE_GPIO  GPIO_NUM_8
-#elif CONFIG_IDF_TARGET_ESP32C3
-#define LED_STRIP_GPIO GPIO_NUM_8
-#elif CONFIG_IDF_TARGET_ESP32
-// There is not LED module in ESP32 DevKitC board, so you need to connect one by yourself.
-#define LED_STRIP_GPIO GPIO_NUM_18
-#elif CONFIG_IDF_TARGET_ESP32S2
-#define LED_STRIP_GPIO GPIO_NUM_18
-#elif CONFIG_IDF_TARGET_ESP32S3
-// For old version board, the number is 48.
-#define LED_STRIP_GPIO GPIO_NUM_38
-#endif
-
 beta_node_states_t s_stateNode = BETA_STATE_VIRGIN;
+
+uint32_t time_key_exchange; // Timer for key exchange state clear
+uint32_t time_ota;          // Timer for OTA state clear
 
 led_indicator_handle_t s_led_handle_red;
 led_indicator_handle_t s_led_handle_green;
@@ -116,6 +102,7 @@ node_persistent_config_t g_persistent = {
   .pmk        = { 0 },
   .lmk        = { 0 },
   .nodeGuid   = { 0 }, // GUID for unit
+  .keyOrigin  = { 0 },
   .startDelay = 2,
   .bootCnt    = 0,
   .queueSize  = CONFIG_APP_ESPNOW_QUEUE_SIZE,
@@ -128,7 +115,12 @@ node_persistent_config_t g_persistent = {
   .espnowForwardEnable         = true,  // Forward when packets are received
   .espnowFilterAdjacentChannel = true,  // Don't receive if from other channel
   .espnowForwardSwitchChannel  = false, // Allow switchin gchannel on forward
-  .espnowFilterWeakSignal      = -55,   // Filter onm RSSI (zero is no rssi filtering)
+  .espnowFilterWeakSignal      = -65,   // Filter onm RSSI (zero is no rssi filtering)
+
+  // beta
+  .logLevelUart   = ESP_LOG_INFO,
+  .logLevelEspNow = ESP_LOG_INFO,
+  .logLevelFlash  = ESP_LOG_INFO,
 };
 
 #define CONTROL_KEY_GPIO GPIO_NUM_0
@@ -193,6 +185,27 @@ get_device_guid(uint8_t *pguid)
 
   return true;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// read_onboard_temperature
+//
+
+float
+read_onboard_temperature(void)
+{
+  // TODO
+  return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// getMilliSeconds
+//
+
+uint32_t
+getMilliSeconds(void)
+{
+  return (esp_timer_get_time() / 1000);
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // app_led_init
@@ -339,7 +352,7 @@ readPersistentConfigs(void)
       sscanf(pos, "%2hhx", &g_persistent.pmk[i]);
       pos += 2;
     }
-    rv = nvs_set_blob(g_nvsHandle, "pmk", g_persistent.pmk, 16);
+    rv = nvs_set_blob(g_nvsHandle, "pmk", g_persistent.pmk, length);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to write node pmk to nvs. rv=%d", rv);
     }
@@ -355,7 +368,7 @@ readPersistentConfigs(void)
       sscanf(pos, "%2hhx", &g_persistent.lmk[i]);
       pos += 2;
     }
-    rv = nvs_set_blob(g_nvsHandle, "lmk", g_persistent.lmk, 16);
+    rv = nvs_set_blob(g_nvsHandle, "lmk", g_persistent.lmk, length);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to write node lmk to nvs. rv=%d", rv);
     }
@@ -377,7 +390,7 @@ readPersistentConfigs(void)
       ESP_LOGE(TAG, "esp_efuse_mac_get_default failed to get GUID. rv=%d", rv);
     }
 
-    rv = nvs_set_blob(g_nvsHandle, "guid", g_persistent.nodeGuid, 16);
+    rv = nvs_set_blob(g_nvsHandle, "guid", g_persistent.nodeGuid, length);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to write node GUID to nvs. rv=%d", rv);
     }
@@ -400,6 +413,17 @@ readPersistentConfigs(void)
            g_persistent.nodeGuid[13],
            g_persistent.nodeGuid[14],
            g_persistent.nodeGuid[15]);
+
+  
+  length = 6;
+  rv     = nvs_get_blob(g_nvsHandle, "keyorg", g_persistent.keyOrigin, &length);
+  if (rv != ESP_OK) {
+    const char key[] = { 0 };
+    rv = nvs_set_blob(g_nvsHandle, "keyorg", g_persistent.keyOrigin, length);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to write originating max to nvs. rv=%d", rv);
+    }
+  }
 
   // espnow queueSize
   rv = nvs_get_u8(g_nvsHandle, "queue_size", &g_persistent.queueSize);
@@ -489,6 +513,45 @@ readPersistentConfigs(void)
     }
   }
 
+  // Log level for UART
+  rv = nvs_get_u8(g_nvsHandle, "loguartlv", &val);
+  if (ESP_OK != rv) {
+    val = (uint8_t) g_persistent.logLevelUart;
+    rv  = nvs_set_u8(g_nvsHandle, "loguartlv", g_persistent.logLevelUart);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to update espnow uart log level");
+    }
+  }
+  else {
+    g_persistent.logLevelUart = val;
+  }
+
+  // Log level for espnow
+  rv = nvs_get_u8(g_nvsHandle, "logenlv", &val);
+  if (ESP_OK != rv) {
+    val = (uint8_t) g_persistent.logLevelEspNow;
+    rv  = nvs_set_u8(g_nvsHandle, "logenlv", g_persistent.logLevelEspNow);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to update espnow espnow log level");
+    }
+  }
+  else {
+    g_persistent.logLevelEspNow = val;
+  }
+
+  // Log level for flash
+  rv = nvs_get_u8(g_nvsHandle, "logflashlv", &val);
+  if (ESP_OK != rv) {
+    val = (uint8_t) g_persistent.logLevelFlash;
+    rv  = nvs_set_u8(g_nvsHandle, "logflashlv", g_persistent.logLevelFlash);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to update espnow espnow log level");
+    }
+  }
+  else {
+    g_persistent.logLevelFlash = val;
+  }
+
   rv = nvs_commit(g_nvsHandle);
   if (rv != ESP_OK) {
     ESP_LOGI(TAG, "Failed to commit updates to nvs\n");
@@ -496,6 +559,90 @@ readPersistentConfigs(void)
 
   return ESP_OK;
 }
+
+//-----------------------------------------------------------------------------
+//                                  OTA
+//-----------------------------------------------------------------------------
+
+///////////////////////////////////////////////////////////////////////////////
+// app_ota_responder_start
+//
+
+esp_err_t
+app_ota_responder_start()
+{
+  espnow_ota_config_t ota_config = {
+    .skip_version_check       = true,
+    .progress_report_interval = 10,
+  };
+  return espnow_ota_responder_start(&ota_config);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// app_ota_responder_stop
+//
+
+esp_err_t
+app_ota_responder_stop()
+{
+  return espnow_ota_responder_stop();
+}
+
+//-----------------------------------------------------------------------------
+//                                  SEC
+//-----------------------------------------------------------------------------
+
+///////////////////////////////////////////////////////////////////////////////
+// sec_probe_task
+//
+
+void
+sec_probe_task(void *arg)
+{
+  int rv;
+
+  espnow_sec_responder_start(POP);
+
+  if (VSCP_ERROR_SUCCESS != (rv = vscp_espnow_probe())) {
+    ESP_LOGE(TAG, "[%s, %d]: <Probe failed> !(%x)", __func__, __LINE__, rv);
+    // goto EXIT;
+  }
+
+  // espnow_sec_responder_start(POP);
+
+  // vTaskDelay(pdMS_TO_TICKS(100));
+  // EXIT:
+  vTaskDelete(NULL);
+}
+
+//-----------------------------------------------------------------------------
+//                                  Wifi
+//-----------------------------------------------------------------------------
+
+///////////////////////////////////////////////////////////////////////////////
+// app_wifi_init
+//
+
+static void
+app_wifi_init()
+{
+  ESP_ERROR_CHECK(esp_netif_init());
+
+  ESP_ERROR_CHECK(esp_event_loop_create_default());
+  esp_netif_create_default_wifi_sta();
+
+  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+
+  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+  ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+  ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
+  ESP_ERROR_CHECK(esp_wifi_start());
+}
+
+//-----------------------------------------------------------------------------
+//                                Key handlers
+//-----------------------------------------------------------------------------
 
 ///////////////////////////////////////////////////////////////////////////////
 // app_sec_init_press_cb
@@ -519,15 +666,35 @@ app_sec_init_press_cb(void *arg, void *usr_data)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// app_wifi_prov_start_press_cb
+// app_ota_start_press_cb
 //
 
 static void
-app_wifi_prov_start_press_cb(void *arg, void *usr_data)
+app_ota_start_press_cb(void *arg, void *usr_data)
 {
+  esp_err_t ret;
   ESP_ERROR_CHECK(!(BUTTON_DOUBLE_CLICK == iot_button_get_event(arg)));
 
-  ESP_LOGI(TAG, "No functionality");
+  if (BETA_STATE_OTA == s_stateNode) {
+    ESP_LOGI(TAG, "Deactivate OTA firmware update");
+    ret = app_ota_responder_stop();
+    if (ESP_OK == ret) {
+      app_led_switch_blink_type(s_led_handle_green, BLINK_CONNECTED);
+      s_stateNode = BETA_STATE_IDLE;
+    }
+  }
+  else if (BETA_STATE_IDLE == s_stateNode) {
+    ESP_LOGI(TAG, "Initiate OTA firmware update");
+    ret = app_ota_responder_start();
+    if (ESP_OK == ret) {
+      app_led_switch_blink_type(s_led_handle_green, BLINK_UPDATING);
+      s_stateNode = BETA_STATE_OTA;
+      time_ota    = getMilliSeconds();
+    }
+    else {
+      ESP_LOGE(TAG, "Failed to start OTA");
+    }
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -571,76 +738,6 @@ app_restore_factory_defaults_press_cb(void *arg, void *usr_data)
   // esp_restart();
 }
 
-//-----------------------------------------------------------------------------
-//                                  Wifi
-//-----------------------------------------------------------------------------
-
-///////////////////////////////////////////////////////////////////////////////
-// app_wifi_init
-//
-
-static void
-app_wifi_init()
-{
-  ESP_ERROR_CHECK(esp_netif_init());
-
-  ESP_ERROR_CHECK(esp_event_loop_create_default());
-  esp_netif_create_default_wifi_sta();
-
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-
-  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-  ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
-  ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
-  ESP_ERROR_CHECK(esp_wifi_start());
-}
-
-//-----------------------------------------------------------------------------
-//                                  OTA
-//-----------------------------------------------------------------------------
-
-///////////////////////////////////////////////////////////////////////////////
-// app_ota_responder_start
-//
-
-void
-app_ota_responder_start()
-{
-  espnow_ota_config_t ota_config = {
-    .skip_version_check       = true,
-    .progress_report_interval = 10,
-  };
-  espnow_ota_responder_start(&ota_config);
-}
-
-//-----------------------------------------------------------------------------
-//                                  SEC
-//-----------------------------------------------------------------------------
-
-///////////////////////////////////////////////////////////////////////////////
-// sec_probe_task
-//
-
-void
-sec_probe_task(void *arg)
-{
-  int rv;
-
-  espnow_sec_responder_start(POP);
-
-  if (VSCP_ERROR_SUCCESS != (rv = vscp_espnow_probe())) {
-    ESP_LOGE(TAG, "[%s, %d]: <Probe failed> !(%x)", __func__, __LINE__, rv);
-    // goto EXIT;
-  }
-
-  // espnow_sec_responder_start(POP);
-
-  // vTaskDelay(pdMS_TO_TICKS(100));
-  // EXIT:
-  vTaskDelete(NULL);
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 // app_system_event_handler
 //
@@ -665,8 +762,11 @@ app_system_event_handler(void *arg, esp_event_base_t event_base, int32_t event_i
     switch (event_id) {
 
       case ESP_EVENT_ESPNOW_LOG_FLASH_FULL:
-        ESP_LOGI(TAG, "ESP_EVENT_ESPNOW_LOG_FLASH_FULL");
-        ESP_LOGI(TAG, "The flash partition that stores the log is full, size: %d", espnow_log_flash_size());
+        ESP_LOGW(TAG, "The flash partition that stores the log is full, size: %d", espnow_log_flash_size());
+        ret = espnow_log_flash_erase();
+        if (ESP_OK != ret) {
+          ESP_LOGE(TAG, "Failed to clear flash.");
+        }
         break;
 
       case ESP_EVENT_ESPNOW_OTA_STARTED:
@@ -759,26 +859,27 @@ app_main()
 
     // Initializing logging
     espnow_log_config_t log_config = {
-      .log_level_uart   = ESP_LOG_INFO,
-      .log_level_espnow = ESP_LOG_INFO,
-      .log_level_flash  = ESP_LOG_INFO,
+      .log_level_uart   = g_persistent.logLevelUart,
+      .log_level_espnow = g_persistent.logLevelEspNow,
+      .log_level_flash  = g_persistent.logLevelFlash,
     };
+
     if (ESP_OK != (ret = espnow_log_init(&log_config))) {
       ESP_LOGE(TAG, "Failed to init espnow logging");
     }
     esp_log_level_set("*", ESP_LOG_INFO);
 
     // Initializing OTA
-    espnow_ota_config_t ota_config = {
-      .skip_version_check       = true,
-      .progress_report_interval = 10,
-    };
+    // espnow_ota_config_t ota_config = {
+    //   .skip_version_check       = true,
+    //   .progress_report_interval = 10,
+    // };
 
-    ESP_LOGI(TAG, "Starting ota");
-    ret = espnow_ota_responder_start(&ota_config);
-    if (ESP_OK != ret) {
-      ESP_LOGE(TAG, "Failed to start OTA responder");
-    }
+    // ESP_LOGI(TAG, "Starting ota");
+    // ret = espnow_ota_responder_start(&ota_config);
+    // if (ESP_OK != ret) {
+    //   ESP_LOGE(TAG, "Failed to start OTA responder");
+    // }
   }
   else {
     ESP_LOGW(TAG, "Security key is not set");
@@ -798,7 +899,7 @@ app_main()
   button_handle_t button_handle = iot_button_create(&button_config);
 
   iot_button_register_cb(button_handle, BUTTON_SINGLE_CLICK, app_sec_init_press_cb, NULL);
-  iot_button_register_cb(button_handle, BUTTON_DOUBLE_CLICK, app_wifi_prov_start_press_cb, NULL);
+  iot_button_register_cb(button_handle, BUTTON_DOUBLE_CLICK, app_ota_start_press_cb, NULL);
   iot_button_register_cb(button_handle, BUTTON_LONG_PRESS_START, app_restore_factory_defaults_press_cb, NULL);
 
   esp_event_handler_register(ESP_EVENT_ESPNOW, ESP_EVENT_ANY_ID, app_system_event_handler, NULL);
@@ -833,6 +934,13 @@ app_main()
     // ESP_LOGI(TAG, "heap %lu kB (%lu)",esp_get_minimum_free_heap_size()/1024,esp_get_minimum_free_heap_size());
     vTaskDelay(pdMS_TO_TICKS(1000));
     taskYIELD();
+
+    // Check if OTA takes to long
+    if ((BETA_STATE_OTA == s_stateNode) && ((getMilliSeconds() - time_ota) > 120000)) {
+      ESP_LOGW(TAG, "OTA valid period over. Go back to IDLE");
+      s_stateNode = BETA_STATE_IDLE;
+      app_led_switch_blink_type(s_led_handle_green, BLINK_CONNECTED);
+    }
 
     // ESP_LOG_BUFFER_HEXDUMP(TAG, g_persistent.pmk, 16, ESP_LOG_INFO);
     // ESP_LOG_BUFFER_HEXDUMP(TAG, g_persistent.lmk, 16, ESP_LOG_INFO);

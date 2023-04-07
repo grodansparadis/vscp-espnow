@@ -942,7 +942,7 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
     return;
   }
 
-  ESP_LOGI(TAG,
+  ESP_LOGD(TAG,
            "<<< Receive event from " MACSTR " to " MACSTR " , RSSI %d Channel %d, size %zd",
            MAC2STR((src_addr)),
            MAC2STR((src_addr)),
@@ -1027,18 +1027,22 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
     if (ESP_OK != (ret = nvs_set_u8(g_nvsHandle, "channel", rx_ctrl->channel))) {
       ESP_LOGE(TAG, "[%s, %d]: Failed to update espnow nvs channel %X", __func__, __LINE__, ret);
     }
+
+    // Save sender MAC address to persistent storage
+    size_t length = 6;
+    rv = nvs_set_blob(g_nvsHandle, "keyorg", src_addr, length);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to write originating max to nvs. rv=%d", rv);
+    }
   }
 #endif
 
   ESP_LOGI(TAG,
-           ">> esp-now data received. len=%zd ch=%d src=" MACSTR " rssi=%d",
+           "<<< esp-now data received. len=%zd ch=%d src=" MACSTR " rssi=%d class=%d, type=%d sizedata=%d timestamp=%lX",
            size,
            rx_ctrl->channel,
            MAC2STR(src_addr),
-           rx_ctrl->rssi);
-
-  ESP_LOGI(TAG,
-           ">> class=%d, type=%d sizedata=%d timestamp=%lX\n",
+           rx_ctrl->rssi,
            pev->vscp_class,
            pev->vscp_type,
            pev->sizeData,

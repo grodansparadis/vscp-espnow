@@ -75,8 +75,10 @@
 // #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 // From app_main
-void startOTA(void);
-int app_initiate_firmware_upload(const char *url);
+void
+startOTA(void);
+int
+app_initiate_firmware_upload(const char *url);
 
 // External from main
 extern nvs_handle_t g_nvsHandle;
@@ -726,8 +728,8 @@ info_get_handler(httpd_req_t *req)
           MAC2STR(mac));
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  esp_netif_t* netif=NULL;
-  netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+  esp_netif_t *netif = NULL;
+  netif              = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
   esp_netif_ip_info_t ifinfo;
   if (NULL != netif) {
     esp_netif_get_ip_info(netif, &ifinfo);
@@ -878,24 +880,28 @@ upgrade_get_handler(httpd_req_t *req)
   sprintf(buf, "<div><form id=but3 class=\"button\" action='/upgrdSibling' method='get'><fieldset>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf, "OTA URL:<input type=\"text\"  id=\"url\" name=\"url\" value=\"%s\" >", PRJDEF_BETA_FIRMWARE_UPGRADE_URL);
+  sprintf(buf,
+          "OTA URL:<input type=\"text\"  id=\"url\" name=\"url\" value=\"%s\" >",
+          PRJDEF_BETA_FIRMWARE_UPGRADE_URL);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   sprintf(buf, "<button class=\"bgrn bgrn:hover\" >Start Upgrade</button></fieldset></form></div>");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);  
+  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   // ----- Local Siblings -----
 
   sprintf(buf,
-          "<h3>Upgrade Beta/Gamma node(s) from local file</h3><div> <span style=\"color:red;font-family:verdana;font-size:300%%;\" "
+          "<h3>Upgrade Beta/Gamma node(s) from local file</h3><div> <span "
+          "style=\"color:red;font-family:verdana;font-size:300%%;\" "
           "id=\"progress_sib\" /></div>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   sprintf(buf, "<div><fform id=but4 class=\"button\" action='/upgrdSiblingLocal' method='post'><fieldset>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf,
-          "<label for=\"otafile\">OTA firmware file:</label><input type=\"file\" id=\"otafile_sib\" name=\"otafile_sib\" />");
+  sprintf(
+    buf,
+    "<label for=\"otafile\">OTA firmware file:</label><input type=\"file\" id=\"otafile_sib\" name=\"otafile_sib\" />");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   sprintf(buf,
@@ -914,7 +920,7 @@ upgrade_get_handler(httpd_req_t *req)
   return ESP_OK;
 }
 
-//httpd_uri_t upgrade = { .uri = "/upgrade", .method = HTTP_GET, .handler = upgrade_get_handler, .user_ctx = NULL };
+// httpd_uri_t upgrade = { .uri = "/upgrade", .method = HTTP_GET, .handler = upgrade_get_handler, .user_ctx = NULL };
 
 ///////////////////////////////////////////////////////////////////////////////
 // upgrdsrv_get_handler
@@ -947,7 +953,7 @@ upgrdsrv_get_handler(httpd_req_t *req)
         VSCP_FREE(buf);
         return ESP_ERR_ESPNOW_NO_MEM;
       }
-     
+
       // URL
       if (ESP_OK == (ret = httpd_query_key_value(req_buf, "url", param, WEBPAGE_PARAM_SIZE))) {
         ESP_LOGI(TAG, "Found query parameter => url=%s", param);
@@ -1004,7 +1010,7 @@ upgrdlocal_post_handler(httpd_req_t *req)
 
     // Timeout Error: Just retry
     if (recv_len == HTTPD_SOCK_ERR_TIMEOUT) {
-      continue;      
+      continue;
     }
     else if (recv_len <= 0) {
       // Serious Error: Abort OTA
@@ -1080,10 +1086,10 @@ upgrdsibling_get_handler(httpd_req_t *req)
         VSCP_FREE(buf);
         return ESP_ERR_ESPNOW_NO_MEM;
       }
-     
+
       // URL
       if (ESP_OK == (ret = httpd_query_key_value(req_buf, "url", param, WEBPAGE_PARAM_SIZE))) {
-        
+
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
           VSCP_FREE(param);
@@ -1092,7 +1098,7 @@ upgrdsibling_get_handler(httpd_req_t *req)
           return ESP_ERR_ESPNOW_NO_MEM;
         }
 
-        memset(url, 0, PRJDEF_OTA_URL_SIZE); 
+        memset(url, 0, PRJDEF_OTA_URL_SIZE);
         strncpy(url, pdecoded, MIN(strlen(pdecoded), (PRJDEF_OTA_URL_SIZE - 1)));
 
         ESP_LOGI(TAG, "Found query parameter => url=%s", url);
@@ -1131,7 +1137,8 @@ upgrdsibling_get_handler(httpd_req_t *req)
   return ESP_OK;
 }
 
-///////////////////////////////////////////////////////////////////////////////
+
+  ///////////////////////////////////////////////////////////////////////////////
 // upgrdlocal_post_handler
 //
 // Handle OTA file upload
@@ -1152,6 +1159,8 @@ upgrdSiblingslocal_post_handler(httpd_req_t *req)
   while (remaining > 0) {
 
     ESP_LOGI(TAG, "OTA remaining %d", remaining);
+
+    taskYIELD();
 
     int recv_len = httpd_req_recv(req, buf, MIN(remaining, sizeof(buf)));
 
@@ -1200,10 +1209,11 @@ upgrdSiblingslocal_post_handler(httpd_req_t *req)
   return ESP_OK;
 }
 
+
 static const httpd_uri_t upgrdsiblinglocal = { .uri      = "/upgrdSiblingLocal",
-                                        .method   = HTTP_POST,
-                                        .handler  = upgrdSiblingslocal_post_handler,
-                                        .user_ctx = NULL };
+                                               .method   = HTTP_POST,
+                                               .handler  = upgrdSiblingslocal_post_handler,
+                                               .user_ctx = NULL };
 
 ///////////////////////////////////////////////////////////////////////////////
 // provisioning_get_handler
@@ -1651,8 +1661,7 @@ config_get_handler(httpd_req_t *req)
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
   sprintf(buf, "<p><form id=but2 class=\"button\" action='cfgwifi' method='get'><button>WiFi</button></form></p>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf,
-          "<p><form id=but3 class=\"button\" action='cfgespnow' method='get'><button>espnow</button></form></p>");
+  sprintf(buf, "<p><form id=but3 class=\"button\" action='cfgespnow' method='get'><button>espnow</button></form></p>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
   sprintf(buf,
           "<p><form id=but3 class=\"button\" action='cfgvscplink' method='get'><button>VSCP Link</button></form></p>");
@@ -2228,9 +2237,7 @@ config_espnow_get_handler(httpd_req_t *req)
   // Forward
   sprintf(buf, "<br><input type=\"checkbox\" name=\"fw\" value=\"true\" ");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf,
-          "%s><label for=\"fw\"> Enable Frame Forward</label>",
-          g_persistent.espnowForwardEnable ? "checked" : "");
+  sprintf(buf, "%s><label for=\"fw\"> Enable Frame Forward</label>", g_persistent.espnowForwardEnable ? "checked" : "");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   // Filter Adj Channel
@@ -2249,29 +2256,29 @@ config_espnow_get_handler(httpd_req_t *req)
           g_persistent.espnowForwardSwitchChannel ? "checked" : "");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-/*
-  // Encryption
-  sprintf(buf, "<br />Encryption:<select  name=\"enc\" >");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf,
-          "<option value=\"0\" %s>None</option>",
-          (VSCP_ENCRYPTION_NONE == g_persistent.espnowEncryption) ? "selected" : "");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf,
-          "<option value=\"1\" %s>AES-128</option>",
-          (VSCP_ENCRYPTION_AES128 == g_persistent.espnowEncryption) ? "selected" : "");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf,
-          "<option value=\"2\" %s>AES-192</option>",
-          (VSCP_ENCRYPTION_AES192 == g_persistent.espnowEncryption) ? "selected" : "");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf,
-          "<option value=\"3\" %s>AES-256</option>",
-          (VSCP_ENCRYPTION_AES256 == g_persistent.espnowEncryption) ? "selected" : "");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf, "</select>");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-*/
+  /*
+    // Encryption
+    sprintf(buf, "<br />Encryption:<select  name=\"enc\" >");
+    httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+    sprintf(buf,
+            "<option value=\"0\" %s>None</option>",
+            (VSCP_ENCRYPTION_NONE == g_persistent.espnowEncryption) ? "selected" : "");
+    httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+    sprintf(buf,
+            "<option value=\"1\" %s>AES-128</option>",
+            (VSCP_ENCRYPTION_AES128 == g_persistent.espnowEncryption) ? "selected" : "");
+    httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+    sprintf(buf,
+            "<option value=\"2\" %s>AES-192</option>",
+            (VSCP_ENCRYPTION_AES192 == g_persistent.espnowEncryption) ? "selected" : "");
+    httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+    sprintf(buf,
+            "<option value=\"3\" %s>AES-256</option>",
+            (VSCP_ENCRYPTION_AES256 == g_persistent.espnowEncryption) ? "selected" : "");
+    httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+    sprintf(buf, "</select>");
+    httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  */
 
   sprintf(buf, "<br>Queue size (32):<input type=\"text\" name=\"qsize\" value=\"%d\" >", g_persistent.espnowSizeQueue);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
@@ -2481,20 +2488,20 @@ do_config_espnow_get_handler(httpd_req_t *req)
         ESP_LOGE(TAG, "Error getting espnow rssi => rv=%d", rv);
       }
 
-/*
-      // Encryption
-      if (ESP_OK == (rv = httpd_query_key_value(buf, "enc", param, WEBPAGE_PARAM_SIZE))) {
-        ESP_LOGI(TAG, "Found query parameter => enc=%s", param);
-        g_persistent.espnowEncryption = atoi(param);
-        rv                             = nvs_set_u8(g_nvsHandle, "drop_enc", g_persistent.espnowEncryption);
-        if (rv != ESP_OK) {
-          ESP_LOGE(TAG, "Failed to update espnow encryption");
-        }
-      }
-      else {
-        ESP_LOGE(TAG, "Error getting espnow enc => rv=%d", rv);
-      }
-*/
+      /*
+            // Encryption
+            if (ESP_OK == (rv = httpd_query_key_value(buf, "enc", param, WEBPAGE_PARAM_SIZE))) {
+              ESP_LOGI(TAG, "Found query parameter => enc=%s", param);
+              g_persistent.espnowEncryption = atoi(param);
+              rv                             = nvs_set_u8(g_nvsHandle, "drop_enc", g_persistent.espnowEncryption);
+              if (rv != ESP_OK) {
+                ESP_LOGE(TAG, "Failed to update espnow encryption");
+              }
+            }
+            else {
+              ESP_LOGE(TAG, "Error getting espnow enc => rv=%d", rv);
+            }
+      */
       rv = nvs_commit(g_nvsHandle);
       if (rv != ESP_OK) {
         ESP_LOGE(TAG, "Failed to commit updates to nvs\n");
@@ -3905,7 +3912,6 @@ default_get_handler(httpd_req_t *req)
     ESP_LOGV(TAG, "--------- Upgrade sibling(s) local ---------\n");
     return upgrdSiblingslocal_post_handler(req);
   }
-  
 
   if (0 == strncmp(req->uri, "/provisioning", 13)) {
     ESP_LOGV(TAG, "--------- Provisioning ---------\n");
@@ -4008,7 +4014,7 @@ start_webserver(void)
   httpd_config_t dfltconfig = HTTPD_DEFAULT_CONFIG();
 
   // 4096 is to low for OTA
-  dfltconfig.stack_size = 1024*5;
+  dfltconfig.stack_size = 1024 * 5;
 
   dfltconfig.lru_purge_enable = true;
   // Use the URI wildcard matching function in order to

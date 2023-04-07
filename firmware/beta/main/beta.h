@@ -62,6 +62,7 @@ typedef struct {
   uint8_t pmk[16];      // Primary key (This key is static and set to VSCP default. Dont change!)
   uint8_t lmk[16];      // Local key (This key is static and set to VSCP default)
   uint8_t nodeGuid[16]; // GUID for node (default: Constructed from MAC address)
+  uint8_t keyOrigin;    // MAC address for node that sent common system key
   uint8_t queueSize;    // espnow queue size
   uint8_t startDelay;   // Delay before wifi is enabled (to charge cap.)
   uint32_t bootCnt;     // Number of restarts (not editable)
@@ -75,6 +76,11 @@ typedef struct {
   bool espnowFilterAdjacentChannel; // Don't receive if from other channel
   bool espnowForwardSwitchChannel;  // Allow switching channel on forward
   int8_t espnowFilterWeakSignal;    // Filter on RSSI (zero is no rssi filtering)
+
+  // beta common
+  uint8_t logLevelUart;   // Log level to uart
+  uint8_t logLevelEspNow; // Log level to espnow
+  uint8_t logLevelFlash;  // Log level to flash
 } node_persistent_config_t;
 
 // ----------------------------------------------------------------------------
@@ -91,8 +97,11 @@ typedef struct {
 
 // Beta node states
 typedef enum {
-  BETA_STATE_IDLE,   // Standard working state
-  BETA_STATE_VIRGIN, // Node is uninitialized
+  BETA_STATE_IDLE,         // Standard working state
+  BETA_STATE_VIRGIN,       // Node is uninitialized
+  BETA_STATE_KEY_EXCHANGE, // Key exchange active
+  BETA_STATE_OTA,          // OTA responser active
+  BETA_STATE_MAX
 } beta_node_states_t;
 
 ESP_EVENT_DECLARE_BASE(ALPHA_EVENT); // declaration of the alpha events family
