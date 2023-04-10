@@ -550,7 +550,9 @@ espnow_send(espnow_data_type_t type,
   espnow_data_t *espnow_data      = NULL;
   bool enc                        = false;
 
-  if (data_head->security && g_espnow_config->sec_enable && type != ESPNOW_DATA_TYPE_ACK && type != ESPNOW_DATA_TYPE_FORWARD &&
+  if (g_espnow_config->sec_enable && 
+  ((NULL == data_head) ? g_espnow_frame_head_default.security : data_head->security) &&  
+  type != ESPNOW_DATA_TYPE_ACK && type != ESPNOW_DATA_TYPE_FORWARD &&
       type != ESPNOW_DATA_TYPE_SECURITY_STATUS && type != ESPNOW_DATA_TYPE_SECURITY) {
     ESP_ERROR_RETURN(!(g_espnow_sec && g_espnow_sec->state == ESPNOW_SEC_OVER), ESP_FAIL, "Security key is not set");
     size_t enc_len    = 0;
