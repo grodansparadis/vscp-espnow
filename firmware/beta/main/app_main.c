@@ -421,7 +421,7 @@ readPersistentConfigs(void)
     const char key[] = { 0 };
     rv = nvs_set_blob(g_nvsHandle, "keyorg", g_persistent.keyOrigin, length);
     if (rv != ESP_OK) {
-      ESP_LOGE(TAG, "Failed to write originating max to nvs. rv=%d", rv);
+      ESP_LOGE(TAG, "Failed to write originating mac to nvs. rv=%d", rv);
     }
   }
 
