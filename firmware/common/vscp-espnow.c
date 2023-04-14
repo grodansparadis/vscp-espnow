@@ -939,7 +939,7 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
     return;
   }
 
-  ESP_LOGD(TAG,
+  ESP_LOGI(TAG,
            "<<< Receive event from " MACSTR " to " MACSTR " , RSSI %d Channel %d, size %zd",
            MAC2STR((src_addr)),
            MAC2STR((src_addr)),

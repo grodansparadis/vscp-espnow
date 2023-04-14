@@ -1,6 +1,6 @@
 test:
 	mkdir -p bin
-	gcc main.c -Wall -o bin/receiver
+	gcc  main.c -Wall -o bin/receiver
 
 
 clean:
