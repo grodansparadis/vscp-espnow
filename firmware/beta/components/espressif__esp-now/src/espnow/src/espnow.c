@@ -1,16 +1,8 @@
-// Copyright 2021 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -22,6 +14,7 @@
 #include "freertos/task.h"
 
 #include "esp_wifi.h"
+#include "esp_sleep.h"
 #include "esp_now.h"
 #include "esp_log.h"
 #include "espnow.h"
@@ -48,7 +41,12 @@
 #endif
 
 #define SEND_DELAY_UNIT_MSECS         2
+
+#if CONFIG_ESP32_WIFI_DYNAMIC_TX_BUFFER_NUM
 #define MAX_BUFFERED_NUM              (CONFIG_ESP32_WIFI_DYNAMIC_TX_BUFFER_NUM / 2)     /* Not more than CONFIG_ESP32_WIFI_DYNAMIC_TX_BUFFER_NUM */
+#elif CONFIG_ESP32_WIFI_STATIC_TX_BUFFER_NUM
+#define MAX_BUFFERED_NUM              (CONFIG_ESP32_WIFI_STATIC_TX_BUFFER_NUM / 2)     /* Not more than CONFIG_ESP32_WIFI_STATIC_TX_BUFFER_NUM */
+#endif
 
 /* Event source task related definitions */
 ESP_EVENT_DEFINE_BASE(ESP_EVENT_ESPNOW);
@@ -173,18 +171,21 @@ static bool queue_over_write(espnow_msg_id_t msg_id, const void *const data, siz
 }
 
 /**< callback function of receiving ESPNOW data */
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 1)
 void espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *data, int size)
 #else
 void espnow_recv_cb(const uint8_t *addr, const uint8_t *data, int size)
 #endif
 {
     espnow_data_t *espnow_data = (espnow_data_t *)data;
-    wifi_promiscuous_pkt_t *promiscuous_pkt = (wifi_promiscuous_pkt_t *)(data - sizeof(wifi_pkt_rx_ctrl_t) - sizeof(espnow_frame_format_t));
-    wifi_pkt_rx_ctrl_t *rx_ctrl = &promiscuous_pkt->rx_ctrl;
+    wifi_pkt_rx_ctrl_t *rx_ctrl = NULL;
 
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 1)
     uint8_t * addr = recv_info->src_addr;
+    rx_ctrl = recv_info->rx_ctrl;
+#else
+    wifi_promiscuous_pkt_t *promiscuous_pkt = (wifi_promiscuous_pkt_t *)(data - sizeof(wifi_pkt_rx_ctrl_t) - sizeof(espnow_frame_format_t));
+    rx_ctrl = &promiscuous_pkt->rx_ctrl;
 #endif
 
     ESP_LOG_BUFFER_HEXDUMP(TAG, data, size, ESP_LOG_DEBUG);
@@ -447,6 +448,12 @@ static esp_err_t espnow_send_process(int count, espnow_data_t *espnow_data, uint
                 *ack = true;
                 return ESP_OK;
             }
+#ifdef CONFIG_ESPNOW_LIGHT_SLEEP
+            if (ack) {
+                *ack = true;
+                return ESP_OK;
+            }
+#endif
         } else {
             return ESP_FAIL;
         }
@@ -498,11 +505,10 @@ esp_err_t espnow_send(espnow_data_type_t type, const espnow_addr_t dest_addr, co
     espnow_data_t *espnow_data = NULL;
     bool enc = false;
 
-    if ( g_espnow_config->sec_enable
-        && ((NULL == data_head) ? g_espnow_frame_head_default.security : data_head->security) 
+    if (g_espnow_config->sec_enable && (data_head ? data_head->security : g_espnow_frame_head_default.security)
         && type != ESPNOW_DATA_TYPE_ACK && type != ESPNOW_DATA_TYPE_FORWARD
         && type != ESPNOW_DATA_TYPE_SECURITY_STATUS && type != ESPNOW_DATA_TYPE_SECURITY) {
-        ESP_ERROR_RETURN(!(g_espnow_sec && g_espnow_sec->state == ESPNOW_SEC_OVER), ESP_FAIL, "-Security key is not set");
+        ESP_ERROR_RETURN(!(g_espnow_sec && g_espnow_sec->state == ESPNOW_SEC_OVER), ESP_FAIL, "Security key is not set");
         size_t enc_len = 0;
         espnow_data = ESP_MALLOC(sizeof(espnow_data_t) + size + g_espnow_sec->tag_len);
         ret = espnow_sec_auth_encrypt(g_espnow_sec, data, size, espnow_data->payload, size + g_espnow_sec->tag_len, &enc_len, g_espnow_sec->tag_len);
@@ -799,6 +805,10 @@ static esp_err_t espnow_send_forward(espnow_data_t *espnow_data)
     espnow_frame_head_t *frame_head = &espnow_data->frame_head;
     const uint8_t *dest_addr = (frame_head->broadcast) ? ESPNOW_ADDR_BROADCAST : espnow_data->dest_addr;
 
+    if (espnow_data->type == ESPNOW_DATA_TYPE_ACK && g_recv_handle[ESPNOW_DATA_TYPE_ACK].handle) {
+        g_recv_handle[ESPNOW_DATA_TYPE_ACK].handle(espnow_data->src_addr, (void *)frame_head, sizeof(espnow_frame_head_t), NULL);
+    }
+
     /**< Wait for other tasks to be sent before send ESP-NOW data */
     if (xSemaphoreTake(g_send_lock, g_espnow_config->send_max_timeout) != pdPASS) {
         ESP_LOGW(TAG, "Wait Sem fail");
@@ -956,6 +966,8 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
 
 esp_err_t espnow_init(const espnow_config_t *config)
 {
+    //ESP_LOGI(TAG, "esp-now Version: %d.%d.%d", ESP_NOW_VER_MAJOR, ESP_NOW_VER_MINOR, ESP_NOW_VER_PATCH);
+
     ESP_PARAM_CHECK(config);
 
     if (g_espnow_config) {

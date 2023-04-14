@@ -16,10 +16,11 @@
 
 ## Overview
 
-vscp-espnow implements esp-now for ESP32 nodes using the VSCP protocol for communication. vscp-espnow is uses the [esp-idf framework](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html).
+vscp-espnow implements esp-now for ESP32 nodes using the VSCP protocol for appliction level communication. vscp-espnow is using the [esp-idf framework](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html).
 
 - All communication is encrypted using AES-128 CTR
 - Suitable for sensor networks or control systems with lower packet count and small payload and where high response time is needed.
+- Nodes can forward events.
 - vscp-espnow defines three types of nodes.
    - **Alpha nodes** have a wifi connection, a web-server, MQTT, VSCP Link server, remote logging. Other Alpha and  Beta and Gamma nodes can bind to an Alpha node forming a communication cluster that share a common encryption key. Alpha nodes are provisioned using Bluetooth.
    - **Beta nodes** are nodes that connect to a cluster using esp-now and they are *__always powered__*.

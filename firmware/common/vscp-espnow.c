@@ -37,8 +37,6 @@
  * ******************************************************************************
  */
 
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -77,7 +75,6 @@
 
 #include "vscp-compiler.h"
 #include "vscp-projdefs.h"
-
 
 static const char *TAG = "vscpnow";
 
@@ -317,14 +314,14 @@ vscp_espnow_evToFrame(uint8_t *buf, uint8_t len, const vscpEvent *pev)
 
   memset(buf, 0, len);
 
-  buf[VSCP_ESPNOW_POS_ID]     = 0x55;
-  buf[VSCP_ESPNOW_POS_ID + 1] = 0xAA;
+  buf[VSCP_ESPNOW_POS_ID]     = VSCP_ESPNOW_ID_MSB;
+  buf[VSCP_ESPNOW_POS_ID + 1] = VSCP_ESPNOW_ID_LSB;
 
   buf[VSCP_ESPNOW_POS_TYPE_VER] = (PRJDEF_NODE_TYPE << 6) + (VSCP_ESPNOW_VERSION << 4) + VSCP_ENCRYPTION_AES128;
 
   // head
-  buf[VSCP_ESPNOW_POS_HEAD] = (pev->head >> 8) & 0xff;
-  buf[VSCP_ESPNOW_POS_HEAD] = pev->head & 0xff;
+  buf[VSCP_ESPNOW_POS_HEAD]     = (pev->head >> 8) & 0xff;
+  buf[VSCP_ESPNOW_POS_HEAD + 1] = pev->head & 0xff;
 
   // nickname
   buf[VSCP_ESPNOW_POS_NICKNAME]     = pev->GUID[14];
@@ -375,14 +372,14 @@ vscp_espnow_exToFrame(uint8_t *buf, uint8_t len, const vscpEventEx *pex)
 
   memset(buf, 0, len);
 
-  buf[VSCP_ESPNOW_POS_ID]     = 0x55;
-  buf[VSCP_ESPNOW_POS_ID + 1] = 0xAA;
+  buf[VSCP_ESPNOW_POS_ID]     = VSCP_ESPNOW_ID_MSB;
+  buf[VSCP_ESPNOW_POS_ID + 1] = VSCP_ESPNOW_ID_LSB;
 
   buf[VSCP_ESPNOW_POS_TYPE_VER] = (PRJDEF_NODE_TYPE << 6) + (VSCP_ESPNOW_VERSION << 4) + VSCP_ENCRYPTION_AES128;
 
   // head
-  buf[VSCP_ESPNOW_POS_HEAD] = (pex->head >> 8) & 0xff;
-  buf[VSCP_ESPNOW_POS_HEAD] = pex->head & 0xff;
+  buf[VSCP_ESPNOW_POS_HEAD]     = (pex->head >> 8) & 0xff;
+  buf[VSCP_ESPNOW_POS_HEAD + 1] = pex->head & 0xff;
 
   // nickname
   buf[VSCP_ESPNOW_POS_NICKNAME]     = pex->GUID[14];
@@ -613,10 +610,10 @@ vscp_espnow_sendEvent(const uint8_t *destAddr, const vscpEvent *pev, bool bSec, 
   espnowhead.channel                 = ESPNOW_CHANNEL_CURRENT;
   espnowhead.filter_adjacent_channel = true;
 
-  espnowhead.broadcast = true;
-  espnowhead.ack       = true;
-  espnowhead.magic = esp_random(); 
-  espnowhead.retransmit_count = 10;
+  espnowhead.broadcast          = true;
+  espnowhead.ack                = true;
+  espnowhead.magic              = esp_random();
+  espnowhead.retransmit_count   = 10;
   espnowhead.forward_ttl        = 10;
   espnowhead.forward_rssi       = -80;
   espnowhead.filter_weak_signal = true;
@@ -700,10 +697,10 @@ vscp_espnow_sendEventEx(const uint8_t *destAddr, const vscpEventEx *pex, bool bS
   espnowhead.channel                 = ESPNOW_CHANNEL_CURRENT;
   espnowhead.filter_adjacent_channel = true;
 
-  espnowhead.broadcast = true;
-  espnowhead.ack       = true;
-  espnowhead.magic = esp_random(); 
-  espnowhead.retransmit_count = 10;
+  espnowhead.broadcast          = true;
+  espnowhead.ack                = true;
+  espnowhead.magic              = esp_random();
+  espnowhead.retransmit_count   = 10;
   espnowhead.forward_ttl        = 10;
   espnowhead.forward_rssi       = -80;
   espnowhead.filter_weak_signal = true;
@@ -772,7 +769,7 @@ vscp_espnow_clear_vscp_handler_cb(void)
 int
 vscp_espnow_send_probe_event(const uint8_t *dest_addr, uint8_t channel, TickType_t wait_ticks)
 {
-  int rv = VSCP_ERROR_SUCCESS;
+  int rv        = VSCP_ERROR_SUCCESS;
   esp_err_t ret = ESP_OK;
 
   vscpEvent *pev = vscp_fwhlp_newEvent();
@@ -814,7 +811,7 @@ vscp_espnow_send_probe_event(const uint8_t *dest_addr, uint8_t channel, TickType
   espnow_frame_head_t espnowhead = {
     .security                = false,
     .broadcast               = true,
-    .retransmit_count        = 10,
+    .retransmit_count        = 1,
     .magic                   = esp_random(),
     .ack                     = true,
     .filter_adjacent_channel = true,
@@ -1030,7 +1027,7 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
 
     // Save sender MAC address to persistent storage
     size_t length = 6;
-    rv = nvs_set_blob(g_nvsHandle, "keyorg", src_addr, length);
+    rv            = nvs_set_blob(g_nvsHandle, "keyorg", src_addr, length);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to write originating max to nvs. rv=%d", rv);
     }
@@ -1038,7 +1035,8 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
 #endif
 
   ESP_LOGI(TAG,
-           "<<< esp-now data received. len=%zd ch=%d src=" MACSTR " rssi=%d class=%d, type=%d sizedata=%d timestamp=%lX",
+           "<<< esp-now data received. len=%zd ch=%d src=" MACSTR
+           " rssi=%d class=%d, type=%d sizedata=%d timestamp=%lX",
            size,
            rx_ctrl->channel,
            MAC2STR(src_addr),

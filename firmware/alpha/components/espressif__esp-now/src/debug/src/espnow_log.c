@@ -65,7 +65,7 @@ esp_err_t espnow_log_set_config(const espnow_log_config_t *config)
 static void espnow_log_send_task(void *arg)
 {
     log_info_t *log_info = NULL;
-
+    printf("log1\n");
     for (; g_log_config;) {
         if (xQueueReceive(g_log_queue, &log_info, pdMS_TO_TICKS(DEBUG_LOG_TIMEOUT_MS)) != pdPASS) {
             continue;
@@ -74,7 +74,7 @@ static void espnow_log_send_task(void *arg)
         if (log_info->level <= g_log_config->log_level_flash) {
             espnow_log_flash_write(log_info->data, log_info->size, log_info->level); /**< Write log data to flash */
         }
-
+        printf("log\n");
         if (strcasecmp(log_info->tag, "espnow") && log_info->level <= g_log_config->log_level_espnow) {
             log_info->size = MIN(ESPNOW_DATA_LEN - 1, log_info->size) + 1;
             log_info->data[log_info->size - 1] = '\0';

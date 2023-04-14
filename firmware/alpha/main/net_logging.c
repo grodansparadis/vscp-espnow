@@ -35,17 +35,17 @@ int
 logging_vprintf(const char *fmt, va_list l)
 {
   // Convert according to format
-  char buffer[xItemSize];
-  int buffer_len = vsprintf(buffer, fmt, l);
-  // printf("logging_vprintf buffer_len=%d\n",buffer_len);
-  // printf("logging_vprintf buffer=[%.*s]\n", buffer_len, buffer);
+  char buffer[LOG_MSG_ITEM_SIZE];
+  int buffer_len = vsnprintf(buffer, LOG_MSG_ITEM_SIZE, fmt, l);
+  //printf("logging_vprintf buffer_len=%d\n",buffer_len);
+  //printf("logging_vprintf buffer=[%.*s]\n", buffer_len, buffer);
   if (buffer_len > 0) {
     // Send MessageBuffer
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     size_t nsent = xMessageBufferSendFromISR(xMessageBufferTrans, &buffer, buffer_len, &xHigherPriorityTaskWoken);
-    // printf("logging_vprintf sended=%d\n",sended);
+    //printf("logging_vprintf sent=%d\n",nsent);
     if (nsent != buffer_len) {
-      //ESP_LOG(TAG, "Unable to send full buffer");
+      //ESP_LOGE(TAG, "Unable to send full buffer");
     }
   }
 
@@ -71,7 +71,7 @@ udp_logging_init(char *ipaddr, unsigned long port, int16_t enableStdout)
   printf("start udp logging: ipaddr=[%s] port=%ld\n", ipaddr, port);
 
   // Create MessageBuffer
-  xMessageBufferTrans = xMessageBufferCreate(xBufferSizeBytes);
+  xMessageBufferTrans = xMessageBufferCreate(LOG_MSG_BUF_SIZE);
   configASSERT(xMessageBufferTrans);
 
   // Start UDP task
@@ -104,7 +104,7 @@ tcp_logging_init(char *ipaddr, unsigned long port, int16_t enableStdout)
   printf("start tcp logging: ipaddr=[%s] port=%ld\n", ipaddr, port);
 
   // Create MessageBuffer
-  xMessageBufferTrans = xMessageBufferCreate(xBufferSizeBytes);
+  xMessageBufferTrans = xMessageBufferCreate(LOG_MSG_BUF_SIZE);
   configASSERT(xMessageBufferTrans);
 
   // Start TCP task
@@ -137,7 +137,7 @@ mqtt_logging_init(char *url, char *topic, int16_t enableStdout)
   printf("start mqtt logging: url=[%s] topic=[%s]\n", url, topic);
 
   // Create MessageBuffer
-  xMessageBufferTrans = xMessageBufferCreate(xBufferSizeBytes);
+  xMessageBufferTrans = xMessageBufferCreate(LOG_MSG_BUF_SIZE);
   configASSERT(xMessageBufferTrans);
 
   // Start MQTT task
@@ -170,7 +170,7 @@ http_logging_init(char *url, int16_t enableStdout)
   printf("start http logging: url=[%s]\n", url);
 
   // Create MessageBuffer
-  xMessageBufferTrans = xMessageBufferCreate(xBufferSizeBytes);
+  xMessageBufferTrans = xMessageBufferCreate(LOG_MSG_BUF_SIZE);
   configASSERT(xMessageBufferTrans);
 
   // Start HTTP task

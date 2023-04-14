@@ -59,7 +59,7 @@ extern "C" {
 // Frame id
 
 #define VSCP_ESPNOW_ID_MSB 0x55
-#define VSCP_ESPNOW_ID_LSB (0xA0 + VSCP_ESPNOW_VERSION)
+#define VSCP_ESPNOW_ID_LSB 0xAA
 
 /**
  * @brief Frame positions for data in the VSCP esp-now frame

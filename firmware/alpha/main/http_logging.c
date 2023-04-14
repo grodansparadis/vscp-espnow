@@ -180,7 +180,7 @@ http_client(void *pvParameters)
   // printf("Start:param.url=[%s]\n", param.url);
 
   // Send ready to receive notify
-  char buffer[xItemSize];
+  char buffer[LOG_MSG_ITEM_SIZE];
   xTaskNotifyGive(param.taskHandle);
 
   while (1) {

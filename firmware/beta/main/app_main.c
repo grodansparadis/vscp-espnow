@@ -638,6 +638,7 @@ app_wifi_init()
   ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
   ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
   ESP_ERROR_CHECK(esp_wifi_start());
+
 }
 
 //-----------------------------------------------------------------------------
@@ -850,6 +851,11 @@ app_main()
   espnow_config.send_max_timeout       = pdMS_TO_TICKS(3000);
 
   espnow_init(&espnow_config);
+
+  //ESP_ERROR_CHECK( esp_wifi_set_protocol(ESP_IF_WIFI_STA, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G|WIFI_PROTOCOL_11N) );
+  //#if CONFIG_ESPNOW_ENABLE_LONG_RANGE
+    //ESP_ERROR_CHECK( esp_wifi_set_protocol(ESP_IF_WIFI_STA, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G|WIFI_PROTOCOL_11N|WIFI_PROTOCOL_LR) );
+//#endif
 
   uint8_t key_info[APP_KEY_LEN];
   if (ESP_OK == espnow_get_key(key_info)) {

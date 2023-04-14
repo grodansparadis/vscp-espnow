@@ -31,7 +31,7 @@ list(APPEND include_dirs "src/espnow/include")
 list(APPEND srcs         "src/ota/espnow_ota_initiator.c")
 list(APPEND srcs         "src/ota/espnow_ota_responder.c")
 list(APPEND include_dirs "src/ota/include")
-list(APPEND requires "app_update" "esp_http_client" "esp_https_ota")
+list(APPEND requires "app_update" "esp_http_client" "esp_https_ota" "efuse")
 
 list(APPEND srcs         "src/provisioning/src/espnow_prov.c")
 list(APPEND include_dirs "src/provisioning/include")
@@ -66,4 +66,19 @@ foreach(func ${WRAP_FUNCTIONS})
      target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=${func}")
 endforeach()
 
+# Force esp_wifi to appear later than esp-now in link line since esp-now depends on esp_wifi.
+idf_component_get_property(esp_wifi esp_wifi COMPONENT_LIB)
+idf_build_get_property(build_components BUILD_COMPONENTS)
+
+if("espressif__esp-now" IN_LIST build_components)
+     idf_component_get_property(esp-now espressif__esp-now COMPONENT_LIB)
+else()
+     idf_component_get_property(esp-now esp-now COMPONENT_LIB)
+endif()
+
+target_link_libraries(${COMPONENT_LIB} INTERFACE $<TARGET_FILE:${esp_wifi}> $<TARGET_FILE:${esp-now}>)
+
 target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-pointer-sign -Wno-format)
+
+include(package_manager)
+cu_pkg_define_version(${CMAKE_CURRENT_LIST_DIR})

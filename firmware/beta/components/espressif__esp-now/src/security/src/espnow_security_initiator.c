@@ -91,7 +91,7 @@ static esp_err_t espnow_sec_info(uint8_t *src_addr, void *data,
 
     if (recv_data->sec_ver == ESPNOW_SEC_VER_V1_0
         && !memcmp(recv_data->client_mac, addr_self, 6)) {
-        ESP_LOGI(TAG, "Device security has been configured by this client, skip.");
+        ESP_LOGD(TAG, "Device security has been configured by this client, skip.");
         return ESP_OK;
     }
 
@@ -102,13 +102,13 @@ static esp_err_t espnow_sec_info(uint8_t *src_addr, void *data,
     (g_info_list)[g_scan_num].sec_ver    = recv_data->sec_ver;
     g_scan_num++;
 
-    ESP_LOGI(TAG, "Device information:");
-    ESP_LOGI(TAG, "Device channel:   %d", rx_ctrl->channel);
-    ESP_LOGI(TAG, "Device rssi:      %d", rx_ctrl->rssi);
-    ESP_LOGI(TAG, "Device mac:       " MACSTR "", MAC2STR(src_addr));
-    ESP_LOGI(TAG, "Security information:");
-    ESP_LOGI(TAG, "Version:          %d", recv_data->sec_ver);
-    ESP_LOGI(TAG, "Client MAC:       " MACSTR "", MAC2STR(recv_data->client_mac));
+    ESP_LOGD(TAG, "Device information:");
+    ESP_LOGD(TAG, "Device channel:   %d", rx_ctrl->channel);
+    ESP_LOGD(TAG, "Device rssi:      %d", rx_ctrl->rssi);
+    ESP_LOGD(TAG, "Device mac:       " MACSTR "", MAC2STR(src_addr));
+    ESP_LOGD(TAG, "Security information:");
+    ESP_LOGD(TAG, "Version:          %d", recv_data->sec_ver);
+    ESP_LOGD(TAG, "Client MAC:       " MACSTR "", MAC2STR(recv_data->client_mac));
 
     return ESP_OK;
 }
@@ -126,7 +126,7 @@ static esp_err_t espnow_sec_initiator_status_process(uint8_t *src_addr, void *da
 
     switch (data_type) {
         case ESPNOW_SEC_TYPE_INFO:
-            ESP_LOGI(TAG, "ESPNOW_SEC_TYPE_INFO");
+            ESP_LOGD(TAG, "ESPNOW_SEC_TYPE_INFO");
             ret = espnow_sec_info(src_addr, data, size, rx_ctrl);
             break;
 
@@ -146,7 +146,6 @@ esp_err_t espnow_sec_initiator_scan(espnow_sec_responder_t **info_list, size_t *
     espnow_frame_head_t frame_head = {
         .retransmit_count = 10,
         .broadcast        = true,
-        .security         = true,
         .magic            = esp_random(),
         .filter_adjacent_channel = true,
         .forward_ttl      = CONFIG_ESPNOW_SEC_SEND_FORWARD_TTL,
@@ -249,7 +248,6 @@ static esp_err_t protocomm_espnow_initiator_start(const protocomm_security_t *pr
     uint8_t *outbuf = NULL;
     int32_t session_id = 0;
     espnow_frame_head_t frame_head = {
-        .security         = true,
         .retransmit_count = CONFIG_ESPNOW_SEC_SEND_RETRY_NUM,
         .filter_adjacent_channel = true,
         .forward_ttl      = CONFIG_ESPNOW_SEC_SEND_FORWARD_TTL,
@@ -326,7 +324,7 @@ static esp_err_t protocomm_espnow_initiator_start(const protocomm_security_t *pr
                 ESP_ERROR_CONTINUE(session_id < 0, "addr " MACSTR " not searched", MAC2STR(src_addr));
 
                 if (req_data->type == ESPNOW_SEC_TYPE_KEY_RESP) {
-                    ESP_LOGI(TAG, "Session %d successful, mac "MACSTR"", session_id, MAC2STR(src_addr));
+                    ESP_LOGD(TAG, "Session %d successful, mac "MACSTR"", session_id, MAC2STR(src_addr));
                     addrs_remove(result->unfinished_addr, &result->unfinished_num, src_addr);
                     result->successed_num ++;
                     if (++success_addrs_num == current_addrs_num) {

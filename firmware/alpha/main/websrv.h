@@ -201,7 +201,7 @@ WEBPAGE_STYLE_CSS \
 WEBPAGE_FAVICON \
 "\" rel=\"icon\" type=\"image/x-icon\" />" \
 "</head><body><div " \
-"style='text-align:left;display:inline-block;color:#eaeaea;min-width:340px;'>" \
+"style='text-align:left;display:inline-block;color:#eaeaea;min-width:340px;max-width:600px;'>" \
 "<div style='text-align:center;color:#eaeaea;'>" \
 "<h3>%s</h3></div>" \
 "<div style='text-align:center;color:#f7f1a6;'><h4>%s</h4></div>"

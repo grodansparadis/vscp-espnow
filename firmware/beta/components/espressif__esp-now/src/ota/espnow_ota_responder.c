@@ -21,6 +21,10 @@
 #include "esp_mac.h"
 #endif
 
+#ifdef CONFIG_BOOTLOADER_APP_ANTI_ROLLBACK
+#include "esp_efuse.h"
+#endif
+
 #include "espnow.h"
 #include "espnow_ota.h"
 #include "espnow_utils.h"
@@ -52,7 +56,7 @@ static esp_err_t validate_image_header(const esp_partition_t *update)
     }
 
     if (esp_ota_get_partition_description(update, &new_app_info) == ESP_OK) {
-        ESP_LOGI(TAG, "Update firmware version: %s", new_app_info.version);
+        ESP_LOGI(TAG, "Running firmware version: %s", new_app_info.version);
     }
 
     if (!g_espnow_ota_config->skip_version_check
@@ -353,7 +357,7 @@ static esp_err_t espnow_ota_write(const espnow_addr_t src_addr, const espnow_ota
 esp_err_t espnow_ota_responder_get_status(espnow_ota_status_t *status)
 {
     ESP_PARAM_CHECK(status);
-    ESP_ERROR_RETURN(!g_ota_config, ESP_ERR_NOT_SUPPORTED, "Upgrade firmware is not initialized");
+    ESP_ERROR_RETURN(!g_ota_config, ESP_ERR_NOT_SUPPORTED, "Mupgrade firmware is not initialized");
 
     memcpy(status, &g_ota_config->status, sizeof(espnow_ota_status_t));
 

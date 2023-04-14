@@ -1,7 +1,7 @@
-dependencies:
-  idf:
-    version: '>=4.3'
-description: This package provides enhanced ESP-NOW functions which will be easy to
-  integrated into product.
+version: "2.2.0"
+description: This package provides enhanced ESP-NOW functions which will be easy to integrate into product.
 url: https://github.com/espressif/esp-now
-version: 2.0.0
+issues: https://github.com/espressif/esp-now/issues
+dependencies:
+  idf: ">=4.3"
+  cmake_utilities: "0.*"

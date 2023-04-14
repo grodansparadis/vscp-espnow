@@ -67,7 +67,7 @@ udp_client(void *pvParameters)
   LWIP_ASSERT("fd >= 0", fd >= 0);
 
   // Send ready to receive notify
-  char buffer[xItemSize];
+  char buffer[LOG_MSG_ITEM_SIZE];
   xTaskNotifyGive(param.taskHandle);
 
   while (1) {

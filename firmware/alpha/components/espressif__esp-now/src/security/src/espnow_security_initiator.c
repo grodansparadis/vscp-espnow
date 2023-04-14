@@ -146,7 +146,6 @@ esp_err_t espnow_sec_initiator_scan(espnow_sec_responder_t **info_list, size_t *
     espnow_frame_head_t frame_head = {
         .retransmit_count = 10,
         .broadcast        = true,
-        .security         = false,
         .magic            = esp_random(),
         .filter_adjacent_channel = true,
         .forward_ttl      = CONFIG_ESPNOW_SEC_SEND_FORWARD_TTL,
@@ -159,7 +158,7 @@ esp_err_t espnow_sec_initiator_scan(espnow_sec_responder_t **info_list, size_t *
     espnow_set_config_for_data_type(ESPNOW_DATA_TYPE_SECURITY_STATUS, 1, espnow_sec_initiator_status_process);
 
     for (int i = 0, start_ticks = xTaskGetTickCount(), recv_ticks = 500; i < 5 && wait_ticks - (xTaskGetTickCount() - start_ticks) > 0;
-            ++i, recv_ticks = pdMS_TO_TICKS(500)) {      
+            ++i, recv_ticks = pdMS_TO_TICKS(500)) {
         ret = espnow_send(ESPNOW_DATA_TYPE_SECURITY, ESPNOW_ADDR_BROADCAST, &request_sec_info, 1, &frame_head, portMAX_DELAY);
         ESP_ERROR_RETURN(ret != ESP_OK, ret, "espnow_send");
 
@@ -213,8 +212,6 @@ static esp_err_t espnow_initiator_sec_process(uint8_t *src_addr, void *data,
     ESP_PARAM_CHECK(size);
     ESP_PARAM_CHECK(rx_ctrl);
 
-    ESP_LOGI(TAG, "----> espnow_initiator_sec_process");
-
     if (g_sec_queue) {
         espnow_sec_data_t sec_data = { 0 };
         sec_data.data = ESP_MALLOC(size);
@@ -251,7 +248,6 @@ static esp_err_t protocomm_espnow_initiator_start(const protocomm_security_t *pr
     uint8_t *outbuf = NULL;
     int32_t session_id = 0;
     espnow_frame_head_t frame_head = {
-        .security         = false,
         .retransmit_count = CONFIG_ESPNOW_SEC_SEND_RETRY_NUM,
         .filter_adjacent_channel = true,
         .forward_ttl      = CONFIG_ESPNOW_SEC_SEND_FORWARD_TTL,
@@ -428,11 +424,8 @@ static esp_err_t protocomm_espnow_initiator_stop()
     return ESP_OK;
 }
 
-esp_err_t espnow_sec_initiator_start(uint8_t key_info[APP_KEY_LEN], 
-                                        const char *pop_data, 
-                                        const uint8_t addrs_list[][6], 
-                                        size_t addrs_num,
-                                        espnow_sec_result_t *res)
+esp_err_t espnow_sec_initiator_start(uint8_t key_info[APP_KEY_LEN], const char *pop_data, const uint8_t addrs_list[][6], size_t addrs_num,
+                                    espnow_sec_result_t *res)
 {
     ESP_PARAM_CHECK(key_info);
     ESP_PARAM_CHECK(pop_data);

@@ -80,7 +80,7 @@ tcp_client(void *pvParameters)
   }
 
   // Send ready to receive notify
-  char buffer[xItemSize];
+  char buffer[LOG_MSG_ITEM_SIZE];
   xTaskNotifyGive(param.taskHandle);
 
   while (1) {

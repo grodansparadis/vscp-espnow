@@ -28,9 +28,9 @@ typedef struct {
 } PARAMETER_t;
 
 // The total number of bytes (not messages) the message buffer will be able to hold at any one time.
-#define xBufferSizeBytes 1024
+#define LOG_MSG_BUF_SIZE 1024
 // The size, in bytes, required to hold each item in the message,
-#define xItemSize 256
+#define LOG_MSG_ITEM_SIZE 512
 
 
 int logging_vprintf( const char *fmt, va_list l );
