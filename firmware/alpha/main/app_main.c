@@ -1918,6 +1918,7 @@ app_main()
   // uint8_t addr[] = { 0xcc, 0x50, 0xe3, 0x80, 0x10, 0xbc };
   uint8_t addr[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
+  uint8_t ttt = 0;
   while (1) {
     // esp_task_wdt_reset();
     // vTaskDelay(pdMS_TO_TICKS(1000));
@@ -1930,6 +1931,36 @@ app_main()
     if (g_vscp_espnow_probe) {
       vscp_espnow_sec_initiator();
       g_vscp_espnow_probe = false;
+    }
+
+    ttt++;
+    if (ttt > 10) {
+      ttt            = 0;
+      vscpEvent *pev = vscp_fwhlp_newEvent();
+      if (NULL == pev) {
+        ESP_LOGE(TAG, "Unable to allocate heartbeat event");
+        continue;
+      }
+
+      pev->pdata = VSCP_CALLOC(3);
+      if (NULL == pev->pdata) {
+        ESP_LOGE(TAG, "Unable to allocate heartbeat event data");
+        continue;
+      }
+
+      pev->vscp_class = VSCP_CLASS1_CONTROL;
+      pev->vscp_type  = VSCP_TYPE_CONTROL_TURNON;
+      pev->sizeData   = 3;
+      pev->pdata[0]   = 0x00; // Optional
+      pev->pdata[1]   = 0xff; // zone
+      pev->pdata[2]   = 0xff; // subzone
+      pev->timestamp  = esp_timer_get_time();
+
+      vscp_espnow_sendEvent(ESPNOW_ADDR_BROADCAST, pev, true, pdMS_TO_TICKS(1000));
+
+      if (NULL != pev) {
+        vscp_fwhlp_deleteEvent(&pev);
+      }
     }
   }
 
