@@ -42,6 +42,9 @@ Changes and additions 2023 by Ake Hedman for the VSCP project (https://vscp.org)
 #define MYDATA         18  // 0x12
 #define MAX_PACKET_LEN 1000
 
+#define PRIORITY_LVL -20
+#define SOCKET_PRIORITY 7
+
 /**
  * @brief Frame header of espnow
  */
@@ -483,6 +486,8 @@ create_raw_socket(char *dev, struct sock_fprog *bpf)
   struct sockaddr_ll sll;
   struct ifreq ifr;
   int fd, ifi, rb, attach_filter;
+  int priority;
+  int priority_errno; // Set priority errno
 
   bzero(&sll, sizeof(sll));
   bzero(&ifr, sizeof(ifr));
@@ -504,6 +509,11 @@ create_raw_socket(char *dev, struct sock_fprog *bpf)
 
   attach_filter = setsockopt(fd, SOL_SOCKET, SO_ATTACH_FILTER, bpf, sizeof(*bpf));
   assert(attach_filter != -1);
+
+  priority = SOCKET_PRIORITY;
+  priority_errno =
+  setsockopt(fd, SOL_SOCKET, SO_PRIORITY, &priority, sizeof(priority));
+  assert(priority_errno == 0);
 
   return fd;
 }

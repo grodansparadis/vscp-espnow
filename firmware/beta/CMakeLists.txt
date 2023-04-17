@@ -20,5 +20,7 @@ endif(DEFINED ENV{PROJECT_NAME})
 
 project(${PROJECT_NAME})
 
+set(EXTRA_COMPONENT_DIRS "../common/components/")
+
 git_describe(PROJECT_VERSION ${COMPONENT_DIR})
 message("Project commit: " ${PROJECT_VERSION})

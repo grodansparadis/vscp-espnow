@@ -1,0 +1,21 @@
+dependencies:
+  esp-now:
+    component_hash: null
+    source:
+      path: /usr/local/src/esp/esp-now
+      type: local
+    version: 2.1.0
+  espressif/cmake_utilities:
+    component_hash: 68f66cd93f6048590a5febe76fa5d7cadeacc592b880ce8241362fd158320c6a
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 0.4.0
+  idf:
+    component_hash: null
+    source:
+      type: idf
+    version: 5.0.1
+manifest_hash: e38f18f576a45e34a861951c52bbda32c2a832d86cda70616b958874577eab07
+target: esp32
+version: 1.0.0

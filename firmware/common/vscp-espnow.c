@@ -613,7 +613,7 @@ vscp_espnow_sendEvent(const uint8_t *destAddr, const vscpEvent *pev, bool bSec, 
   espnowhead.broadcast          = true;
   espnowhead.ack                = true;
   espnowhead.magic              = esp_random();
-  espnowhead.retransmit_count   = 10;
+  espnowhead.retransmit_count   = 1;
   espnowhead.forward_ttl        = 10;
   espnowhead.forward_rssi       = -80;
   espnowhead.filter_weak_signal = true;

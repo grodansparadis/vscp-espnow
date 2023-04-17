@@ -1,0 +1,102 @@
+diff --git a/examples/security/main/Kconfig.projbuild b/examples/security/main/Kconfig.projbuild
+index 69519e6..3c071c3 100644
+--- a/examples/security/main/Kconfig.projbuild
++++ b/examples/security/main/Kconfig.projbuild
+@@ -12,6 +12,12 @@ menu "Example Configuration"
+         help
+             Proof of Possession (PoP) string used to authorize session and derive shared key.
+ 
++    config APP_ESPNOW_SEC_OPTION
++        bool "The payload data is ciphertext or plaintext when enable security"
++        default y
++        help
++            Send ciphertext or plaintext when enable security.
++
+     choice APP_ESPNOW_SEC_MODE
+         bool "ESP-NOW Mode"
+         default APP_ESPNOW_SEC_INITIATOR
+diff --git a/examples/security/main/app_main.c b/examples/security/main/app_main.c
+index 1677639..96a6def 100644
+--- a/examples/security/main/app_main.c
++++ b/examples/security/main/app_main.c
+@@ -49,6 +49,7 @@ static void app_uart_read_task(void *arg)
+     espnow_frame_head_t frame_head = {
+         .retransmit_count = CONFIG_APP_ESPNOW_RETRY_NUM,
+         .broadcast        = true,
++        .security         = CONFIG_APP_ESPNOW_SEC_OPTION
+     };
+ 
+     for (;;) {
+diff --git a/src/espnow/src/espnow.c b/src/espnow/src/espnow.c
+index 341917f..8dbb1a9 100644
+--- a/src/espnow/src/espnow.c
++++ b/src/espnow/src/espnow.c
+@@ -510,11 +510,26 @@ esp_err_t espnow_send(espnow_data_type_t type, const espnow_addr_t dest_addr, co
+         && type != ESPNOW_DATA_TYPE_SECURITY_STATUS && type != ESPNOW_DATA_TYPE_SECURITY) {
+         ESP_ERROR_RETURN(!(g_espnow_sec && g_espnow_sec->state == ESPNOW_SEC_OVER), ESP_FAIL, "Security key is not set");
+         size_t enc_len = 0;
+-        espnow_data = ESP_MALLOC(sizeof(espnow_data_t) + size + g_espnow_sec->tag_len);
++        espnow_data = ESP_MALLOC(sizeof(espnow_data_t) + size + g_espnow_sec->tag_len + IV_LEN);
++        uint8_t key_info[APP_KEY_LEN];
++        uint8_t iv_info[IV_LEN];
++
++        ret = espnow_get_key(key_info);
++        if (ret) {
++            ESP_FREE(espnow_data);
++            ESP_LOGE(TAG, "Get security key fail for encrypt, err_name: %s", esp_err_to_name(ret));
++            return ret;
++        }
++
++        esp_fill_random(iv_info, IV_LEN);
++        memcpy(key_info + KEY_LEN, iv_info, IV_LEN);
++        espnow_set_key(key_info);
++
+         ret = espnow_sec_auth_encrypt(g_espnow_sec, data, size, espnow_data->payload, size + g_espnow_sec->tag_len, &enc_len, g_espnow_sec->tag_len);
+-        espnow_data->size = enc_len;
++        espnow_data->size = enc_len + IV_LEN;
+         if (ret == ESP_OK) {
+             enc = 1;
++            memcpy(espnow_data->payload + enc_len, iv_info, IV_LEN);
+         } else {
+             ESP_FREE(espnow_data);
+             ESP_LOGE(TAG, "Security encrypt return error");
+@@ -761,7 +776,17 @@ static esp_err_t espnow_recv_process(espnow_pkt_t *q_data)
+         if (frame_head->security) {
+             if (g_espnow_config->sec_enable) {
+                 if (g_espnow_sec && g_espnow_sec->state == ESPNOW_SEC_OVER) {
+-                    ret = espnow_sec_auth_decrypt(g_espnow_sec, espnow_data->payload, espnow_data->size, data, ESPNOW_PAYLOAD_LEN, &size, g_espnow_sec->tag_len);
++                    uint8_t key_info[APP_KEY_LEN];
++
++                    ret = espnow_get_key(key_info);
++                    if (ret) {
++                        ESP_LOGE(TAG, "Get security key fail for decrypt, err_name: %s", esp_err_to_name(ret));
++                        goto EXIT;
++                    }
++                    memcpy(key_info + KEY_LEN, espnow_data->payload + (espnow_data->size - IV_LEN), IV_LEN);
++                    espnow_set_key(key_info);
++
++                    ret = espnow_sec_auth_decrypt(g_espnow_sec, espnow_data->payload, (espnow_data->size - IV_LEN), data, ESPNOW_PAYLOAD_LEN, &size, g_espnow_sec->tag_len);
+                     ESP_ERROR_GOTO(ret != ESP_OK, EXIT, "espnow_sec_auth_decrypt, err_name: %s", esp_err_to_name(ret));
+                 } else {
+                     ESP_LOGE(TAG, "Security key is not set");
+@@ -1083,6 +1108,7 @@ esp_err_t espnow_set_key(uint8_t key_info[APP_KEY_LEN])
+     ESP_PARAM_CHECK(g_espnow_sec);
+     ESP_PARAM_CHECK(key_info);
+ 
++    ESP_LOG_BUFFER_HEX_LEVEL(TAG, key_info, APP_KEY_LEN, ESP_LOG_DEBUG);
+     int ret = espnow_sec_setkey(g_espnow_sec, key_info);
+     ESP_ERROR_RETURN(ret != ESP_OK, ret, "espnow_sec_setkey %x", ret);
+     ret = espnow_storage_set("key_info", key_info, APP_KEY_LEN);
+diff --git a/src/security/include/espnow_security.h b/src/security/include/espnow_security.h
+index f3f6a4d..55670d7 100644
+--- a/src/security/include/espnow_security.h
++++ b/src/security/include/espnow_security.h
+@@ -28,7 +28,7 @@ extern "C" {
+ #define KEY_LEN                             16      /**< Secret key length */
+ #define IV_LEN                              8       /**< The initialization vector (nonce) length */
+ #define TAG_LEN                             4       /**< The length of the authentication field */
+-#define ESPNOW_SEC_PACKET_MAX_SIZE          (ESPNOW_PAYLOAD_LEN - TAG_LEN)  /**< Maximum length of a single encrypted packet transmitted */
++#define ESPNOW_SEC_PACKET_MAX_SIZE          (ESPNOW_PAYLOAD_LEN - TAG_LEN - IV_LEN)  /**< Maximum length of a single encrypted packet transmitted */
+ 
+ /**
+  * @brief State of security

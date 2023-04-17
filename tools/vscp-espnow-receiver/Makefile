@@ -1,4 +1,4 @@
-test:
+receiver:
 	mkdir -p bin
 	gcc  main.c -Wall -o bin/receiver
 
