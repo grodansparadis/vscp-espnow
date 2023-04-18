@@ -47,6 +47,7 @@
 #include <string.h>
 
 #include <esp_wifi_types.h>
+#include <espnow.h>
 
 #include <vscp.h>
 
@@ -74,18 +75,26 @@ extern "C" {
 // bit 3,2,1,0 - Encryption (0=none/1=AES128(/2=AES192/3=AES256))
 #define VSCP_ESPNOW_POS_TYPE_VER 2
 
+// Sequence counter byte can be used to protect from replay attacks.
+// It is increase by on for each event sent
+#define VSCP_ESPNOW_POS_SEQ 3
+
+// Time stamp is the time_t from the time() call. Not that
+// time_t can be 65 bits on some systems (__USE_TIME_BITS64)
+#define VSCP_ESPNOW_POS_TIME_STAMP 4
+
 // VSCP content
-#define VSCP_ESPNOW_POS_HEAD       3  // VSCP head bytes (2)
-#define VSCP_ESPNOW_POS_NICKNAME   5  // Node nickname (2)
-#define VSCP_ESPNOW_POS_VSCP_CLASS 7  // VSCP class (2)
-#define VSCP_ESPNOW_POS_VSCP_TYPE  9  // VSCP Type (2)
-#define VSCP_ESPNOW_POS_SIZE       11 // Data size (needed because of encryption padding) (1)
-#define VSCP_ESPNOW_POS_DATA       12 // VSCP data (max 128 bytes)
+#define VSCP_ESPNOW_POS_HEAD       8  // VSCP head bytes (2)
+#define VSCP_ESPNOW_POS_NICKNAME   10 // Node nickname (2)
+#define VSCP_ESPNOW_POS_VSCP_CLASS 12 // VSCP class (2)
+#define VSCP_ESPNOW_POS_VSCP_TYPE  14 // VSCP Type (2)
+#define VSCP_ESPNOW_POS_SIZE       16 // Data size (needed because of encryption padding) (1)
+#define VSCP_ESPNOW_POS_DATA       17 // VSCP data (max 128 bytes)
 
 #define VSCP_ESPNOW_MIN_FRAME VSCP_ESPNOW_POS_DATA // Number of bytes in minimum frame
 #define VSCP_ESPNOW_MAX_DATA                                                                                           \
   (ESPNOW_SEC_PACKET_MAX_SIZE - VSCP_ESPNOW_MIN_FRAME) // Max VSCP data (of possible 512 bytes) that a frame can hold
-#define VSCP_ESPNOW_MAX_FRAME (ESPNOW_SEC_PACKET_MAX_SIZE - VSCP_ESPNOW_MIN_FRAME - 16) // 16 byte for iv
+#define VSCP_ESPNOW_MAX_FRAME (ESPNOW_SEC_PACKET_MAX_SIZE - VSCP_ESPNOW_MIN_FRAME - 16) // 16 byte IV if VSCP encryption
 
 /*
   Note on max data size
@@ -126,13 +135,35 @@ typedef enum {
   VSCP_ESPNOW_RECV_CB,
 } vscp_espnow_event_id_t;
 
+typedef struct {
+  uint8_t node_type; // VSCP_DROPLET_ALPHA / VSCP_DROPLET_BETA / VSCP_DROPLET_GAMMA
+  uint8_t freq;      // Heart beat frequency
+} vscp_espnow_heart_beat_t;
+
+/**
+ * @brief Item in table for replay attack preventions
+ *
+ * An event is accepted from a node only if:
+ *  Timestamp is not null.
+ *  The timestamp is within 200 ms of the sync time.
+ *
+ * Timestamp is set to current timestamp when first heartbeat is received
+ *    from node with this mac adress.
+ */
+
+// Maximum number of seq nodes in replay prevention table
+#define MAX_SEQ_NODES 100
+
+typedef struct {
+  uint8_t seq;                  // Last seq counter
+  uint8_t mac[ESPNOW_ADDR_LEN]; // MAC address for node
+} vscp_espnow_last_event_t;
+
 /* When ESPNOW sending or receiving callback function is called, post event to ESPNOW task. */
 typedef struct {
   vscp_espnow_event_id_t id;
-  //vscp_espnow_event_info_t info;
+  // vscp_espnow_event_info_t info;
 } vscp_espnow_event_t;
-
-
 
 /**
  * @brief Initialize the configuration of esp-now
@@ -176,15 +207,15 @@ typedef struct {
 } vscp_espnow_prov_data_t;
 
 #define KEYSTR                                                                                                         \
-  "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x%02x:%02x:%02x:%02x:%02x:%02x:%02x" \
+  "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x%02x:%02x:%02x:%02x:%02x:%02x:%02x"   \
   ":%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x"
 #define KEY2STR(a)                                                                                                     \
   (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5], (a)[6], (a)[7], (a)[8], (a)[9], (a)[10], (a)[11], (a)[12], (a)[13],  \
     (a)[14], (a)[15], (a)[16], (a)[17], (a)[18], (a)[19], (a)[20], (a)[21], (a)[22], (a)[23], (a)[24], (a)[25],        \
     (a)[26], (a)[27], (a)[28], (a)[29], (a)[30], (a)[31]
 
-#define VSCP_ESPNOW_MSG_CACHE_SIZE           32    // Size for magic cache
-#define VSCP_ESPNOW_HEART_BEAT_INTERVAL      30000 // Milliseconds between heartbeat events (30 seconds)
+#define VSCP_ESPNOW_MSG_CACHE_SIZE      32    // Size for magic cache
+#define VSCP_ESPNOW_HEART_BEAT_INTERVAL 30000 // Milliseconds between heartbeat events (30 seconds)
 
 ESP_EVENT_DECLARE_BASE(VSCP_ESPNOW_EVENT); // declaration of the vscp espnow events family
 
@@ -199,9 +230,18 @@ typedef void (*vscp_espnow_attach_network_handler_cb_t)(wifi_pkt_rx_ctrl_t *prxd
 // ----------------------------------------------------------------------------
 
 /**
+ * @brief Get VSCP timestamp
+ *
+ * @return timestamp in microsecond. The returned timestamp is based on the set system time.
+ */
+
+uint64_t
+vscp_espnow_timestamp(void);
+
+/**
  * @brief Start security initiation
- * 
- * @return esp_err_t 
+ *
+ * @return esp_err_t
  */
 
 esp_err_t
@@ -231,9 +271,9 @@ vscp_espnow_init(const vscp_espnow_config_t *pconfig);
  * @brief Send alpha probe
  *
  * @return int VSCP_ERROR_SUCCESS if all is OK
- * 
- * A Beta/Gamma node send a VSCP probe on all channels until it get a 
- * response from an alpha node. If it does it starts security key 
+ *
+ * A Beta/Gamma node send a VSCP probe on all channels until it get a
+ * response from an alpha node. If it does it starts security key
  * exchange with that node. The node use the channel it received the probe on.
  */
 
@@ -264,10 +304,7 @@ vscp_espnow_build_guid_from_mac(uint8_t *pguid, const uint8_t *pmac, uint16_t ni
  */
 
 int
-vscp_espnow_sendEvent(const uint8_t *destAddr,
-                      const vscpEvent *pev,
-                      bool bSec,
-                      uint32_t wait_ms);
+vscp_espnow_sendEvent(const uint8_t *destAddr, const vscpEvent *pev, bool bSec, uint32_t wait_ms);
 
 /**
  * @fn vscp_espnow_sendEventEx
@@ -281,10 +318,7 @@ vscp_espnow_sendEvent(const uint8_t *destAddr,
  * @return int Error code. VSCP_ERROR_SUCCESS if all is OK.
  */
 int
-vscp_espnow_sendEventEx(const uint8_t *destAddr,
-                        const vscpEventEx *pex,
-                        bool bSec,
-                        uint32_t wait_ms);
+vscp_espnow_sendEventEx(const uint8_t *destAddr, const vscpEventEx *pex, bool bSec, uint32_t wait_ms);
 
 /**
  * @fn vscp_espnow_getMinBufSizeEv

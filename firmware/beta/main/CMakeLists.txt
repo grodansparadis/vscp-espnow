@@ -1,10 +1,11 @@
 idf_component_register(SRCS "app_main.c" 
                             "../../../vscp-firmware/common/vscp-firmware-helper.c"
                             "../../../vscp-firmware/common/vscp-firmware-level2.c"
-                            "../../../vscp-firmware/common/vscp-aes.c"
+                            "../../../vscp-firmware/common/vscp-aes.c"                            
                             "../../common/vscp-espnow.c"
+                            "../../common/dllist.c"
                             "callbacks-vscp-protocol.c"
                       INCLUDE_DIRS "." 
                             "../../common"
                             "../../../vscp-firmware/" 
-                            "../../../vscp-firmware/common/"  )
+                            "../../../vscp-firmware/common/" )

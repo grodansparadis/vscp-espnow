@@ -1774,10 +1774,10 @@ app_main()
   ESP_LOGI(TAG, "Starting time sync");
 
   // Initialize time synchronization
-  // ret = espnow_timesync_start();
-  // if (ESP_OK != ret) {
-  //   ESP_LOGI(TAG,"Failed to start timesync %X", ret);
-  // }
+  ret = espnow_timesync_start();
+  if (ESP_OK != ret) {
+    ESP_LOGI(TAG, "Failed to start timesync %X", ret);
+  }
 
   // ESP_LOGI(TAG, "Starting log");
 
@@ -1915,6 +1915,10 @@ app_main()
   esp_wifi_get_mac(ESP_IF_WIFI_STA, ESPNOW_ADDR_SELF);
   ESP_LOGI(TAG, "mac: " MACSTR ", version: %d", MAC2STR(ESPNOW_ADDR_SELF), ESPNOW_VERSION);
 
+  // Set timezone to GMT
+  setenv("TZ", "GMT", 1);
+  tzset();
+
   // uint8_t addr[] = { 0xcc, 0x50, 0xe3, 0x80, 0x10, 0xbc };
   uint8_t addr[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
@@ -1938,22 +1942,46 @@ app_main()
       ttt            = 0;
       vscpEvent *pev = vscp_fwhlp_newEvent();
       if (NULL == pev) {
-        ESP_LOGE(TAG, "Unable to allocate heartbeat event");
+        ESP_LOGE(TAG, "Unable to allocate VSCP event");
         continue;
       }
 
-      pev->pdata = VSCP_CALLOC(3);
+      pev->pdata = VSCP_CALLOC(8);
       if (NULL == pev->pdata) {
-        ESP_LOGE(TAG, "Unable to allocate heartbeat event data");
+        ESP_LOGE(TAG, "Unable to allocate event data");
         continue;
       }
 
-      pev->vscp_class = VSCP_CLASS1_CONTROL;
-      pev->vscp_type  = VSCP_TYPE_CONTROL_TURNON;
-      pev->sizeData   = 3;
-      pev->pdata[0]   = 0x00; // Optional
-      pev->pdata[1]   = 0xff; // zone
-      pev->pdata[2]   = 0xff; // subzone
+#ifdef __USE_TIME_BITS64
+      ESP_LOGE(TAG, "64 bit timer is not supported.");
+#endif
+
+      time_t now;
+      char strftime_buf[64];
+      struct tm timeinfo;
+
+      time(&now);
+
+      localtime_r(&now, &timeinfo);
+      strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+      
+      struct timeval tv_now;
+      gettimeofday(&tv_now, NULL);
+      int64_t time_us = (int64_t) tv_now.tv_sec * 1000000L + (int64_t) tv_now.tv_usec;
+
+      ESP_LOGI(TAG, "The current date/time GMT is: %lld %s", tv_now.tv_sec, strftime_buf);
+
+      pev->vscp_class = VSCP_CLASS1_INFORMATION;
+      pev->vscp_type  = VSCP_TYPE_INFORMATION_TIME;
+      pev->sizeData   = 8;
+      pev->pdata[0]   = 0x00;                           // Index
+      pev->pdata[1]   = 0xff;                           // Zone
+      pev->pdata[2]   = 0xff;                           // Sub-Zone
+      pev->pdata[3]   = timeinfo.tm_hour;               // Hour
+      pev->pdata[4]   = timeinfo.tm_min;                // Minutes
+      pev->pdata[5]   = timeinfo.tm_sec;                // Seconds
+      pev->pdata[6]   = ((time_us / 1000) >> 8) & 0xff; // Milliseconds (MSB)
+      pev->pdata[7]   = (time_us / 1000) & 0xff;        // Milliseconds (LSB)
       pev->timestamp  = esp_timer_get_time();
 
       vscp_espnow_sendEvent(ESPNOW_ADDR_BROADCAST, pev, true, pdMS_TO_TICKS(1000));

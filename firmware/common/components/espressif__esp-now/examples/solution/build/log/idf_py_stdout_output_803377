@@ -1,0 +1,5 @@
+[1/4] cd /usr/local/src/esp/esp-now/examples/solution/build/esp-idf/esptool_py && /home/akhe/.espressif/python_env/idf5.0_py3.10_env/bin/python /usr/local/src/esp/esp-idf-v5.0.1/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /usr/local/src/esp/esp-now/examples/solution/build/partition_table/partition-table.bin /usr/local/src/esp/esp-now/examples/solution/build/Init.bin
+Init.bin binary size 0x13cd20 bytes. Smallest app partition is 0x1d0000 bytes. 0x932e0 bytes (32%) free.
+[2/4] Performing build step for 'bootloader'
+[1/1] cd /usr/local/src/esp/esp-now/examples/solution/build/bootloader/esp-idf/esptool_py && /home/akhe/.espressif/python_env/idf5.0_py3.10_env/bin/python /usr/local/src/esp/esp-idf-v5.0.1/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x1000 /usr/local/src/esp/esp-now/examples/solution/build/bootloader/bootloader.bin
+Bootloader binary size 0x6ca0 bytes. 0x360 bytes (3%) free.

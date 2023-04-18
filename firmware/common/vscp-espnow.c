@@ -41,6 +41,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
+#include <sys/unistd.h>
+#include <sys/time.h>
 
 #include <freertos/FreeRTOS.h>
 #include "freertos/semphr.h"
@@ -64,6 +66,7 @@
 #include <protocomm_security1.h>
 
 #include "espnow.h"
+#include <espnow_utils.h>
 #include "espnow_security_handshake.h"
 
 #include <cJSON.h>
@@ -159,9 +162,84 @@ static vscp_espnow_attach_network_handler_cb_t s_vscp_espnow_attach_network_hand
 // static vscp_espnow_provisioning_t s_provisionNodeInfo = { 0 };
 
 // Statistics
+static uint8_t s_vscp_espnow_seq = 0; // Sequency counter for sent events
+
+static uint8_t s_cntSeqNodes = 0;
+vscp_espnow_last_event_t **s_pSeqNodes;
+
 static vscp_espnow_stats_t s_vscpEspNowStats;
 
 // Forward declarations
+
+static bool
+addSeqNode(const uint8_t *pmac, uint8_t seq)
+{
+  // Is this the first
+  if (!s_cntSeqNodes) {
+    s_pSeqNodes = malloc(sizeof(vscp_espnow_last_event_t[1]));
+    if (NULL == s_pSeqNodes) {
+      ESP_LOGE(TAG, "Failed to allocate seq node structure");
+      return false;
+    }
+    s_cntSeqNodes++;
+    s_pSeqNodes[0]->seq = seq;
+    memcpy(s_pSeqNodes[0]->mac, pmac, ESPNOW_ADDR_LEN);
+  }
+  else {
+    // Check count
+    if (s_cntSeqNodes >= MAX_SEQ_NODES) {
+      ESP_LOGE(TAG, "Max number of seq nodes has been reached.");
+      return false;
+    }
+
+    s_pSeqNodes = realloc(s_pSeqNodes, sizeof(vscp_espnow_last_event_t[s_cntSeqNodes + 1]));
+    if (NULL == s_pSeqNodes) {
+      ESP_LOGE(TAG, "Failed to allocate seq node structure");
+      return false;
+    }
+    s_cntSeqNodes++;
+    s_pSeqNodes[s_cntSeqNodes]->seq = seq;
+    memcpy(s_pSeqNodes[s_cntSeqNodes]->mac, pmac, ESPNOW_ADDR_LEN);
+  }
+
+  return true;
+}
+
+static bool
+validateSeqNode(const uint8_t *pmac, uint8_t seq)
+{
+  // Find node in table and if seq is greater than previous seq update seq
+  // and return true
+  for (int i = 0; i < s_cntSeqNodes; i++) {
+    if ((0 == memcmp(s_pSeqNodes[s_cntSeqNodes]->mac, pmac, ESPNOW_ADDR_LEN)) &&
+        (seq > s_pSeqNodes[s_cntSeqNodes]->seq)) {
+      s_pSeqNodes[s_cntSeqNodes]->seq = seq;
+      return true;
+    }
+  }
+
+  // If nodes first event add it to the table.
+  // There should be no risk for a replay on a first
+  // event from a node. You can't replay something that
+  // has not been sent yet.
+  // If it can be added true is returned.
+  return addSeqNode(pmac, seq);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// vscp_espnow_timestamp
+//
+
+uint64_t
+vscp_espnow_timestamp(void)
+{
+  struct timeval tv_now;
+  if (-1 == gettimeofday(&tv_now, NULL)) {
+    return ESP_ERR_ESPNOW_INTERNAL;
+  }
+
+  return (int64_t) tv_now.tv_sec * 1000000L + (int64_t) tv_now.tv_usec;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // vscp_espnow_sec_initiator
@@ -319,6 +397,25 @@ vscp_espnow_evToFrame(uint8_t *buf, uint8_t len, const vscpEvent *pev)
 
   buf[VSCP_ESPNOW_POS_TYPE_VER] = (PRJDEF_NODE_TYPE << 6) + (VSCP_ESPNOW_VERSION << 4) + VSCP_ENCRYPTION_AES128;
 
+  // Set encryption
+  buf[VSCP_ESPNOW_POS_TYPE_VER] = (PRJDEF_NODE_TYPE << 6) + (VSCP_ESPNOW_VERSION << 4) + (0 & 0x0f);
+
+  // Set seq count
+  buf[VSCP_ESPNOW_POS_SEQ] = s_vscp_espnow_seq++;
+
+  // Set timestamp (in seconds)
+  struct timeval tv_now;
+  gettimeofday(&tv_now, NULL);
+  buf[VSCP_ESPNOW_POS_TIME_STAMP]     = (tv_now.tv_sec >> 24) & 0xff;
+  buf[VSCP_ESPNOW_POS_TIME_STAMP + 1] = (tv_now.tv_sec >> 16) & 0xff;
+  buf[VSCP_ESPNOW_POS_TIME_STAMP + 2] = (tv_now.tv_sec >> 8) & 0xff;
+  buf[VSCP_ESPNOW_POS_TIME_STAMP + 3] = tv_now.tv_sec & 0xff;
+
+  long long int node_time =
+    (long long int) (((uint32_t) buf[VSCP_ESPNOW_POS_TIME_STAMP] << 24) +
+                     ((uint32_t) buf[VSCP_ESPNOW_POS_TIME_STAMP + 1] << 16) +
+                     ((uint32_t) buf[VSCP_ESPNOW_POS_TIME_STAMP + 2] << 8) + buf[VSCP_ESPNOW_POS_TIME_STAMP + 3]);
+
   // head
   buf[VSCP_ESPNOW_POS_HEAD]     = (pev->head >> 8) & 0xff;
   buf[VSCP_ESPNOW_POS_HEAD + 1] = pev->head & 0xff;
@@ -376,6 +473,17 @@ vscp_espnow_exToFrame(uint8_t *buf, uint8_t len, const vscpEventEx *pex)
   buf[VSCP_ESPNOW_POS_ID + 1] = VSCP_ESPNOW_ID_LSB;
 
   buf[VSCP_ESPNOW_POS_TYPE_VER] = (PRJDEF_NODE_TYPE << 6) + (VSCP_ESPNOW_VERSION << 4) + VSCP_ENCRYPTION_AES128;
+
+  // Set seq count
+  buf[VSCP_ESPNOW_POS_SEQ] = s_vscp_espnow_seq++;
+
+  // Set timestamp (in seconds)
+  struct timeval tv_now;
+  gettimeofday(&tv_now, NULL);
+  buf[VSCP_ESPNOW_POS_TIME_STAMP]     = (tv_now.tv_sec >> 24) & 0xff;
+  buf[VSCP_ESPNOW_POS_TIME_STAMP + 1] = (tv_now.tv_sec >> 16) & 0xff;
+  buf[VSCP_ESPNOW_POS_TIME_STAMP + 2] = (tv_now.tv_sec >> 8) & 0xff;
+  buf[VSCP_ESPNOW_POS_TIME_STAMP + 3] = tv_now.tv_sec & 0xff;
 
   // head
   buf[VSCP_ESPNOW_POS_HEAD]     = (pex->head >> 8) & 0xff;
@@ -451,7 +559,7 @@ vscp_espnow_frameToEv(vscpEvent *pev, const uint8_t *buf, uint8_t len, uint32_t 
 
   // Set timestamp if not set
   if (!timestamp) {
-    pev->timestamp = esp_timer_get_time();
+    pev->timestamp = vscp_espnow_timestamp(); // esp_timer_get_time();
   }
   else {
     pev->timestamp = timestamp;
@@ -508,7 +616,7 @@ vscp_espnow_frameToEx(vscpEventEx *pex, const uint8_t *buf, uint8_t len, uint32_
 
   // Set timestamp if not set
   if (!timestamp) {
-    pex->timestamp = esp_timer_get_time();
+    pex->timestamp = vscp_espnow_timestamp(); // esp_timer_get_time();
   }
   else {
     pex->timestamp = timestamp;
@@ -597,9 +705,6 @@ vscp_espnow_sendEvent(const uint8_t *destAddr, const vscpEvent *pev, bool bSec, 
     ESP_LOGE(TAG, "Failed to convert event to frame. rv=%d", rv);
     return rv;
   }
-
-  // Set encryption
-  pbuf[VSCP_ESPNOW_POS_TYPE_VER] = (PRJDEF_NODE_TYPE << 6) + (VSCP_ESPNOW_VERSION << 4) + (0 & 0x0f);
 
   // ESP_LOG_BUFFER_HEXDUMP(TAG, pbuf, len, ESP_LOG_DEBUG);
 
@@ -787,7 +892,7 @@ vscp_espnow_send_probe_event(const uint8_t *dest_addr, uint8_t channel, TickType
   }
 
   pev->head       = 0;
-  pev->timestamp  = esp_timer_get_time();
+  pev->timestamp  = vscp_espnow_timestamp(); // esp_timer_get_time();
   pev->vscp_class = VSCP_CLASS1_PROTOCOL;
   pev->vscp_type  = VSCP_TYPE_PROTOCOL_NEW_NODE_ONLINE;
 
@@ -974,6 +1079,19 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
     return;
   }
 
+  struct timeval tv_now;
+  gettimeofday(&tv_now, NULL);
+
+  long long int node_time =
+    (long long int) (((uint32_t) data[VSCP_ESPNOW_POS_TIME_STAMP] << 24) +
+                     ((uint32_t) data[VSCP_ESPNOW_POS_TIME_STAMP + 1] << 16) +
+                     ((uint32_t) data[VSCP_ESPNOW_POS_TIME_STAMP + 2] << 8) + data[VSCP_ESPNOW_POS_TIME_STAMP + 3]);
+
+  ESP_LOGI(TAG,"node_time  time: %lld, tv: %lld ---------> diff: %lld\n",
+         node_time,
+         tv_now.tv_sec,
+         node_time - tv_now.tv_sec);
+
   vscpEvent *pev = vscp_fwhlp_newEvent();
   if (NULL == pev) {
     ESP_LOGE(TAG, "[%s, %d]: Could not ", __func__, __LINE__);
@@ -1032,6 +1150,19 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
       ESP_LOGE(TAG, "Failed to write originating max to nvs. rv=%d", rv);
     }
   }
+
+  // Check if we got a heartbeat from an alpha node
+  if ((VSCP_CLASS1_PROTOCOL == pev->vscp_class) && (VSCP_TYPE_PROTOCOL_SEGCTRL_HEARTBEAT == pev->vscp_type) &&
+      (pev->sizeData >= 5)) {
+    struct timeval tm;
+
+    tm.tv_sec  = (long long int) (((uint32_t) pev->pdata[1] << 24) + ((uint32_t) pev->pdata[2] << 16) +
+                                 ((uint32_t) pev->pdata[3] << 8) + pev->pdata[4]);
+    tm.tv_usec = 0;
+    if (-1 == settimeofday(&tm, NULL)) {
+      ESP_LOGE(TAG, "Failed to set time.");
+    }
+  }
 #endif
 
   ESP_LOGI(TAG,
@@ -1059,10 +1190,9 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
 void
 vscp_espnow_heartbeat_task(void *pvParameter)
 {
-  // uint8_t buf[VSCP_ESPNOW_MIN_FRAME + 3]; // Three byte data
-  //  45size_t size = sizeof(buf);
+  time_t now;
 
-  // vscp_espnow_config_t *pconfig = (vscp_espnow_config_t *) pvParameter;
+  // vscp_espnow_heart_beat_t *pconfig = (vscp_espnow_heart_beat_t *) pvParameter;
   // if (NULL == pconfig) {
   //   ESP_LOGE(TAG, "Invalid (NULL) parameter given");
   //   vTaskDelete(NULL);
@@ -1080,16 +1210,6 @@ vscp_espnow_heartbeat_task(void *pvParameter)
     goto ERROR;
   }
 
-  pev->vscp_class = VSCP_CLASS1_INFORMATION;
-  pev->vscp_type  = VSCP_TYPE_INFORMATION_NODE_HEARTBEAT;
-  pev->sizeData   = 3;
-  pev->pdata[0]   = 0xff; // index
-  pev->pdata[1]   = 0xff; // zone
-  pev->pdata[2]   = 0xff; // subzone
-  pev->timestamp  = esp_timer_get_time();
-
-  ESP_LOGI(TAG, "Start sending VSCP heartbeats");
-
   while (true) {
 
     if (1 /*VSCP_ESPNOW_STATE_IDLE == s_stateVscpEspNow*/) {
@@ -1104,6 +1224,43 @@ vscp_espnow_heartbeat_task(void *pvParameter)
 
       ESP_LOGI(TAG, "Sending heartbeat ch=%d (%d).", ch, second);
 
+      // time(&now); // Get current time
+      struct timeval tv_now;
+      gettimeofday(&tv_now, NULL);
+
+#if (PRJDEF_NODE_TYPE == VSCP_DROPLET_ALPHA)
+      // Alpha node send protocol heartbeat
+      pev->vscp_class = VSCP_CLASS1_PROTOCOL;
+      pev->vscp_type  = VSCP_TYPE_PROTOCOL_SEGCTRL_HEARTBEAT;
+      pev->sizeData   = 5;
+      pev->pdata[0]   = 0x00; // CRC for GUID
+      pev->pdata[1]   = (tv_now.tv_sec >> 24) & 0xff;
+      pev->pdata[2]   = (tv_now.tv_sec >> 16) & 0xff;
+      pev->pdata[3]   = (tv_now.tv_sec >> 8) & 0xff;
+      pev->pdata[4]   = tv_now.tv_sec & 0xff;
+      printf("now=%lld  %lld\n",
+             tv_now.tv_sec,
+             (long long int) (((uint32_t) pev->pdata[1] << 24) + ((uint32_t) pev->pdata[2] << 16) +
+                              ((uint32_t) pev->pdata[3] << 8) + pev->pdata[4]));
+#elif (PRJDEF_NODE_TYPE == VSCP_DROPLET_BETA)
+      // Beta nodes send information heartbeat
+      pev->vscp_class = VSCP_CLASS1_INFORMATION;
+      pev->vscp_type  = VSCP_TYPE_INFORMATION_NODE_HEARTBEAT;
+      pev->sizeData   = 3;
+      pev->pdata[0]   = 0xff; // index
+      pev->pdata[1]   = 0xff; // zone
+      pev->pdata[2]   = 0xff; // subzone
+#else
+      // Beta nodes send information heartbeat
+      pev->vscp_class = VSCP_CLASS1_INFORMATION;
+      pev->vscp_type  = VSCP_TYPE_INFORMATION_NODE_HEARTBEAT;
+      pev->sizeData   = 3;
+      pev->pdata[0]   = 0xff; // index
+      pev->pdata[1]   = 0xff; // zone
+      pev->pdata[2]   = 0xff; // subzone
+#endif
+
+      pev->timestamp = vscp_espnow_timestamp(); // esp_timer_get_time();
       vscp_espnow_sendEvent(ESPNOW_ADDR_BROADCAST, pev, false, pdMS_TO_TICKS(1000));
     }
 

@@ -106,6 +106,9 @@
     "vscp-compiler.h": "c",
     "esp_random.h": "c",
     "vscp.h": "c",
-    "initiator.h": "c"
+    "initiator.h": "c",
+    "esp_err.h": "c",
+    "sntp.h": "c",
+    "espnow_utils.h": "c"
   }
 }

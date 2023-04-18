@@ -414,12 +414,11 @@ readPersistentConfigs(void)
            g_persistent.nodeGuid[14],
            g_persistent.nodeGuid[15]);
 
-  
   length = 6;
   rv     = nvs_get_blob(g_nvsHandle, "keyorg", g_persistent.keyOrigin, &length);
   if (rv != ESP_OK) {
     const char key[] = { 0 };
-    rv = nvs_set_blob(g_nvsHandle, "keyorg", g_persistent.keyOrigin, length);
+    rv               = nvs_set_blob(g_nvsHandle, "keyorg", g_persistent.keyOrigin, length);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to write originating mac to nvs. rv=%d", rv);
     }
@@ -638,7 +637,6 @@ app_wifi_init()
   ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
   ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
   ESP_ERROR_CHECK(esp_wifi_start());
-
 }
 
 //-----------------------------------------------------------------------------
@@ -852,10 +850,11 @@ app_main()
 
   espnow_init(&espnow_config);
 
-  //ESP_ERROR_CHECK( esp_wifi_set_protocol(ESP_IF_WIFI_STA, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G|WIFI_PROTOCOL_11N) );
-  //#if CONFIG_ESPNOW_ENABLE_LONG_RANGE
-    //ESP_ERROR_CHECK( esp_wifi_set_protocol(ESP_IF_WIFI_STA, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G|WIFI_PROTOCOL_11N|WIFI_PROTOCOL_LR) );
-//#endif
+  // ESP_ERROR_CHECK( esp_wifi_set_protocol(ESP_IF_WIFI_STA, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G|WIFI_PROTOCOL_11N) );
+  // #if CONFIG_ESPNOW_ENABLE_LONG_RANGE
+  // ESP_ERROR_CHECK( esp_wifi_set_protocol(ESP_IF_WIFI_STA,
+  // WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G|WIFI_PROTOCOL_11N|WIFI_PROTOCOL_LR) );
+  // #endif
 
   uint8_t key_info[APP_KEY_LEN];
   if (ESP_OK == espnow_get_key(key_info)) {
@@ -930,6 +929,10 @@ app_main()
   esp_wifi_get_mac(ESP_IF_WIFI_STA, ESPNOW_ADDR_SELF);
   ESP_LOGI(TAG, "mac: " MACSTR ", version: %d", MAC2STR(ESPNOW_ADDR_SELF), ESPNOW_VERSION);
 
+  // Set timezone to GMT
+  setenv("TZ", "GMT", 1);
+  tzset();
+
   while (1) {
     if ((BETA_STATE_VIRGIN == s_stateNode) && (ESP_OK == espnow_get_key(key_info))) {
       app_led_switch_blink_type(s_led_handle_green, BLINK_CONNECTED);
@@ -950,6 +953,18 @@ app_main()
 
     // ESP_LOG_BUFFER_HEXDUMP(TAG, g_persistent.pmk, 16, ESP_LOG_INFO);
     // ESP_LOG_BUFFER_HEXDUMP(TAG, g_persistent.lmk, 16, ESP_LOG_INFO);
+
+    if (0) {
+      time_t now;
+      char strftime_buf[64];
+      struct tm timeinfo;
+
+      time(&now);
+
+      localtime_r(&now, &timeinfo);
+      strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+      ESP_LOGI(TAG, "The current date/time GMT is: %s", strftime_buf);
+    }
 
     if (0) {
       uint32_t free_heap = esp_get_free_heap_size() / 1024;

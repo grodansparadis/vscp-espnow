@@ -1,0 +1,54 @@
+[0/1] Re-running CMake...
+-- Building ESP-IDF components for target esp32
+Processing 3 dependencies:
+[1/3] esp-now (2.1.0)
+[2/3] espressif/cmake_utilities (0.4.0)
+[3/3] idf (5.0.1)
+-- Project sdkconfig file /usr/local/src/esp/esp-now/examples/security/sdkconfig
+Loading defaults file /usr/local/src/esp/esp-now/examples/security/sdkconfig.defaults...
+-- App "security" version: v1.0-97-g399da61-dirty
+-- Adding linker script /usr/local/src/esp/esp-now/examples/security/build/esp-idf/esp_system/ld/memory.ld
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/esp_system/ld/esp32/sections.ld.in
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/esp_rom/esp32/ld/esp32.rom.ld
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/esp_rom/esp32/ld/esp32.rom.api.ld
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/esp_rom/esp32/ld/esp32.rom.libgcc.ld
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/esp_rom/esp32/ld/esp32.rom.newlib-data.ld
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/esp_rom/esp32/ld/esp32.rom.syscalls.ld
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/esp_rom/esp32/ld/esp32.rom.newlib-funcs.ld
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/soc/esp32/ld/esp32.peripherals.ld
+-- Relinker isn't enabled.
+-- ESP_NOW: 2.1.0
+-- Components: app_trace app_update bootloader bootloader_support bt cmock console cxx driver efuse esp-now esp-tls esp_adc esp_app_format esp_common esp_eth esp_event esp_gdbstub esp_hid esp_http_client esp_http_server esp_https_ota esp_https_server esp_hw_support esp_lcd esp_local_ctrl esp_netif esp_partition esp_phy esp_pm esp_psram esp_ringbuf esp_rom esp_system esp_timer esp_wifi espcoredump espressif__cmake_utilities esptool_py fatfs freertos hal heap http_parser idf_test ieee802154 json log lwip main mbedtls mqtt newlib nvs_flash openthread partition_table perfmon protobuf-c protocomm pthread sdmmc soc spi_flash spiffs tcp_transport ulp unity usb vfs wear_levelling wifi_provisioning wpa_supplicant xtensa
+-- Component paths: /usr/local/src/esp/esp-idf-v5.0.1/components/app_trace /usr/local/src/esp/esp-idf-v5.0.1/components/app_update /usr/local/src/esp/esp-idf-v5.0.1/components/bootloader /usr/local/src/esp/esp-idf-v5.0.1/components/bootloader_support /usr/local/src/esp/esp-idf-v5.0.1/components/bt /usr/local/src/esp/esp-idf-v5.0.1/components/cmock /usr/local/src/esp/esp-idf-v5.0.1/components/console /usr/local/src/esp/esp-idf-v5.0.1/components/cxx /usr/local/src/esp/esp-idf-v5.0.1/components/driver /usr/local/src/esp/esp-idf-v5.0.1/components/efuse /usr/local/src/esp/esp-now /usr/local/src/esp/esp-idf-v5.0.1/components/esp-tls /usr/local/src/esp/esp-idf-v5.0.1/components/esp_adc /usr/local/src/esp/esp-idf-v5.0.1/components/esp_app_format /usr/local/src/esp/esp-idf-v5.0.1/components/esp_common /usr/local/src/esp/esp-idf-v5.0.1/components/esp_eth /usr/local/src/esp/esp-idf-v5.0.1/components/esp_event /usr/local/src/esp/esp-idf-v5.0.1/components/esp_gdbstub /usr/local/src/esp/esp-idf-v5.0.1/components/esp_hid /usr/local/src/esp/esp-idf-v5.0.1/components/esp_http_client /usr/local/src/esp/esp-idf-v5.0.1/components/esp_http_server /usr/local/src/esp/esp-idf-v5.0.1/components/esp_https_ota /usr/local/src/esp/esp-idf-v5.0.1/components/esp_https_server /usr/local/src/esp/esp-idf-v5.0.1/components/esp_hw_support /usr/local/src/esp/esp-idf-v5.0.1/components/esp_lcd /usr/local/src/esp/esp-idf-v5.0.1/components/esp_local_ctrl /usr/local/src/esp/esp-idf-v5.0.1/components/esp_netif /usr/local/src/esp/esp-idf-v5.0.1/components/esp_partition /usr/local/src/esp/esp-idf-v5.0.1/components/esp_phy /usr/local/src/esp/esp-idf-v5.0.1/components/esp_pm /usr/local/src/esp/esp-idf-v5.0.1/components/esp_psram /usr/local/src/esp/esp-idf-v5.0.1/components/esp_ringbuf /usr/local/src/esp/esp-idf-v5.0.1/components/esp_rom /usr/local/src/esp/esp-idf-v5.0.1/components/esp_system /usr/local/src/esp/esp-idf-v5.0.1/components/esp_timer /usr/local/src/esp/esp-idf-v5.0.1/components/esp_wifi /usr/local/src/esp/esp-idf-v5.0.1/components/espcoredump /usr/local/src/esp/esp-now/examples/security/managed_components/espressif__cmake_utilities /usr/local/src/esp/esp-idf-v5.0.1/components/esptool_py /usr/local/src/esp/esp-idf-v5.0.1/components/fatfs /usr/local/src/esp/esp-idf-v5.0.1/components/freertos /usr/local/src/esp/esp-idf-v5.0.1/components/hal /usr/local/src/esp/esp-idf-v5.0.1/components/heap /usr/local/src/esp/esp-idf-v5.0.1/components/http_parser /usr/local/src/esp/esp-idf-v5.0.1/components/idf_test /usr/local/src/esp/esp-idf-v5.0.1/components/ieee802154 /usr/local/src/esp/esp-idf-v5.0.1/components/json /usr/local/src/esp/esp-idf-v5.0.1/components/log /usr/local/src/esp/esp-idf-v5.0.1/components/lwip /usr/local/src/esp/esp-now/examples/security/main /usr/local/src/esp/esp-idf-v5.0.1/components/mbedtls /usr/local/src/esp/esp-idf-v5.0.1/components/mqtt /usr/local/src/esp/esp-idf-v5.0.1/components/newlib /usr/local/src/esp/esp-idf-v5.0.1/components/nvs_flash /usr/local/src/esp/esp-idf-v5.0.1/components/openthread /usr/local/src/esp/esp-idf-v5.0.1/components/partition_table /usr/local/src/esp/esp-idf-v5.0.1/components/perfmon /usr/local/src/esp/esp-idf-v5.0.1/components/protobuf-c /usr/local/src/esp/esp-idf-v5.0.1/components/protocomm /usr/local/src/esp/esp-idf-v5.0.1/components/pthread /usr/local/src/esp/esp-idf-v5.0.1/components/sdmmc /usr/local/src/esp/esp-idf-v5.0.1/components/soc /usr/local/src/esp/esp-idf-v5.0.1/components/spi_flash /usr/local/src/esp/esp-idf-v5.0.1/components/spiffs /usr/local/src/esp/esp-idf-v5.0.1/components/tcp_transport /usr/local/src/esp/esp-idf-v5.0.1/components/ulp /usr/local/src/esp/esp-idf-v5.0.1/components/unity /usr/local/src/esp/esp-idf-v5.0.1/components/usb /usr/local/src/esp/esp-idf-v5.0.1/components/vfs /usr/local/src/esp/esp-idf-v5.0.1/components/wear_levelling /usr/local/src/esp/esp-idf-v5.0.1/components/wifi_provisioning /usr/local/src/esp/esp-idf-v5.0.1/components/wpa_supplicant /usr/local/src/esp/esp-idf-v5.0.1/components/xtensa
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /usr/local/src/esp/esp-now/examples/security/build
+[1/7] Performing build step for 'bootloader'
+[0/1] Re-running CMake...
+-- Building ESP-IDF components for target esp32
+-- Project sdkconfig file /usr/local/src/esp/esp-now/examples/security/sdkconfig
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/soc/esp32/ld/esp32.peripherals.ld
+-- App "bootloader" version: v5.0.1
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/esp_rom/esp32/ld/esp32.rom.ld
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/esp_rom/esp32/ld/esp32.rom.api.ld
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/esp_rom/esp32/ld/esp32.rom.libgcc.ld
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/esp_rom/esp32/ld/esp32.rom.newlib-funcs.ld
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/bootloader/subproject/main/ld/esp32/bootloader.ld
+-- Adding linker script /usr/local/src/esp/esp-idf-v5.0.1/components/bootloader/subproject/main/ld/esp32/bootloader.rom.ld
+-- Components: bootloader bootloader_support efuse esp_app_format esp_common esp_hw_support esp_rom esp_system esptool_py freertos hal log main micro-ecc newlib partition_table soc spi_flash xtensa
+-- Component paths: /usr/local/src/esp/esp-idf-v5.0.1/components/bootloader /usr/local/src/esp/esp-idf-v5.0.1/components/bootloader_support /usr/local/src/esp/esp-idf-v5.0.1/components/efuse /usr/local/src/esp/esp-idf-v5.0.1/components/esp_app_format /usr/local/src/esp/esp-idf-v5.0.1/components/esp_common /usr/local/src/esp/esp-idf-v5.0.1/components/esp_hw_support /usr/local/src/esp/esp-idf-v5.0.1/components/esp_rom /usr/local/src/esp/esp-idf-v5.0.1/components/esp_system /usr/local/src/esp/esp-idf-v5.0.1/components/esptool_py /usr/local/src/esp/esp-idf-v5.0.1/components/freertos /usr/local/src/esp/esp-idf-v5.0.1/components/hal /usr/local/src/esp/esp-idf-v5.0.1/components/log /usr/local/src/esp/esp-idf-v5.0.1/components/bootloader/subproject/main /usr/local/src/esp/esp-idf-v5.0.1/components/bootloader/subproject/components/micro-ecc /usr/local/src/esp/esp-idf-v5.0.1/components/newlib /usr/local/src/esp/esp-idf-v5.0.1/components/partition_table /usr/local/src/esp/esp-idf-v5.0.1/components/soc /usr/local/src/esp/esp-idf-v5.0.1/components/spi_flash /usr/local/src/esp/esp-idf-v5.0.1/components/xtensa
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /usr/local/src/esp/esp-now/examples/security/build/bootloader
+[1/1] cd /usr/local/src/esp/esp-now/examples/security/build/bootloader/esp-idf/esptool_py && /home/akhe/.espressif/python_env/idf5.0_py3.10_env/bin/python /usr/local/src/esp/esp-idf-v5.0.1/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x1000 /usr/local/src/esp/esp-now/examples/security/build/bootloader/bootloader.bin
+Bootloader binary size 0x6ca0 bytes. 0x360 bytes (3%) free.
+[2/5] Generating ld/sections.ld
+[3/5] Linking CXX executable security.elf
+[4/5] Generating binary image from built executable
+esptool.py v4.5.1
+Creating esp32 image...
+Merged 25 ELF sections
+Successfully created esp32 image.
+Generated /usr/local/src/esp/esp-now/examples/security/build/security.bin
+[5/5] cd /usr/local/src/esp/esp-now/examples/security/build/esp-idf/esptool_py && /home/akhe/.espressif/python_env/idf5.0_py3.10_env/bin/python /usr/local/src/esp/esp-idf-v5.0.1/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /usr/local/src/esp/esp-now/examples/security/build/partition_table/partition-table.bin /usr/local/src/esp/esp-now/examples/security/build/security.bin
+security.bin binary size 0xa4900 bytes. Smallest app partition is 0x100000 bytes. 0x5b700 bytes (36%) free.
