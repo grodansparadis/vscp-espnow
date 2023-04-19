@@ -81,6 +81,9 @@ extern "C" {
 
 // Time stamp is the time_t from the time() call. Not that
 // time_t can be 65 bits on some systems (__USE_TIME_BITS64)
+
+// NOTE! This timestamp is not the same as the event timestamp and
+// is only relevant to vscp-espnow
 #define VSCP_ESPNOW_POS_TIME_STAMP 4
 
 // VSCP content

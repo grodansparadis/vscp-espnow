@@ -1087,10 +1087,11 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
                      ((uint32_t) data[VSCP_ESPNOW_POS_TIME_STAMP + 1] << 16) +
                      ((uint32_t) data[VSCP_ESPNOW_POS_TIME_STAMP + 2] << 8) + data[VSCP_ESPNOW_POS_TIME_STAMP + 3]);
 
-  ESP_LOGI(TAG,"node_time  time: %lld, tv: %lld ---------> diff: %lld\n",
-         node_time,
-         tv_now.tv_sec,
-         node_time - tv_now.tv_sec);
+  ESP_LOGI(TAG,
+           "node_time  time: %lld, tv: %lld ---------> diff: %lld\n",
+           node_time,
+           tv_now.tv_sec,
+           node_time - tv_now.tv_sec);
 
   vscpEvent *pev = vscp_fwhlp_newEvent();
   if (NULL == pev) {
@@ -1204,7 +1205,14 @@ vscp_espnow_heartbeat_task(void *pvParameter)
     goto ERROR;
   }
 
+#if (PRJDEF_NODE_TYPE == VSCP_DROPLET_ALPHA)
+  pev->pdata = VSCP_CALLOC(5);
+#elif #if (PRJDEF_NODE_TYPE == VSCP_DROPLET_BETA)
   pev->pdata = VSCP_CALLOC(3);
+#else
+  pev->pdata = VSCP_CALLOC(3);
+#endif
+
   if (NULL == pev->pdata) {
     ESP_LOGE(TAG, "Unable to allocate heartbeat event data");
     goto ERROR;
@@ -1250,7 +1258,7 @@ vscp_espnow_heartbeat_task(void *pvParameter)
       pev->pdata[0]   = 0xff; // index
       pev->pdata[1]   = 0xff; // zone
       pev->pdata[2]   = 0xff; // subzone
-#else
+#else // Gamma nodes
       // Beta nodes send information heartbeat
       pev->vscp_class = VSCP_CLASS1_INFORMATION;
       pev->vscp_type  = VSCP_TYPE_INFORMATION_NODE_HEARTBEAT;

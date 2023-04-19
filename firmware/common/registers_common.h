@@ -33,9 +33,16 @@
   beta
   ----
     0   - No command    
-    1   - Get key
-    2   - Start OTA
-    255 - Reset device
+    1   - Restart node.
+    2   - Start privisioning (get key handshaking/probing).
+    3   - Start OTA.
+    4   - Stop OTA.
+    5   - Start remote logging.
+    6   - Stop remote logging.
+    7   - Get dumped core.
+    8   - Read flash log.
+    9   - Read flash log all.
+    255 - Reset device.
 */
 #define REG_VSCP_ESPNOW_COMMAND   0x00001000
 

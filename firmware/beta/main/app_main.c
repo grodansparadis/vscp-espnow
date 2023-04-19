@@ -766,6 +766,11 @@ app_system_event_handler(void *arg, esp_event_base_t event_base, int32_t event_i
         if (ESP_OK != ret) {
           ESP_LOGE(TAG, "Failed to clear flash.");
         }
+        // char buf[512];
+        // size_t len = 512;
+        // while (ESP_OK == espnow_log_flash_read(buf, &len)) {
+        //   printf("len=%zu buf = %s ", len, buf);
+        // }
         break;
 
       case ESP_EVENT_ESPNOW_OTA_STARTED:
@@ -862,18 +867,6 @@ app_main()
     // Set the key permanently
     espnow_set_key(key_info);
 
-    // Initializing logging
-    espnow_log_config_t log_config = {
-      .log_level_uart   = g_persistent.logLevelUart,
-      .log_level_espnow = g_persistent.logLevelEspNow,
-      .log_level_flash  = g_persistent.logLevelFlash,
-    };
-
-    if (ESP_OK != (ret = espnow_log_init(&log_config))) {
-      ESP_LOGE(TAG, "Failed to init espnow logging");
-    }
-    esp_log_level_set("*", ESP_LOG_INFO);
-
     // Initializing OTA
     // espnow_ota_config_t ota_config = {
     //   .skip_version_check       = true,
@@ -889,6 +882,18 @@ app_main()
   else {
     ESP_LOGW(TAG, "Security key is not set");
   }
+
+  // Initializing logging
+    espnow_log_config_t log_config = {
+      .log_level_uart   = g_persistent.logLevelUart,
+      .log_level_espnow = g_persistent.logLevelEspNow,
+      .log_level_flash  = g_persistent.logLevelFlash,
+    };
+
+    if (ESP_OK != (ret = espnow_log_init(&log_config))) {
+      ESP_LOGE(TAG, "Failed to init espnow logging");
+    }
+    esp_log_level_set("*", ESP_LOG_INFO);
 
   // esp_wifi_set_channel(3, WIFI_SECOND_CHAN_NONE);
 
