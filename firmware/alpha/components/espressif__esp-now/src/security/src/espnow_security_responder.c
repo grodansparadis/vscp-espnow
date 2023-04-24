@@ -34,17 +34,19 @@ static const char* TAG = "espnow_sec_resp";
 static uint8_t app_key[APP_KEY_LEN] = { 0 };
 static protocomm_t *g_espnow_pc = NULL;
 static espnow_sec_info_t g_sec_info = { 0 };
-static espnow_frame_head_t g_frame_config = { 0 };
 
 static esp_err_t espnow_sec_info(const uint8_t *src_addr)
 {
     esp_err_t ret = ESP_OK;
     size_t size = sizeof(espnow_sec_info_t);
     espnow_sec_info_t *info = &g_sec_info;
+    espnow_frame_head_t frame_head = {
+        .security         = true,
+    };
 
     info->type = ESPNOW_SEC_TYPE_INFO;
 
-    ret = espnow_send(ESPNOW_DATA_TYPE_SECURITY_STATUS, src_addr, info, size, &g_frame_config, portMAX_DELAY);
+    ret = espnow_send(ESPNOW_DATA_TYPE_SECURITY_STATUS, src_addr, info, size, &frame_head, portMAX_DELAY);
 
     ESP_ERROR_RETURN(ret != ESP_OK, ret, "espnow_write");
 
@@ -76,6 +78,7 @@ static esp_err_t espnow_sec_handle(const char *ep_name, uint8_t resp_type, const
     espnow_frame_head_t frame_head = {
         .retransmit_count = 1,
         .broadcast        = false,
+        .security         = true,
         .filter_adjacent_channel = true,
         .forward_ttl      = 0,
     };

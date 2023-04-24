@@ -11,6 +11,7 @@
 - [Alpha-nodes](#Alpha-nodes)
 - [Beta-nodes](#Beta-nodes)
 - [Gamma-nodes](#Gamma-Nodes)
+- [Testing](Testing)
 - [License](#license)
 - [Contribution](#contribution)
 
@@ -91,6 +92,73 @@ All gamma nodes have an init button.
 - A short press wake up a gamma node and enable the node to securely pair with an Alpha node that is set in pairing mode, transferring encryption key and channel to work on.
 - A long press (more than 3 seconds) wake up a gamma node and reset the node to factory defaults.  
 - A double click wake up a gamma node and enable the node to receive OTA firmware from an initiating (typically Alpha-node) node.
+
+## Test
+To test vscp-espnow you ned at least two ESP32 boards. One should be loaded with the alpha firmware and one with the beta or gamma firmware depending on your needs. There is no (well there is in practice) limit on the number of Beta and Gamma nodes you can set up. It is also possible to have several Alpha nodes.
+
+### Set up Alpha node
+Set up the Alpha node to connect to the wifi router. This is used with your phone over BLE. A ready made product will have a QR code labeled on it but for development you probably need to use the uart to get this information. The status led on the device blinks as long as the device is not connected to wifi. When the len is steady on you have a connection. Find it by scanning the ip-address. Open this ip address in the device and you enter the configuration interface. Default user is **vscp** and default password **secret**. For a non test product you should probably change this the first thing you do.
+
+The Alpha node generate a 32 byte secret key itself when it starts for the first time. 
+
+Configure MQTT to use a MQTT broker you have access to.
+
+Hold down the init key for more then four seconds to restore factory defaults. It starts to blink again when it is ready. You need to proivision the node again so it get access to wifi. All connected Beta and Gamma nodes needs to be set up agin also if you do this. You can set your own key in the web interface under configure/module/primary key. The key should be a 32 byte key on hex form (_000102030405060708090A0B...._a total of 64 bytes). The key should not change after you have added Beta and Gamma nodes to the segment the Alpha node is on.
+
+### Set up Beta node(s)
+
+Press the init key shortly on both the alpha node and the beta node and wait until the status led on the beta node lights steady. Now it is part of the same segment as the Alpha node.
+
+Hold down the init key for more then four seconds to restore factory defaults. It starts to blink again when it is ready.
+
+### Set up Gamma nodes node(s)
+
+### MQTT
+The default MQTT broker is 192.168.1.1 and that is proably not the one you use. Change the the address and other parameters. If You use the default publishing topic you can subscribe to topic published from an alpha node that publish all traffic from espnow 
+
+```
+mosquitto_sub -h 192.168.1.7 -p 1883 -u vscp -P secret -t vscp/FF:FF:FF:FF:FF:FF:FF:FE:B8:27:EB:CF:3A:15:FF:FF/#
+```
+
+The **FF:FF:FF:FF:FF:FF:FF:FE:B8:27:EB:CF:3A:15:FF:FF** is the GUID for the alpha node that publish the events. It will be different in your case. Check the GUID in the **Node Information** of the web interface.
+
+The default publishing topic for an alpha node is
+
+```
+vscp/{{guid}}/{{class}}/{{type}}/{{index}}
+```
+
+This is pretty standard for most VSCP devices to use over MQTT. It allows for filtering of GUID, VSCP class and VSCP type as well as senor index for measurments. But you can of course use any other schema.  The mosquitto_sub sample above subscribe to all events. But if you are only interested in temperature events for example use
+
+```
+vscp/FF:FF:FF:FF:FF:FF:FF:FE:B8:27:EB:CF:3A:15:FF:FF/10/6/#
+```
+
+To use **{{eguid}}** instead of **{{guid}}** let you subscribe onlu to events sent by a specific node.
+
+Default subscribe on Alpha nodes use
+
+```
+vscp/{{guid}}/pub/#
+```
+
+And you can publish events to the bus by publish them on this topic on JSON format. {{guid}} will again be changed to the full GUID of the Alpha node.
+
+Other options you have are
+
+| Mustach token | Description |
+| ============= | =========== |
+| {{node}}        | Node name in clear text of Alpha node |
+| {{guid}}        | Node GUID for Alpha node |
+| {{evguid}}      | Event GUID for the event published |
+| {{class}}       | VSCP Event class |
+| {{type}}        | VSCP Event type |
+| {{nickname}}    | Node nickname (16-bit) for Alpha node |
+| {{evnickname}}  | Node nickname (16-bit) for node thats ent event. |
+| {{sindex}}      | Sensor index (if any) |
+
+
+
 
 ## Issues, Ideas And Bugs
 If you have further ideas or you found some bugs, great! Create an [issue](https://github.com/grodansparadis/vscp-espnow/issues) or if you are able and willing to fix it by yourself, clone the repository and create a pull request.

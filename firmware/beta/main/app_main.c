@@ -67,13 +67,16 @@ static espnow_addr_t ESPNOW_ADDR_SELF = { 0 };
 static const char *TAG = "app";
 static const char *POP = VSCP_PROJDEF_ESPNOW_SESSION_POP;
 
-beta_node_states_t s_stateNode = BETA_STATE_VIRGIN;
+static beta_node_states_t s_stateNode = BETA_STATE_VIRGIN;
+
+// Handle for nvs storage
+static nvs_handle_t s_nvsHandle = 0;
 
 uint32_t time_key_exchange; // Timer for key exchange state clear
 uint32_t time_ota;          // Timer for OTA state clear
 
-led_indicator_handle_t s_led_handle_red;
-led_indicator_handle_t s_led_handle_green;
+static led_indicator_handle_t s_led_handle_red;
+static led_indicator_handle_t s_led_handle_green;
 
 // Last blink state
 static int s_blink_last = 0;
@@ -99,9 +102,8 @@ node_persistent_config_t g_persistent = {
 
   // General
   .nodeName   = "Beta Node",
-  .pmk        = { 0 },
-  .lmk        = { 0 },
-  .nodeGuid   = { 0 }, // GUID for unit
+  .pmk        = { 0 },  // Currently not used
+  .lmk        = { 0 },  // Currently not used
   .keyOrigin  = { 0 },
   .startDelay = 2,
   .bootCnt    = 0,
@@ -121,6 +123,7 @@ node_persistent_config_t g_persistent = {
   .logLevelUart   = ESP_LOG_INFO,
   .logLevelEspNow = ESP_LOG_INFO,
   .logLevelFlash  = ESP_LOG_INFO,
+
 };
 
 #define CONTROL_KEY_GPIO GPIO_NUM_0
@@ -131,8 +134,6 @@ static app_espnow_ctrl_status_t s_espnow_ctrl_status = APP_ESPNOW_CTRL_INIT;
 
 #define WIFI_PROV_KEY_GPIO GPIO_NUM_0
 
-// Handle for nvs storage
-nvs_handle_t g_nvsHandle = 0;
 
 ///////////////////////////////////////////////////////////
 //        F O R W A R D  D E C L A R A T I O N S
@@ -151,39 +152,6 @@ app_led_switch_blink_type(led_indicator_handle_t h, int type)
   led_indicator_preempt_stop(h, s_blink_last);
   led_indicator_preempt_start(s_led_handle_green, type);
   s_blink_last = type;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// get_device_guid
-//
-
-bool
-get_device_guid(uint8_t *pguid)
-{
-  esp_err_t rv;
-  size_t length = 16;
-
-  // Check pointer
-  if (NULL == pguid) {
-    return false;
-  }
-
-  rv = nvs_get_blob(g_nvsHandle, "guid", pguid, &length);
-  switch (rv) {
-
-    case ESP_OK:
-      break;
-
-    case ESP_ERR_NVS_NOT_FOUND:
-      printf("GUID not found in nvs\n");
-      return false;
-
-    default:
-      printf("Error (%s) reading GUID from nvs!\n", esp_err_to_name(rv));
-      return false;
-  }
-
-  return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -279,7 +247,7 @@ readPersistentConfigs(void)
   uint8_t val;
 
   // boot counter
-  rv = nvs_get_u32(g_nvsHandle, "boot_counter", &g_persistent.bootCnt);
+  rv = nvs_get_u32(s_nvsHandle, "boot_counter", &g_persistent.bootCnt);
   switch (rv) {
 
     case ESP_OK:
@@ -297,13 +265,13 @@ readPersistentConfigs(void)
 
   // Update and write back boot counter
   g_persistent.bootCnt++;
-  rv = nvs_set_u32(g_nvsHandle, "boot_counter", g_persistent.bootCnt);
+  rv = nvs_set_u32(s_nvsHandle, "boot_counter", g_persistent.bootCnt);
   if (rv != ESP_OK) {
     ESP_LOGE(TAG, "Failed to update boot counter");
   }
 
   // Node name
-  rv = nvs_get_str(g_nvsHandle, "node_name", buf, &length);
+  rv = nvs_get_str(s_nvsHandle, "node_name", buf, &length);
   switch (rv) {
     case ESP_OK:
       strncpy(g_persistent.nodeName, buf, sizeof(g_persistent.nodeName));
@@ -311,7 +279,7 @@ readPersistentConfigs(void)
       break;
 
     case ESP_ERR_NVS_NOT_FOUND:
-      rv = nvs_set_str(g_nvsHandle, "node_name", g_persistent.nodeName);
+      rv = nvs_set_str(s_nvsHandle, "node_name", g_persistent.nodeName);
       if (rv != ESP_OK) {
         ESP_LOGE(TAG, "Failed to update node name");
       }
@@ -323,7 +291,7 @@ readPersistentConfigs(void)
   }
 
   // Start Delay (seconds)
-  rv = nvs_get_u8(g_nvsHandle, "start_delay", &g_persistent.startDelay);
+  rv = nvs_get_u8(s_nvsHandle, "start_delay", &g_persistent.startDelay);
   switch (rv) {
 
     case ESP_OK:
@@ -331,7 +299,7 @@ readPersistentConfigs(void)
       break;
 
     case ESP_ERR_NVS_NOT_FOUND:
-      rv = nvs_set_u8(g_nvsHandle, "start_delay", 2);
+      rv = nvs_set_u8(s_nvsHandle, "start_delay", 2);
       if (rv != ESP_OK) {
         ESP_LOGE(TAG, "Failed to update start delay");
       }
@@ -344,7 +312,7 @@ readPersistentConfigs(void)
 
   // pmk (Primary key)
   length = 16;
-  rv     = nvs_get_blob(g_nvsHandle, "pmk", g_persistent.pmk, &length);
+  rv     = nvs_get_blob(s_nvsHandle, "pmk", g_persistent.pmk, &length);
   if (rv != ESP_OK) {
     const char key[] = VSCP_DEFAULT_KEY16;
     const char *pos  = key;
@@ -352,7 +320,7 @@ readPersistentConfigs(void)
       sscanf(pos, "%2hhx", &g_persistent.pmk[i]);
       pos += 2;
     }
-    rv = nvs_set_blob(g_nvsHandle, "pmk", g_persistent.pmk, length);
+    rv = nvs_set_blob(s_nvsHandle, "pmk", g_persistent.pmk, length);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to write node pmk to nvs. rv=%d", rv);
     }
@@ -360,7 +328,7 @@ readPersistentConfigs(void)
 
   // lmk (Local key)
   length = 16;
-  rv     = nvs_get_blob(g_nvsHandle, "lmk", g_persistent.lmk, &length);
+  rv     = nvs_get_blob(s_nvsHandle, "lmk", g_persistent.lmk, &length);
   if (rv != ESP_OK) {
     const char key[] = VSCP_DEFAULT_KEY32;
     const char *pos  = key + 16;
@@ -368,76 +336,36 @@ readPersistentConfigs(void)
       sscanf(pos, "%2hhx", &g_persistent.lmk[i]);
       pos += 2;
     }
-    rv = nvs_set_blob(g_nvsHandle, "lmk", g_persistent.lmk, length);
+    rv = nvs_set_blob(s_nvsHandle, "lmk", g_persistent.lmk, length);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to write node lmk to nvs. rv=%d", rv);
     }
   }
 
-  // GUID
-  length = 16;
-  rv     = nvs_get_blob(g_nvsHandle, "guid", g_persistent.nodeGuid, &length);
-
-  if (rv != ESP_OK) {
-    // FF:FF:FF:FF:FF:FF:FF:FE:MAC1:MAC2:MAC3:MAC4:MAC5:MAC6:NICKNAME1:NICKNAME2
-    memset(g_persistent.nodeGuid, 0xff, 7);
-    g_persistent.nodeGuid[7] = 0xfe;
-    // rv                       = esp_efuse_mac_get_default(g_persistent.nodeGuid + 8);
-    //  ESP_MAC_WIFI_STA
-    //  ESP_MAC_WIFI_SOFTAP
-    rv = esp_read_mac(g_persistent.nodeGuid + 8, ESP_MAC_WIFI_STA);
-    if (rv != ESP_OK) {
-      ESP_LOGE(TAG, "esp_efuse_mac_get_default failed to get GUID. rv=%d", rv);
-    }
-
-    rv = nvs_set_blob(g_nvsHandle, "guid", g_persistent.nodeGuid, length);
-    if (rv != ESP_OK) {
-      ESP_LOGE(TAG, "Failed to write node GUID to nvs. rv=%d", rv);
-    }
-  }
-  ESP_LOGI(TAG,
-           "GUID for node: %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X",
-           g_persistent.nodeGuid[0],
-           g_persistent.nodeGuid[1],
-           g_persistent.nodeGuid[2],
-           g_persistent.nodeGuid[3],
-           g_persistent.nodeGuid[4],
-           g_persistent.nodeGuid[5],
-           g_persistent.nodeGuid[6],
-           g_persistent.nodeGuid[7],
-           g_persistent.nodeGuid[8],
-           g_persistent.nodeGuid[9],
-           g_persistent.nodeGuid[10],
-           g_persistent.nodeGuid[11],
-           g_persistent.nodeGuid[12],
-           g_persistent.nodeGuid[13],
-           g_persistent.nodeGuid[14],
-           g_persistent.nodeGuid[15]);
-
   length = 6;
-  rv     = nvs_get_blob(g_nvsHandle, "keyorg", g_persistent.keyOrigin, &length);
+  rv     = nvs_get_blob(s_nvsHandle, "keyorg", g_persistent.keyOrigin, &length);
   if (rv != ESP_OK) {
     const char key[] = { 0 };
-    rv               = nvs_set_blob(g_nvsHandle, "keyorg", g_persistent.keyOrigin, length);
+    rv               = nvs_set_blob(s_nvsHandle, "keyorg", g_persistent.keyOrigin, length);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to write originating mac to nvs. rv=%d", rv);
     }
   }
 
   // espnow queueSize
-  rv = nvs_get_u8(g_nvsHandle, "queue_size", &g_persistent.queueSize);
+  rv = nvs_get_u8(s_nvsHandle, "queue_size", &g_persistent.queueSize);
   if (ESP_OK != rv) {
-    rv = nvs_set_u8(g_nvsHandle, "queue_size", g_persistent.queueSize);
+    rv = nvs_set_u8(s_nvsHandle, "queue_size", g_persistent.queueSize);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to update queue_size");
     }
   }
 
   // Long Range
-  rv = nvs_get_u8(g_nvsHandle, "longr", &val);
+  rv = nvs_get_u8(s_nvsHandle, "longr", &val);
   if (ESP_OK != rv) {
     val = (uint8_t) g_persistent.espnowLongRange;
-    rv  = nvs_set_u8(g_nvsHandle, "longr", g_persistent.espnowLongRange);
+    rv  = nvs_set_u8(s_nvsHandle, "longr", g_persistent.espnowLongRange);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to update espnow long range");
     }
@@ -447,28 +375,28 @@ readPersistentConfigs(void)
   }
 
   // Channel
-  rv = nvs_get_u8(g_nvsHandle, "channel", &g_persistent.espnowChannel);
+  rv = nvs_get_u8(s_nvsHandle, "channel", &g_persistent.espnowChannel);
   if (ESP_OK != rv) {
-    rv = nvs_set_u8(g_nvsHandle, "channel", g_persistent.espnowChannel);
+    rv = nvs_set_u8(s_nvsHandle, "channel", g_persistent.espnowChannel);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to update espnow channel");
     }
   }
 
   // Default ttl
-  rv = nvs_get_u8(g_nvsHandle, "ttl", &g_persistent.espnowTtl);
+  rv = nvs_get_u8(s_nvsHandle, "ttl", &g_persistent.espnowTtl);
   if (ESP_OK != rv) {
-    rv = nvs_set_u8(g_nvsHandle, "ttl", g_persistent.espnowTtl);
+    rv = nvs_set_u8(s_nvsHandle, "ttl", g_persistent.espnowTtl);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to update espnow ttl");
     }
   }
 
   // Forward
-  rv = nvs_get_u8(g_nvsHandle, "fw", &val);
+  rv = nvs_get_u8(s_nvsHandle, "fw", &val);
   if (ESP_OK != rv) {
     val = (uint8_t) g_persistent.espnowForwardEnable;
-    rv  = nvs_set_u8(g_nvsHandle, "fw", g_persistent.espnowForwardEnable);
+    rv  = nvs_set_u8(s_nvsHandle, "fw", g_persistent.espnowForwardEnable);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to update espnow forward");
     }
@@ -478,10 +406,10 @@ readPersistentConfigs(void)
   }
 
   // Adj filter channel
-  rv = nvs_get_u8(g_nvsHandle, "adjchfilt", &val);
+  rv = nvs_get_u8(s_nvsHandle, "adjchfilt", &val);
   if (ESP_OK != rv) {
     val = (uint8_t) g_persistent.espnowFilterAdjacentChannel;
-    rv  = nvs_set_u8(g_nvsHandle, "adjchfilt", g_persistent.espnowFilterAdjacentChannel);
+    rv  = nvs_set_u8(s_nvsHandle, "adjchfilt", g_persistent.espnowFilterAdjacentChannel);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to update espnow adj channel filter");
     }
@@ -491,10 +419,10 @@ readPersistentConfigs(void)
   }
 
   // Allow switching channel on forward
-  rv = nvs_get_u8(g_nvsHandle, "swchf", &val);
+  rv = nvs_get_u8(s_nvsHandle, "swchf", &val);
   if (ESP_OK != rv) {
     val = (uint8_t) g_persistent.espnowForwardSwitchChannel;
-    rv  = nvs_set_u8(g_nvsHandle, "swchf", g_persistent.espnowForwardSwitchChannel);
+    rv  = nvs_set_u8(s_nvsHandle, "swchf", g_persistent.espnowForwardSwitchChannel);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to update espnow switch channel on forward");
     }
@@ -504,19 +432,19 @@ readPersistentConfigs(void)
   }
 
   // RSSI limit
-  rv = nvs_get_i8(g_nvsHandle, "rssi", &g_persistent.espnowFilterWeakSignal);
+  rv = nvs_get_i8(s_nvsHandle, "rssi", &g_persistent.espnowFilterWeakSignal);
   if (ESP_OK != rv) {
-    rv = nvs_set_u8(g_nvsHandle, "rssi", g_persistent.espnowFilterWeakSignal);
+    rv = nvs_set_u8(s_nvsHandle, "rssi", g_persistent.espnowFilterWeakSignal);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to update espnow RSSI");
     }
   }
 
   // Log level for UART
-  rv = nvs_get_u8(g_nvsHandle, "loguartlv", &val);
+  rv = nvs_get_u8(s_nvsHandle, "loguartlv", &val);
   if (ESP_OK != rv) {
     val = (uint8_t) g_persistent.logLevelUart;
-    rv  = nvs_set_u8(g_nvsHandle, "loguartlv", g_persistent.logLevelUart);
+    rv  = nvs_set_u8(s_nvsHandle, "loguartlv", g_persistent.logLevelUart);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to update espnow uart log level");
     }
@@ -526,10 +454,10 @@ readPersistentConfigs(void)
   }
 
   // Log level for espnow
-  rv = nvs_get_u8(g_nvsHandle, "logenlv", &val);
+  rv = nvs_get_u8(s_nvsHandle, "logenlv", &val);
   if (ESP_OK != rv) {
     val = (uint8_t) g_persistent.logLevelEspNow;
-    rv  = nvs_set_u8(g_nvsHandle, "logenlv", g_persistent.logLevelEspNow);
+    rv  = nvs_set_u8(s_nvsHandle, "logenlv", g_persistent.logLevelEspNow);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to update espnow espnow log level");
     }
@@ -539,10 +467,10 @@ readPersistentConfigs(void)
   }
 
   // Log level for flash
-  rv = nvs_get_u8(g_nvsHandle, "logflashlv", &val);
+  rv = nvs_get_u8(s_nvsHandle, "logflashlv", &val);
   if (ESP_OK != rv) {
     val = (uint8_t) g_persistent.logLevelFlash;
-    rv  = nvs_set_u8(g_nvsHandle, "logflashlv", g_persistent.logLevelFlash);
+    rv  = nvs_set_u8(s_nvsHandle, "logflashlv", g_persistent.logLevelFlash);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to update espnow espnow log level");
     }
@@ -551,11 +479,7 @@ readPersistentConfigs(void)
     g_persistent.logLevelFlash = val;
   }
 
-  rv = nvs_commit(g_nvsHandle);
-  if (rv != ESP_OK) {
-    ESP_LOGI(TAG, "Failed to commit updates to nvs\n");
-  }
-
+  
   return ESP_OK;
 }
 
@@ -713,7 +637,7 @@ app_restore_factory_defaults_press_cb(void *arg, void *usr_data)
   led_indicator_preempt_stop(s_led_handle_green, s_blink_last);
 
   // Erase all settings
-  ret = nvs_erase_all(g_nvsHandle);
+  ret = nvs_erase_all(s_nvsHandle);
   if (ESP_OK != ret) {
     ESP_LOGE(TAG, "Unable to erase configuration area");
   }
@@ -721,7 +645,7 @@ app_restore_factory_defaults_press_cb(void *arg, void *usr_data)
   // Unbound device
   espnow_erase_key();
 
-  nvs_commit(g_nvsHandle);
+  nvs_commit(s_nvsHandle);
 
   // set defaults
   setPersistenDefaults();
@@ -762,15 +686,15 @@ app_system_event_handler(void *arg, esp_event_base_t event_base, int32_t event_i
 
       case ESP_EVENT_ESPNOW_LOG_FLASH_FULL:
         ESP_LOGW(TAG, "The flash partition that stores the log is full, size: %d", espnow_log_flash_size());
-        ret = espnow_log_flash_erase();
-        if (ESP_OK != ret) {
-          ESP_LOGE(TAG, "Failed to clear flash.");
-        }
-        // char buf[512];
-        // size_t len = 512;
-        // while (ESP_OK == espnow_log_flash_read(buf, &len)) {
-        //   printf("len=%zu buf = %s ", len, buf);
+        // ret = espnow_log_flash_erase();
+        // if (ESP_OK != ret) {
+        //   ESP_LOGE(TAG, "Failed to clear flash.");
         // }
+        char buf[80];
+        size_t len = 80;
+        while (ESP_OK == espnow_log_flash_read(buf, &len)) {
+          printf("len=%zu buf = %s ", len, buf);
+        }
         break;
 
       case ESP_EVENT_ESPNOW_OTA_STARTED:
@@ -830,7 +754,7 @@ app_main()
   // Init persistent storage
   ESP_LOGI(TAG, "Read persistent storage ... ");
 
-  ret = nvs_open("cfgbeta", NVS_READWRITE, &g_nvsHandle);
+  ret = nvs_open("config", NVS_READWRITE, &s_nvsHandle);
   if (ret != ESP_OK) {
     ESP_LOGE(TAG, "Error (%s) opening NVS handle!\n", esp_err_to_name(ret));
   }
@@ -884,16 +808,16 @@ app_main()
   }
 
   // Initializing logging
-    espnow_log_config_t log_config = {
-      .log_level_uart   = g_persistent.logLevelUart,
-      .log_level_espnow = g_persistent.logLevelEspNow,
-      .log_level_flash  = g_persistent.logLevelFlash,
-    };
+  espnow_log_config_t log_config = {
+    .log_level_uart   = g_persistent.logLevelUart,
+    .log_level_espnow = g_persistent.logLevelEspNow,
+    .log_level_flash  = g_persistent.logLevelFlash,
+  };
 
-    if (ESP_OK != (ret = espnow_log_init(&log_config))) {
-      ESP_LOGE(TAG, "Failed to init espnow logging");
-    }
-    esp_log_level_set("*", ESP_LOG_INFO);
+  // if (ESP_OK != (ret = espnow_log_init(&log_config))) {
+  //   ESP_LOGE(TAG, "Failed to init espnow logging");
+  // }
+  // esp_log_level_set("*", ESP_LOG_INFO);
 
   // esp_wifi_set_channel(3, WIFI_SECOND_CHAN_NONE);
 
@@ -919,7 +843,7 @@ app_main()
   // Setup VSCP esp-now
 
   vscp_espnow_config_t vscp_espnow_conf;
-  vscp_espnow_conf.pguid = g_persistent.nodeGuid;
+  
 
   // Set default primary key
   // uint8_t pmk[16];

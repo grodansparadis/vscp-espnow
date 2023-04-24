@@ -55,6 +55,12 @@
 extern "C" {
 #endif
 
+// ----------------------------------------------------------------------------
+
+#define VSCP_ESPNOW_WAIT_MS_DEFAULT   1000      // One second
+
+// ----------------------------------------------------------------------------
+
 #define VSCP_ESPNOW_VERSION 0
 
 // Frame id
@@ -110,12 +116,6 @@ extern "C" {
 
 #define VSCP_ESPNOW_IV_LEN 16
 
-// typedef enum {
-//   VSCP_ESPNOW_ALPHA_NODE = 0,
-//   VSCP_ESPNOW_BETA_NODE,
-//   VSCP_ESPNOW_GAMMA_NODE,
-// } vscp_espnow_node_type_t;
-
 /*
   The idel state is the normal state a node is in. This is where it does all it's
   work if it has been initialized.
@@ -142,6 +142,21 @@ typedef struct {
   uint8_t node_type; // VSCP_DROPLET_ALPHA / VSCP_DROPLET_BETA / VSCP_DROPLET_GAMMA
   uint8_t freq;      // Heart beat frequency
 } vscp_espnow_heart_beat_t;
+
+/*
+  **VSCP espnow** persistent storage
+*/
+typedef struct {
+  // VSCP
+  uint16_t nickname;      // 16-bit nickname of node (two lsb of GUID)
+
+  // User id
+  uint8_t userid0;
+  uint8_t userid1;
+  uint8_t userid2;
+  uint8_t userid3;
+  uint8_t userid4;
+} vscp_espnow_persistent_t;
 
 /**
  * @brief Item in table for replay attack preventions
@@ -172,8 +187,10 @@ typedef struct {
  * @brief Initialize the configuration of esp-now
  */
 typedef struct {
-  uint8_t *pguid; // Pointer to 16 byte GUID for node.
+  uint8_t *ttt; // Placeholder
 } vscp_espnow_config_t;
+
+
 
 /**
  * @brief Send and receive statistics
@@ -190,6 +207,7 @@ typedef struct {
   uint32_t nRecvAdjChFilter; // Adjacent channel filter
   uint32_t nRecvŔssiFilter;  // RSSI filter stats
   uint32_t nForw;            // # Number of forwarded frames
+  uint32_t nTimeDiffLarge;   // Frames skipped with time diff to large
 } vscp_espnow_stats_t;
 
 /**
@@ -231,6 +249,48 @@ typedef void (*vscp_event_handler_cb_t)(const vscpEvent *pev, void *userdata);
 typedef void (*vscp_espnow_attach_network_handler_cb_t)(wifi_pkt_rx_ctrl_t *prxdata, void *userdata);
 
 // ----------------------------------------------------------------------------
+
+/**
+ * @brief Read VSCP register(s)
+ * 
+ * @param reg Register to start read at (<0xffff0000)
+ * @param cnt Number of bytes to read (max 508 bytes)
+ * @return int Return VSCP_ERROR_SUCCESS if OK, error code if not
+ */
+int
+vscp_espnow_read_reg(uint32_t reg, uint16_t cnt);
+
+/**
+ * @brief Read VSCP standard register(s)
+ * 
+ * @param reg Register to start read at (>=0xffff0000)
+ * @param cnt Number of bytes to read
+ * @return int Return VSCP_ERROR_SUCCESS if OK, error code if not
+ */
+int
+vscp_espnow_read_std_reg(uint32_t reg, uint16_t cnt);
+
+/**
+ * @brief Write VSCP standard register(s)
+ * 
+ * @param reg Register to write (>=0xffff0000)
+ * @param cnt Number of bytes to write
+ * @param pdata Pointer to data to write
+ * @return int Return VSCP_ERROR_SUCCESS if OK, error code if not
+ */
+int
+vscp_espnow_write_reg(uint32_t reg, uint16_t cnt, uint16_t *pdata);
+
+/**
+ * @brief Write VSCP standard register(s)
+ * 
+ * @param reg Register to write (>=0xffff0000)
+ * @param cnt Number of bytes to write
+ * @param pdata Pointer to data to write
+ * @return int Return VSCP_ERROR_SUCCESS if OK, error code if not
+ */
+int
+vscp_espnow_write_std_reg(uint32_t reg, uint16_t cnt, uint16_t *pdata);
 
 /**
  * @brief Get VSCP timestamp
@@ -284,15 +344,22 @@ int
 vscp_espnow_probe(void);
 
 /**
+ * @brief  Check if GUID ios to me
+ * 
+ * @param pguid Pointer to GUID to check
+ * @return Return true if GUID is same as ours
+ */
+bool
+vscp_espnow_to_me(const uint8_t *pguid);
+
+/**
  * @brief Build full GUID from mac address
  *
  * @param pguid Pointer to GUID that will get data
- * @param pmac Pointer to six byte mac
- * @param nickname Nickname for node. Set to zero if not used.
- * @return int VSCP_ERROR_SUCCES is returned if all goes well. Otherwise VSCP error code is returned.
+ * @return int VSCP_ERROR_SUCCESS is returned if all goes well. Otherwise VSCP error code is returned.
  */
 int
-vscp_espnow_build_guid_from_mac(uint8_t *pguid, const uint8_t *pmac, uint16_t nickname);
+vscp_espnow_get_node_guid(uint8_t *pguid);
 
 /**
  * @fn vscp_espnow_sendEvent

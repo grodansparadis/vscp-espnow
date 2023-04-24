@@ -74,10 +74,10 @@ extern const uint8_t DROPLET_ADDR_BROADCAST[6];
 //
 
 #define TCPSRV_WELCOME_MSG                                                                                             \
-   "Welcome to the %s node\r\n"                                                                                         \
-   "Copyright (C) 2000-2023 Åke Hedman, Grodans Paradis AB\r\n"                                                        \
-   "https://www.grodansparadis.com\r\n"                                                                                 \
-   "+OK\r\n"
+  "Welcome to the %s node\r\n"                                                                                         \
+  "Copyright (C) 2000-2023 Åke Hedman, Grodans Paradis AB\r\n"                                                        \
+  "https://www.grodansparadis.com\r\n"                                                                                 \
+  "+OK\r\n"
 
 int
 vscp_link_callback_welcome(const void *pdata)
@@ -187,9 +187,11 @@ vscp_link_callback_get_interface(const void *pdata, uint16_t index, struct vscp_
   // interface-id-n, type, interface-GUID-n, interface_real-name-n
   // interface types in vscp.h
 
+  
   pif->idx  = index;
   pif->type = VSCP_INTERFACE_TYPE_INTERNAL;
-  memcpy(pif->guid, g_persistent.nodeGuid, 16);
+  vscp_espnow_get_node_guid(pif->guid);
+  vscp_espnow_get_node_guid(pif->guid);
   strncpy(pif->description, "Interface for the device itself", sizeof(pif->description));
 
   // We have no interfaces
@@ -370,8 +372,6 @@ vscp_link_callback_test(const void *pdata, const char *arg)
 int
 vscp_link_callback_send(const void *pdata, vscpEvent *pev)
 {
-  esp_err_t ret;
-
   if ((NULL == pdata) && (NULL == pev)) {
     return VSCP_ERROR_INVALID_POINTER;
   }
@@ -543,7 +543,7 @@ vscp_link_callback_get_guid(const void *pdata, uint8_t *pguid)
     return VSCP_ERROR_INVALID_POINTER;
   }
 
-  memcpy(pguid, g_persistent.nodeGuid, 16);
+  vscp_espnow_get_node_guid(pguid);
   return VSCP_ERROR_SUCCESS;
 }
 
@@ -559,7 +559,7 @@ vscp_link_callback_set_guid(const void *pdata, uint8_t *pguid)
     return VSCP_ERROR_INVALID_POINTER;
   }
 
-  memcpy(g_persistent.nodeGuid, pguid, 16);
+  vscp_espnow_get_node_guid(pguid);
   return VSCP_ERROR_SUCCESS;
 }
 

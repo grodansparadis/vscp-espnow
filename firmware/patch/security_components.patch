@@ -1,0 +1,290 @@
+diff --git a/Kconfig b/Kconfig
+index 36d901b..85ddce4 100644
+--- a/Kconfig
++++ b/Kconfig
+@@ -8,6 +8,34 @@ menu "ESP-NOW Configuration"
+         help
+             Enable to secure the application level data.
+ 
++    config ESPNOW_CONTROL_SECURITY
++        bool "Secure control data"
++        default n
++        depends on ESPNOW_APP_SECURITY
++        help
++            Enable to secure the control data.
++
++    config ESPNOW_DEBUG_SECURITY
++        bool "Secure debug data"
++        default n
++        depends on ESPNOW_APP_SECURITY
++        help
++            Enable to secure the debug data.
++
++    config ESPNOW_OTA_SECURITY
++        bool "Secure OTA data"
++        default n
++        depends on ESPNOW_APP_SECURITY
++        help
++            Enable to secure the OTA data.
++
++    config ESPNOW_PROV_SECURITY
++        bool "Secure provisioning data"
++        default n
++        depends on ESPNOW_APP_SECURITY
++        help
++            Enable to secure the provisioning data.
++
+     endmenu
+ 
+     menu "ESP-NOW Light Sleep Configuration"
+diff --git a/src/control/src/espnow_ctrl.c b/src/control/src/espnow_ctrl.c
+index 8b4a3c8..726602e 100644
+--- a/src/control/src/espnow_ctrl.c
++++ b/src/control/src/espnow_ctrl.c
+@@ -48,6 +48,10 @@ typedef struct {
+ static const char *TAG = "espnow_ctrl";
+ static espnow_bindlist_t g_bindlist = {0};
+ 
++#ifndef CONFIG_ESPNOW_CONTROL_SECURITY
++#define CONFIG_ESPNOW_CONTROL_SECURITY 0
++#endif
++
+ #ifdef CONFIG_ESPNOW_CONTROL_AUTO_CHANNEL_SENDING
+ #define ESPNOW_CHANNEL_KEY       "ch_key"
+ #define RESEND_SCAN_COUNT_MAX (sizeof(scan_channel_sequence) * 2)
+@@ -78,6 +82,7 @@ static const espnow_frame_head_t g_initiator_frame = {
+     .channel          = ESPNOW_CHANNEL_ALL,
+     .forward_ttl      = 10,
+     .forward_rssi     = -25,
++    .security         = CONFIG_ESPNOW_CONTROL_SECURITY,
+ };
+ #endif
+ 
+@@ -333,7 +338,8 @@ static esp_err_t espnow_ctrl_initiator_handle(espnow_data_type_t type, espnow_at
+             .forward_rssi     = CONFIG_ESPNOW_CONTROL_FORWARD_RSSI,
+             .magic            = esp_random(),
+             .ack              = true,
+-            .channel          = channel
++            .channel          = channel,
++            .security         = CONFIG_ESPNOW_CONTROL_SECURITY,
+         },
+         .initiator_attribute = initiator_attribute,
+         .responder_attribute = responder_attribute,
+diff --git a/src/debug/include/espnow_log.h b/src/debug/include/espnow_log.h
+index a500aa3..d18b87a 100644
+--- a/src/debug/include/espnow_log.h
++++ b/src/debug/include/espnow_log.h
+@@ -45,6 +45,10 @@ extern "C" {
+ #define DEBUG_LOG_MALLOC malloc
+ #define DEBUG_LOG_FREE   free
+ 
++#ifndef CONFIG_ESPNOW_DEBUG_SECURITY
++#define CONFIG_ESPNOW_DEBUG_SECURITY   0
++#endif
++
+ /**
+  * @brief Enumerated list of debug event id
+  */
+diff --git a/src/debug/src/commands/cmd_espnow.c b/src/debug/src/commands/cmd_espnow.c
+index fdb6acf..7992a15 100644
+--- a/src/debug/src/commands/cmd_espnow.c
++++ b/src/debug/src/commands/cmd_espnow.c
+@@ -70,6 +70,7 @@ static int command_func(int argc, char **argv)
+ 
+     espnow_frame_head_t frame_head = {
+         .filter_adjacent_channel = true,
++        .security                = CONFIG_ESPNOW_DEBUG_SECURITY,
+     };
+ 
+     esp_err_t ret = ESP_OK;
+@@ -181,6 +182,7 @@ static int scan_func(int argc, char **argv)
+         .broadcast = true,
+         .magic     = esp_random(),
+         .filter_adjacent_channel = true,
++        .security                = CONFIG_ESPNOW_DEBUG_SECURITY,
+     };
+ 
+     if (scan_args.rssi->count) {
+@@ -811,6 +813,8 @@ static int beacon_func(int argc, char **argv)
+     const esp_app_desc_t *app_desc = esp_ota_get_app_description();
+ #endif
+     size_t beacon_data_len = 0;
++    espnow_frame_head_t frame_head = ESPNOW_FRAME_CONFIG_DEFAULT();
++    frame_head.security = CONFIG_ESPNOW_DEBUG_SECURITY;
+ 
+     espnow_add_peer(g_src_addr, NULL);
+ 
+@@ -826,7 +830,7 @@ static int beacon_func(int argc, char **argv)
+     for (size_t size = MIN(beacon_data_len, ESPNOW_DATA_LEN);
+             size > 0; data += size, beacon_data_len -= size, size = MIN(beacon_data_len, ESPNOW_DATA_LEN)) {
+         ret = espnow_send(ESPNOW_DATA_TYPE_DEBUG_LOG, g_src_addr,
+-                        data, size, NULL, portMAX_DELAY);
++                        data, size, &frame_head, portMAX_DELAY);
+     }
+ 
+     espnow_del_peer(g_src_addr);
+@@ -864,6 +868,8 @@ static int log_func(int argc, char **argv)
+ {
+     const char *level_str[6] = {"NONE", "ERR", "WARN", "INFO", "DEBUG", "VER"};
+     espnow_log_config_t log_config = {0};
++    espnow_frame_head_t frame_head = ESPNOW_FRAME_CONFIG_DEFAULT();
++    frame_head.security = CONFIG_ESPNOW_DEBUG_SECURITY;
+ 
+     if (arg_parse(argc, argv, (void **)&log_args) != ESP_OK) {
+         arg_print_errors(stderr, log_args.end, argv[0]);
+@@ -929,7 +935,7 @@ static int log_func(int argc, char **argv)
+                 }
+ 
+                 espnow_send(ESPNOW_DATA_TYPE_DEBUG_LOG, ESPNOW_ADDR_BROADCAST,
+-                            log_data, size, NULL, portMAX_DELAY);
++                            log_data, size, &frame_head, portMAX_DELAY);
+             }
+ 
+             ESP_FREE(log_data);
+diff --git a/src/debug/src/espnow_log.c b/src/debug/src/espnow_log.c
+index 6b25810..4f71497 100644
+--- a/src/debug/src/espnow_log.c
++++ b/src/debug/src/espnow_log.c
+@@ -65,6 +65,8 @@ esp_err_t espnow_log_set_config(const espnow_log_config_t *config)
+ static void espnow_log_send_task(void *arg)
+ {
+     log_info_t *log_info = NULL;
++    espnow_frame_head_t frame_head = ESPNOW_FRAME_CONFIG_DEFAULT();
++    frame_head.security = CONFIG_ESPNOW_DEBUG_SECURITY;
+ 
+     for (; g_log_config;) {
+         if (xQueueReceive(g_log_queue, &log_info, pdMS_TO_TICKS(DEBUG_LOG_TIMEOUT_MS)) != pdPASS) {
+@@ -78,7 +80,7 @@ static void espnow_log_send_task(void *arg)
+         if (strcasecmp(log_info->tag, "espnow") && log_info->level <= g_log_config->log_level_espnow) {
+             log_info->size = MIN(ESPNOW_DATA_LEN - 1, log_info->size) + 1;
+             log_info->data[log_info->size - 1] = '\0';
+-            espnow_send(ESPNOW_DATA_TYPE_DEBUG_LOG, ESPNOW_ADDR_BROADCAST, log_info->data, log_info->size, NULL, portMAX_DELAY);
++            espnow_send(ESPNOW_DATA_TYPE_DEBUG_LOG, ESPNOW_ADDR_BROADCAST, log_info->data, log_info->size, &frame_head, portMAX_DELAY);
+         }
+ 
+         if (log_info->level <= g_log_config->log_level_custom) {
+diff --git a/src/ota/espnow_ota_initiator.c b/src/ota/espnow_ota_initiator.c
+index 2617fae..1677444 100644
+--- a/src/ota/espnow_ota_initiator.c
++++ b/src/ota/espnow_ota_initiator.c
+@@ -189,6 +189,7 @@ esp_err_t espnow_ota_initiator_scan(espnow_ota_responder_t **info_list, size_t *
+         .filter_adjacent_channel = true,
+         .forward_ttl      = CONFIG_ESPNOW_OTA_SEND_FORWARD_TTL,
+         .forward_rssi     = CONFIG_ESPNOW_OTA_SEND_FORWARD_RSSI,
++        .security         = CONFIG_ESPNOW_OTA_SECURITY,
+     };
+ 
+     espnow_ota_initiator_scan_result_free();
+@@ -276,6 +277,7 @@ static esp_err_t espnow_ota_request_status(uint8_t (*progress_array)[ESPNOW_OTA_
+         .filter_adjacent_channel = true,
+         .forward_ttl      = CONFIG_ESPNOW_OTA_SEND_FORWARD_TTL,
+         .forward_rssi     = CONFIG_ESPNOW_OTA_SEND_FORWARD_RSSI,
++        .security         = CONFIG_ESPNOW_OTA_SECURITY,
+     };
+ 
+     for (int i = 0, wait_ticks = pdMS_TO_TICKS(500); i < 3 && response_num > 0; ++i, wait_ticks = pdMS_TO_TICKS(100)) {
+@@ -402,6 +404,7 @@ esp_err_t espnow_ota_initiator_send(const uint8_t addrs_list[][6], size_t addrs_
+         .group            = true,
+         .forward_ttl      = CONFIG_ESPNOW_OTA_SEND_FORWARD_TTL,
+         .forward_rssi     = CONFIG_ESPNOW_OTA_SEND_FORWARD_RSSI,
++        .security         = CONFIG_ESPNOW_OTA_SECURITY,
+     };
+ 
+     if (addrs_num == 1 && ESPNOW_ADDR_IS_BROADCAST(addrs_list[0])) {
+diff --git a/src/ota/espnow_ota_responder.c b/src/ota/espnow_ota_responder.c
+index d7c8777..ced0fee 100644
+--- a/src/ota/espnow_ota_responder.c
++++ b/src/ota/espnow_ota_responder.c
+@@ -42,7 +42,7 @@ typedef struct {
+ static const char *TAG = "espnow_ota_responder";
+ static ota_config_t *g_ota_config = NULL;
+ static bool g_ota_finished_flag        = false;
+-static espnow_frame_head_t g_frame_config = { 0 };
++static espnow_frame_head_t g_frame_config = { .security = CONFIG_ESPNOW_OTA_SECURITY };
+ static espnow_ota_config_t *g_espnow_ota_config = NULL;
+ 
+ static esp_err_t validate_image_header(const esp_partition_t *update)
+@@ -206,13 +206,15 @@ EXIT:
+             && g_ota_config->status.written_size != g_ota_config->status.total_size) {
+         espnow_ota_status_t *tmp_status = ESP_MALLOC(sizeof(espnow_ota_status_t) + ESPNOW_OTA_PROGRESS_MAX_SIZE);
+         memcpy(tmp_status, &g_ota_config->status, sizeof(espnow_ota_status_t));
++        espnow_frame_head_t frame_head = ESPNOW_FRAME_CONFIG_DEFAULT();
++        frame_head.security = CONFIG_ESPNOW_OTA_SECURITY;
+ 
+         for (int seq = 0; seq < tmp_status->packet_num; ++seq) {
+             if (!ESPNOW_OTA_GET_BITS(g_ota_config->status.progress_array, seq)) {
+                 tmp_status->progress_index = seq / (ESPNOW_OTA_PROGRESS_MAX_SIZE * 8);
+                 memcpy(tmp_status->progress_array[0], g_ota_config->status.progress_array[tmp_status->progress_index], ESPNOW_OTA_PROGRESS_MAX_SIZE);
+                 ret = espnow_send(ESPNOW_DATA_TYPE_OTA_STATUS, src_addr, tmp_status,
+-                                  sizeof(espnow_ota_status_t) + ESPNOW_OTA_PROGRESS_MAX_SIZE, NULL, portMAX_DELAY);
++                                  sizeof(espnow_ota_status_t) + ESPNOW_OTA_PROGRESS_MAX_SIZE, &frame_head, portMAX_DELAY);
+                 ESP_LOG_BUFFER_HEXDUMP(TAG, tmp_status->progress_array, ESPNOW_OTA_PROGRESS_MAX_SIZE, ESP_LOG_DEBUG);
+                 ESP_ERROR_BREAK(ret != ESP_OK, "espnow_send");
+ 
+@@ -383,9 +385,11 @@ esp_err_t espnow_ota_responder_stop()
+     g_ota_config->status.written_size = 0;
+     memset(g_ota_config->status.progress_array, 0, g_ota_config->status.packet_num / 8 + 1);
+     espnow_storage_erase(ESPNOW_OTA_STORE_CONFIG_KEY);
++    espnow_frame_head_t frame_head = ESPNOW_FRAME_CONFIG_DEFAULT();
++    frame_head.security = CONFIG_ESPNOW_OTA_SECURITY;
+ 
+     ret = espnow_send(ESPNOW_DATA_TYPE_OTA_STATUS, ESPNOW_ADDR_BROADCAST,
+-                      &g_ota_config->status, sizeof(espnow_ota_status_t), NULL, portMAX_DELAY);
++                      &g_ota_config->status, sizeof(espnow_ota_status_t), &frame_head, portMAX_DELAY);
+     ESP_ERROR_RETURN(ret != ESP_OK, ret, "espnow_write");
+ 
+     return ESP_OK;
+diff --git a/src/ota/include/espnow_ota.h b/src/ota/include/espnow_ota.h
+index 15478c4..e0cf98e 100644
+--- a/src/ota/include/espnow_ota.h
++++ b/src/ota/include/espnow_ota.h
+@@ -139,6 +139,10 @@ typedef struct {
+     espnow_addr_t *requested_addr;  /**< MAC address of devices that not completed to upgrade */
+ } espnow_ota_result_t;
+ 
++#ifndef CONFIG_ESPNOW_OTA_SECURITY
++#define CONFIG_ESPNOW_OTA_SECURITY   0
++#endif
++
+ /**
+  * @brief  The upgrade data callback function
+  *         Read firmware data from flash to send to unfinished device.
+diff --git a/src/provisioning/src/espnow_prov.c b/src/provisioning/src/espnow_prov.c
+index a6b3f72..3b13772 100644
+--- a/src/provisioning/src/espnow_prov.c
++++ b/src/provisioning/src/espnow_prov.c
+@@ -48,6 +48,10 @@ typedef struct {
+ 
+ #define ESPNOW_PROV_BEACON_INTERVAL 100
+ 
++#ifndef CONFIG_ESPNOW_PROV_SECURITY
++#define CONFIG_ESPNOW_PROV_SECURITY   0
++#endif
++
+ static const char *TAG = "espnow_prov";
+ 
+ typedef struct {
+@@ -190,6 +194,7 @@ esp_err_t espnow_prov_initiator_send(const espnow_addr_t responder_addr, const e
+     memcpy(&prov_data->initiator_info, initiator_info, sizeof(espnow_prov_initiator_t));
+     espnow_frame_head_t frame_head = {
+         .filter_adjacent_channel = true,
++        .security                = CONFIG_ESPNOW_PROV_SECURITY,
+     };
+     uint32_t start_ticks = xTaskGetTickCount();
+ 
+@@ -250,6 +255,7 @@ static void responder_beacon_timercb(TimerHandle_t timer)
+         .broadcast = true,
+         .magic     = esp_random(),
+         .filter_adjacent_channel = true,
++        .security                = CONFIG_ESPNOW_PROV_SECURITY,
+     };
+ 
+     espnow_send(ESPNOW_DATA_TYPE_PROV, ESPNOW_ADDR_BROADCAST, g_beacon_prov_data, 
+@@ -314,6 +320,7 @@ static esp_err_t espnow_prov_responder_send(const espnow_addr_t *initiator_addr_
+     espnow_frame_head_t frame_head = {
+         .retransmit_count = 10,
+         .broadcast = true,
++        .security  = CONFIG_ESPNOW_PROV_SECURITY,
+     };
+ 
+     ESP_LOGD(TAG, MACSTR ", num: %d", MAC2STR(initiator_addr_list[0]), initiator_addr_num);

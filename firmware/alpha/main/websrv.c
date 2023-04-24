@@ -340,9 +340,11 @@ info_get_handler(httpd_req_t *req)
   sprintf(buf, "<tr><td class=\"name\">Number of reboots:</td><td class=\"prop\">%lu</td></tr>", g_persistent.bootCnt);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
+  uint8_t GUID[16];
+  vscp_espnow_get_node_guid(GUID);
   char *pre = VSCP_MALLOC(32);
   if (NULL != pre) {
-    vscp_fwhlp_writeGuidToString(temp, g_persistent.nodeGuid);
+    vscp_fwhlp_writeGuidToString(temp, GUID);
     memset(pre, 0, 32);
     strncpy(pre, temp, 24);
     sprintf(buf, "<tr><td class=\"name\">GUID:</td><td class=\"prop\">%s<br>%s</td></tr>", pre, temp + 24);
@@ -1566,7 +1568,7 @@ config_module_get_handler(httpd_req_t *req)
     sprintf(pmkstr + 2 * i, "%02X", g_persistent.pmk[i]);
   }
   sprintf(buf,
-          "Primay key (16 bytes hex):<input type=\"password\" name=\"pmk\" maxlength=\"64\" size=\"20\" value=\"%s\" >",
+          "Primay key (32 bytes hex):<input type=\"password\" name=\"key\" maxlength=\"64\" size=\"20\" value=\"%s\" >",
           pmkstr);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
   VSCP_FREE(pmkstr);
@@ -1575,15 +1577,6 @@ config_module_get_handler(httpd_req_t *req)
           "Startup delay:<input type=\"text\" name=\"strtdly\" value=\"%d\" maxlength=\"2\" size=\"4\">",
           g_persistent.startDelay);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-
-  char *guidstr = VSCP_MALLOC(48);
-  vscp_fwhlp_writeGuidToString(guidstr, g_persistent.nodeGuid);
-
-  sprintf(buf,
-          "GUID (FF:FF:00...):<input type=\"text\" name=\"guid\" value=\"%s\" maxlength=\"50\" size=\"20\">",
-          guidstr);
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  VSCP_FREE(guidstr);
 
   sprintf(buf, "<button class=\"bgrn bgrn:hover\">Save</button></fieldset></form></div>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
@@ -1652,17 +1645,21 @@ do_config_module_get_handler(httpd_req_t *req)
         ESP_LOGE(TAG, "Error getting node_name => rv=%d", rv);
       }
 
-      // pmk
-      if (ESP_OK == (rv = httpd_query_key_value(buf, "pmk", param, WEBPAGE_PARAM_SIZE))) {
-        ESP_LOGD(TAG, "Found query parameter => pmk=%s", param);
-        memset(g_persistent.pmk, 0, 16);
-        vscp_fwhlp_hex2bin(g_persistent.pmk, 16, param);
-
-        // Write changed value to persistent storage
-        rv = nvs_set_blob(g_nvsHandle, "pmk", g_persistent.pmk, sizeof(g_persistent.pmk));
+      // key
+      if (ESP_OK == (rv = httpd_query_key_value(buf, "key", param, WEBPAGE_PARAM_SIZE))) {
+        uint8_t key_info[APP_KEY_LEN];
+        ESP_LOGD(TAG, "Found query parameter => key");
+        memset(key_info, 0, APP_KEY_LEN);
+        vscp_fwhlp_hex2bin(key_info, APP_KEY_LEN, param);
+        rv = espnow_set_key(key_info);
         if (rv != ESP_OK) {
-          ESP_LOGE(TAG, "Failed to write node pmk to nvs. rv=%d", rv);
+          ESP_LOGE(TAG, "Failed to write key. rv=%d", rv);
         }
+        // Write changed value to persistent storage
+        // rv = nvs_set_blob(g_nvsHandle, "pmk", g_persistent.pmk, sizeof(g_persistent.pmk));
+        // if (rv != ESP_OK) {
+        //   ESP_LOGE(TAG, "Failed to write node pmk to nvs. rv=%d", rv);
+        // }
       }
       else {
         ESP_LOGE(TAG, "Error getting node_name => rv=%d", rv);
@@ -1680,26 +1677,6 @@ do_config_module_get_handler(httpd_req_t *req)
       }
       else {
         ESP_LOGE(TAG, "Error getting strtdly => rv=%d", rv);
-      }
-
-      // GUID
-      if (ESP_OK == (rv = httpd_query_key_value(buf, "guid", param, WEBPAGE_PARAM_SIZE))) {
-        ESP_LOGD(TAG, "Found query parameter => guid=%s", param);
-
-        char *p = urlDecode((const char *) param);
-        ESP_LOGD(TAG, "URL Decode => guid=%s", p);
-        if (VSCP_ERROR_SUCCESS != vscp_fwhlp_parseGuid(g_persistent.nodeGuid, p, NULL)) {
-          ESP_LOGE(TAG, "Failed to read GUID");
-        }
-
-        // Write changed value to persistent storage
-        rv = nvs_set_blob(g_nvsHandle, "guid", g_persistent.nodeGuid, 16);
-        if (rv != ESP_OK) {
-          ESP_LOGE(TAG, "Failed to write node GUID to nvs. rv=%d", rv);
-        }
-      }
-      else {
-        ESP_LOGE(TAG, "Error getting guid => rv=%d", rv);
       }
 
       rv = nvs_commit(g_nvsHandle);
@@ -1953,26 +1930,6 @@ do_config_wifi_get_handler(httpd_req_t *req)
       }
       else {
         ESP_LOGE(TAG, "Error getting strtdly => rv=%d", rv);
-      }
-
-      // GUID
-      if (ESP_OK == (rv = httpd_query_key_value(buf, "guid", param, WEBPAGE_PARAM_SIZE))) {
-        ESP_LOGD(TAG, "Found query parameter => guid=%s", param);
-
-        char *p = urlDecode(param);
-        ESP_LOGD(TAG, "URL Decode => guid=%s", p);
-        if (VSCP_ERROR_SUCCESS != vscp_fwhlp_parseGuid(g_persistent.nodeGuid, p, NULL)) {
-          ESP_LOGE(TAG, "Failed to read GUID");
-        }
-
-        // Write changed value to persistent storage
-        rv = nvs_set_blob(g_nvsHandle, "guid", g_persistent.nodeGuid, 16);
-        if (rv != ESP_OK) {
-          ESP_LOGE(TAG, "Failed to write node GUID to nvs. rv=%d", rv);
-        }
-      }
-      else {
-        ESP_LOGE(TAG, "Error getting guid => rv=%d", rv);
       }
 
       rv = nvs_commit(g_nvsHandle);

@@ -81,10 +81,11 @@
 
 static const char *TAG = "vscpnow";
 
-extern nvs_handle_t g_nvsHandle; // From app main
-// extern espnow_sec_info_t g_sec_info; // From security
-
+// Globals
 bool g_vscp_espnow_probe = false;
+
+// Static
+nvs_handle_t s_nvsHandle; // From app main
 
 /*
   State machine state for the vscp_espnow stack
@@ -101,7 +102,18 @@ bool g_vscp_espnow_probe = false;
 */
 static vscp_espnow_state_t s_stateVscpEspNow = VSCP_ESPNOW_STATE_VIRGIN;
 
-static vscp_espnow_config_t s_vscp_espnow_config = { 0 };
+// static vscp_espnow_config_t s_vscp_espnow_config = { 0 };
+
+// **VSCP espnow** persistent data
+static vscp_espnow_persistent_t s_vscp_persistent = {
+  .nickname = 0xffff,
+
+  .userid0 = 0,
+  .userid1 = 0,
+  .userid2 = 0,
+  .userid3 = 0,
+  .userid4 = 0,
+};
 
 #define VSCP_ESPNOW_MAX_BUFFERED_NUM                                                                                   \
   (CONFIG_ESP32_WIFI_DYNAMIC_TX_BUFFER_NUM / 2) /* Not more than CONFIG_ESP32_WIFI_DYNAMIC_TX_BUFFER_NUM */
@@ -132,14 +144,14 @@ uint8_t VSCP_ESPNOW_ADDR_PROBE_NODE[6] = { 0 };
 /*!
   GUID for unassigned node.
 */
-static uint8_t s_vscp_zero_guid[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+static uint8_t s_VSCP_ESPNOW_GUID_NONE[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                               0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
 /*!
   GUID used for a node that is uninitialized.
 */
-static uint8_t s_vscp_uninit_guid[16] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE,
-                                          0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00 };
+static uint8_t s_VSCP_ESPNOW_GUID_UNINIT[16] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE,
+                                                 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00 };
 
 // User handler for received vscp_espnow frames/events
 static vscp_event_handler_cb_t s_vscp_event_handler_cb = NULL;
@@ -164,13 +176,261 @@ static vscp_espnow_attach_network_handler_cb_t s_vscp_espnow_attach_network_hand
 // Statistics
 static uint8_t s_vscp_espnow_seq = 0; // Sequency counter for sent events
 
-static uint8_t s_cntSeqNodes = 0;
-vscp_espnow_last_event_t **s_pSeqNodes;
+// static uint8_t s_cntSeqNodes = 0;
+// vscp_espnow_last_event_t **s_pSeqNodes;
 
 static vscp_espnow_stats_t s_vscpEspNowStats;
 
 // Forward declarations
 
+// ----------------------------------------------------------------------------
+
+///////////////////////////////////////////////////////////////////////////////
+// vscp_espnow_read_reg
+//
+
+int
+vscp_espnow_read_reg(uint32_t address, uint16_t cnt)
+{
+  // vscp espnow can't handle 512 byte frames and cnt
+  // can be 508 so we may need to do more than one 
+  // read/write reply
+  return VSCP_ERROR_SUCCESS;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// vscp_espnow_read_standard_reg
+//
+
+int
+vscp_espnow_read_standard_reg(uint32_t address, uint16_t cnt)
+{
+  vscpEvent *pev = vscp_fwhlp_newEvent();
+  if (NULL == pev) {
+    ESP_LOGE(TAG, "[%s, %d]: Could not ", __func__, __LINE__);
+    return VSCP_ERROR_MEMORY;
+  }
+
+  VSCP_FREE(pev);
+  return VSCP_ERROR_SUCCESS;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// vscp_espnow_write_reg
+//
+
+int
+vscp_espnow_write_reg(uint32_t reg, uint16_t cnt, uint16_t *pdata)
+{
+  vscpEvent *pev = vscp_fwhlp_newEvent();
+  if (NULL == pev) {
+    return VSCP_ERROR_MEMORY;
+  }
+
+  VSCP_FREE(pev);
+  return VSCP_ERROR_SUCCESS;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// vscp_espnow_write_std_reg
+//
+
+int
+vscp_espnow_write_std_reg(uint32_t reg, uint16_t cnt, uint16_t *pdata)
+{
+  vscpEvent *pev = vscp_fwhlp_newEvent();
+  if (NULL == pev) {
+    return VSCP_ERROR_MEMORY;
+  }
+
+  VSCP_FREE(pev);
+  return VSCP_ERROR_SUCCESS;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// vscp_espnow_send_errror
+//
+
+static int
+vscp_espnow_send_error(uint8_t err)
+{
+  vscpEventEx ex;
+
+  memset(&ex, 0, sizeof(vscpEventEx));
+  ex.vscp_class = VSCP_CLASS1_ERROR;
+  ex.vscp_type  = VSCP_TYPE_ERROR_ERROR;
+  ex.sizeData   = 5;
+  ex.data[3]    = VSCP_ERROR_INVALID_SYNTAX;
+  return vscp_espnow_sendEventEx(ESPNOW_ADDR_BROADCAST, &ex, true, 1000);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// vscp_espnow_set_nickname
+//
+
+static int
+vscp_espnow_set_nickname(uint16_t nickname)
+{
+  return VSCP_ERROR_SUCCESS;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// vscp_espnow_process
+//
+// VSCP event protocol processing takes here. Different callbacks are called
+// to handle
+//
+
+static int
+vscp_espnow_event_process(const vscpEvent *pev)
+{
+  uint16_t vscp_class;
+  uint8_t offset = 0;
+
+  // Check pointer
+  if (NULL == pev) {
+    ESP_LOGE(TAG, "NULL Event");
+    return VSCP_ERROR_INVALID_POINTER;
+  }
+
+  vscp_class = pev->vscp_class;
+  if ((vscp_class >= 512) && (vscp_class < 1024)) {
+    offset = 16;       // Data is after GUID
+    vscp_class -= 512; // We pretend to be level I event
+  }
+
+  if (VSCP_CLASS1_PROTOCOL == vscp_class) {
+    switch (pev->vscp_type) {
+
+      case VSCP_TYPE_PROTOCOL_PROBE_ACK: {
+        vscpEventEx ex;
+        memset(&ex, 0, sizeof(vscpEventEx));
+        ex.vscp_class = VSCP_CLASS1_PROTOCOL;
+        ex.vscp_type  = VSCP_TYPE_PROTOCOL_PROBE_ACK;
+        ex.sizeData   = 0;
+        vscp_espnow_sendEventEx(ESPNOW_ADDR_BROADCAST, &ex, true, 1000);
+      } break;
+
+      // 8/16 bit versions accepted
+      case VSCP_TYPE_PROTOCOL_SET_NICKNAME: {
+        uint16_t nickname_new;
+        // uint16_t nickname;
+
+        if (4 == pev->sizeData) {
+          // nickname     = ((pev->pdata[0]) << 8) + pev->pdata[2];
+          nickname_new = ((pev->pdata[1]) << 8) + pev->pdata[3];
+          vscp_espnow_set_nickname(nickname_new);
+        }
+        else if (2 == pev->sizeData) {
+          // nickname     = pev->pdata[0];
+          nickname_new = pev->pdata[1];
+          vscp_espnow_set_nickname(nickname_new);
+        }
+        else {
+          return (VSCP_ERROR_SUCCESS == vscp_espnow_send_error(VSCP_ERROR_INVALID_SYNTAX));
+        }
+      } break;
+
+      case VSCP_TYPE_PROTOCOL_DROP_NICKNAME:
+        vscp_espnow_set_nickname(0xffff);
+        break;
+
+      case VSCP_TYPE_PROTOCOL_READ_REGISTER:
+        // We do nothing, this is a level II node
+        break;
+
+      case VSCP_TYPE_PROTOCOL_WRITE_REGISTER:
+        // We do nothing this is a level II node
+        break;
+
+      case VSCP_TYPE_PROTOCOL_RESET_DEVICE:
+        break;
+
+      case VSCP_TYPE_PROTOCOL_PAGE_READ:
+        // We do nothing this is a level II node
+        break;
+
+      case VSCP_TYPE_PROTOCOL_PAGE_WRITE:
+        // We do nothing this is a level II node
+        break;
+
+      case VSCP_TYPE_PROTOCOL_INCREMENT_REGISTER:
+        // We do nothing this is a level II node
+        break;
+
+      case VSCP_TYPE_PROTOCOL_DECREMENT_REGISTER:
+        // We do nothing this is a level II node
+        break;
+
+      case VSCP_TYPE_PROTOCOL_WHO_IS_THERE:
+        break;
+
+      case VSCP_TYPE_PROTOCOL_GET_MATRIX_INFO:
+        break;
+
+      case VSCP_TYPE_PROTOCOL_GET_EMBEDDED_MDF:
+        break;
+
+      case VSCP_TYPE_PROTOCOL_EXTENDED_PAGE_READ:
+        // We do nothing this is a level II node
+        break;
+
+      case VSCP_TYPE_PROTOCOL_EXTENDED_PAGE_WRITE:
+        // We do nothing this is a level II node
+        break;
+
+      case VSCP_TYPE_PROTOCOL_GET_EVENT_INTEREST:
+        break;
+    }
+  }
+  else if (VSCP_CLASS2_PROTOCOL == pev->vscp_class) {
+
+    switch (pev->vscp_type) {
+
+      case VSCP2_TYPE_PROTOCOL_READ_REGISTER: {
+        uint32_t reg;
+        uint8_t val;
+        uint16_t cnt;
+
+        if (pev->sizeData >= 22) {
+
+          if (vscp_espnow_to_me(pev->pdata)) {
+
+            // Get register
+            reg = ((uint32_t) pev->pdata[16] << 24) + ((uint32_t) pev->pdata[17] << 16) +
+                  ((uint32_t) pev->pdata[18] << 8) + pev->pdata[19];
+
+            // Get registers to read
+            cnt = ((uint16_t) pev->pdata[20] << 8) + pev->pdata[21];
+
+            if (cnt > 508) {
+              return (VSCP_ERROR_SUCCESS == vscp_espnow_send_error(VSCP_ERROR_INVALID_SYNTAX));
+            }
+
+            if (reg > 0xffff0000) {
+              return vscp_espnow_read_standard_reg(reg, cnt);
+            }
+            else {
+              return vscp_espnow_read_reg(reg,cnt);
+            }
+          }
+        }
+        else {
+          return (VSCP_ERROR_SUCCESS == vscp_espnow_send_error(VSCP_ERROR_INVALID_SYNTAX));
+        }
+      } break;
+
+      case VSCP2_TYPE_PROTOCOL_WRITE_REGISTER:
+        break;
+    }
+  }
+  else {
+  }
+
+  return VSCP_ERROR_SUCCESS;
+}
+
+/*
 static bool
 addSeqNode(const uint8_t *pmac, uint8_t seq)
 {
@@ -225,6 +485,7 @@ validateSeqNode(const uint8_t *pmac, uint8_t seq)
   // If it can be added true is returned.
   return addSeqNode(pmac, seq);
 }
+*/
 
 ///////////////////////////////////////////////////////////////////////////////
 // vscp_espnow_timestamp
@@ -253,8 +514,8 @@ vscp_espnow_sec_initiator(void)
   esp_err_t ret;
   uint8_t key_info[APP_KEY_LEN];
 
-  uint8_t primary;
-  wifi_second_chan_t secondary;
+  // uint8_t primary;
+  // wifi_second_chan_t secondary;
 
   if (espnow_get_key(key_info) != ESP_OK) {
     ESP_LOGI(TAG, "----> New security key is created");
@@ -305,30 +566,42 @@ EXIT:
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// vscp_espnow_build_guid_from_mac
+// vscp_espnow_is_to_me
+//
+
+bool
+vscp_espnow_to_me(const uint8_t *pguid)
+{
+  uint8_t GUID[16];
+  vscp_espnow_get_node_guid(GUID);
+  return  (0==memcmp(GUID,pguid, 16)) ? true : false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// vscp_espnow_get_node_guid
 //
 
 int
-vscp_espnow_build_guid_from_mac(uint8_t *pguid, const uint8_t *pmac, uint16_t nickname)
+vscp_espnow_get_node_guid(uint8_t *pguid)
 {
+  esp_err_t ret;
+
+  // Ethernet based GUID
   uint8_t prebytes[8] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe };
 
-  // Need a GUID pointer
+  // Check GUID pointer
   if (NULL == pguid) {
     ESP_LOGE(TAG, "Pointer to GUID is NULL");
     return VSCP_ERROR_INVALID_POINTER;
   }
 
-  // Need a mac pointer
-  if (NULL == pmac) {
-    ESP_LOGE(TAG, "Pointer to mac address is NULL");
-    return VSCP_ERROR_INVALID_POINTER;
+  ret = esp_read_mac(pguid + 8, ESP_MAC_WIFI_STA);
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG, "esp_efuse_mac_get_default failed to get GUID. rv=%d", ret);
   }
 
-  memcpy(pguid, prebytes, 8);
-  memcpy(pguid + 8, pmac, ESP_NOW_ETH_ALEN);
-  pguid[14] = (nickname << 8) & 0xff;
-  pguid[15] = nickname & 0xff;
+  pguid[14] = (s_vscp_persistent.nickname << 8) & 0xff;
+  pguid[15] = s_vscp_persistent.nickname & 0xff;
 
   return VSCP_ERROR_SUCCESS;
 }
@@ -639,46 +912,14 @@ vscp_espnow_frameToEx(vscpEventEx *pex, const uint8_t *buf, uint8_t len, uint32_
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// readRegister
-//
-
-int
-readRegister(uint8_t *dest_addr, uint32_t address, uint8_t value, uint32_t wait_ms)
-{
-  vscpEvent *pev = vscp_fwhlp_newEvent();
-  if (NULL == pev) {
-    ESP_LOGE(TAG, "[%s, %d]: Could not ", __func__, __LINE__);
-    return VSCP_ERROR_MEMORY;
-  }
-
-  VSCP_FREE(pev);
-  return VSCP_ERROR_SUCCESS;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// writeRegister
-//
-
-int
-writeRegister(uint8_t *dest_addr, uint32_t address, uint8_t *value, uint32_t wait_ms)
-{
-  vscpEvent *pev = vscp_fwhlp_newEvent();
-  if (NULL == pev) {
-    return VSCP_ERROR_MEMORY;
-  }
-
-  VSCP_FREE(pev);
-  return VSCP_ERROR_SUCCESS;
-}
-
-///////////////////////////////////////////////////////////////////////////////
 // vscp_espnow_sendEvent
 //
 
 int
 vscp_espnow_sendEvent(const uint8_t *destAddr, const vscpEvent *pev, bool bSec, uint32_t wait_ms)
 {
-  esp_err_t rv;
+  int rv;
+  uint8_t GUID[16];
   uint8_t *pbuf = NULL;
   size_t len    = vscp_espnow_getMinBufSizeEv(pev);
 
@@ -698,6 +939,14 @@ vscp_espnow_sendEvent(const uint8_t *destAddr, const vscpEvent *pev, bool bSec, 
   if (NULL == pbuf) {
     ESP_LOGE(TAG, "Failed to allocate memory for send buffer-");
     return VSCP_ERROR_MEMORY;
+  }
+
+  // If the GUID is zero we set it to the nodes GUID
+  if (0 == memcmp(pev->GUID, s_VSCP_ESPNOW_GUID_NONE, 16)) {
+    if (VSCP_ERROR_SUCCESS != (rv = vscp_espnow_get_node_guid(GUID))) {
+      ESP_LOGE(TAG, "Failed to get GUID");
+      return rv;
+    }
   }
 
   if (VSCP_ERROR_SUCCESS != (rv = vscp_espnow_evToFrame(pbuf, len, pev))) {
@@ -720,7 +969,7 @@ vscp_espnow_sendEvent(const uint8_t *destAddr, const vscpEvent *pev, bool bSec, 
   espnowhead.magic              = esp_random();
   espnowhead.retransmit_count   = 1;
   espnowhead.forward_ttl        = 10;
-  espnowhead.forward_rssi       = -80;
+  espnowhead.forward_rssi       = -65;
   espnowhead.filter_weak_signal = true;
 
   esp_err_t ret = espnow_send(ESPNOW_DATA_TYPE_DATA, destAddr, pbuf, len, &espnowhead, pdMS_TO_TICKS(wait_ms));
@@ -807,7 +1056,7 @@ vscp_espnow_sendEventEx(const uint8_t *destAddr, const vscpEventEx *pex, bool bS
   espnowhead.magic              = esp_random();
   espnowhead.retransmit_count   = 10;
   espnowhead.forward_ttl        = 10;
-  espnowhead.forward_rssi       = -80;
+  espnowhead.forward_rssi       = -65;
   espnowhead.filter_weak_signal = true;
 
   esp_err_t ret = espnow_send(ESPNOW_DATA_TYPE_DATA, destAddr, pbuf, len, &espnowhead, pdMS_TO_TICKS(wait_ms));
@@ -898,7 +1147,7 @@ vscp_espnow_send_probe_event(const uint8_t *dest_addr, uint8_t channel, TickType
 
   // Set uninitialized
   pev->sizeData = VSCP_SIZE_GUID;
-  memcpy(pev->pdata, s_vscp_uninit_guid, VSCP_SIZE_GUID);
+  memcpy(pev->pdata, s_VSCP_ESPNOW_GUID_UNINIT, VSCP_SIZE_GUID);
 
   size_t len    = vscp_espnow_getMinBufSizeEv(pev);
   uint8_t *pbuf = VSCP_MALLOC(len);
@@ -968,8 +1217,8 @@ vscp_espnow_probe(void)
 {
   int rv = VSCP_ERROR_SUCCESS;
   int ret;
-  uint8_t primary           = 0;
-  wifi_second_chan_t second = 0;
+  // uint8_t primary           = 0;
+  // wifi_second_chan_t second = 0;
 
   ESP_LOGI(TAG, "Probe starting");
 
@@ -1000,10 +1249,11 @@ vscp_espnow_probe(void)
                                            pdFALSE,
                                            pdMS_TO_TICKS(100));
     if (bits & VSCP_ESPNOW_WAIT_PROBE_RESPONSE_BIT) {
+      printf("Probe ack\n");
       break;
     }
     // taskYIELD();
-  }
+  } // for
 
   EventBits_t bits = xEventGroupWaitBits(s_vscp_espnow_event_group,
                                          VSCP_ESPNOW_WAIT_PROBE_RESPONSE_BIT,
@@ -1038,6 +1288,7 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
 {
   int rv;
   int ret;
+  uint32_t diff; // Time diff between node and our time from frame timestamp
 
   if ((src_addr == NULL) || (data == NULL) || (rx_ctrl == NULL) || (size <= 0)) {
     ESP_LOGE(TAG, "Receive cb arg error");
@@ -1045,8 +1296,7 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
   }
 
   ESP_LOGI(TAG,
-           "<<< Receive event from " MACSTR " to " MACSTR " , RSSI %d Channel %d, size %zd",
-           MAC2STR((src_addr)),
+           "<<< 1.) Receive event from: " MACSTR " , RSSI %d Channel %d, espnow size %zd",
            MAC2STR((src_addr)),
            rx_ctrl->rssi,
            rx_ctrl->channel,
@@ -1079,19 +1329,21 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
     return;
   }
 
+  uint8_t node_type  = (data[VSCP_ESPNOW_POS_TYPE_VER] >> 6) & 0x03;
+  uint8_t proto_ver  = (data[VSCP_ESPNOW_POS_TYPE_VER] >> 4) & 0x03;
+  uint8_t encryption = data[VSCP_ESPNOW_POS_TYPE_VER] & 0x07;
+
   struct timeval tv_now;
   gettimeofday(&tv_now, NULL);
 
-  long long int node_time =
-    (long long int) (((uint32_t) data[VSCP_ESPNOW_POS_TIME_STAMP] << 24) +
-                     ((uint32_t) data[VSCP_ESPNOW_POS_TIME_STAMP + 1] << 16) +
-                     ((uint32_t) data[VSCP_ESPNOW_POS_TIME_STAMP + 2] << 8) + data[VSCP_ESPNOW_POS_TIME_STAMP + 3]);
+  int node_time =
+    (long long) (((uint32_t) data[VSCP_ESPNOW_POS_TIME_STAMP] << 24) +
+                 ((uint32_t) data[VSCP_ESPNOW_POS_TIME_STAMP + 1] << 16) +
+                 ((uint32_t) data[VSCP_ESPNOW_POS_TIME_STAMP + 2] << 8) + data[VSCP_ESPNOW_POS_TIME_STAMP + 3]);
 
-  ESP_LOGI(TAG,
-           "node_time  time: %lld, tv: %lld ---------> diff: %lld\n",
-           node_time,
-           tv_now.tv_sec,
-           node_time - tv_now.tv_sec);
+  diff = abs(node_time - (int) tv_now.tv_sec);
+
+  ESP_LOGD(TAG, "node_time  time: %d, tv: %lld ---------> diff: %lu\n", node_time, tv_now.tv_sec, diff);
 
   vscpEvent *pev = vscp_fwhlp_newEvent();
   if (NULL == pev) {
@@ -1104,33 +1356,56 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
     return;
   }
 
+  // ----------------------------------------------------------------------------
+  //                             Channel Probing
+  // ----------------------------------------------------------------------------
+
 #if (PRJDEF_NODE_TYPE == VSCP_DROPLET_ALPHA)
-  if (/*(VSCP_ESPNOW_STATE_PROBE == s_stateVscpEspNow) &&*/ (VSCP_CLASS1_PROTOCOL == pev->vscp_class) &&
-      (VSCP_TYPE_PROTOCOL_NEW_NODE_ONLINE == pev->vscp_type) && (16 == pev->sizeData)) {
+  /*
+    1.) When Beta and Gamma nodes are in virgin state they don't know the secret key or the
+        channel to communicate on. Therefore a pairing has to talke place. This is done by pressing
+        a button on a alpha-node anda beta/gamma node that should be paired. Now the beta/gamma node
+        send CLASS1_PROTOCOL, VSCP_TYPE_PROTOCOL_NEW_NODE_ONLINE on all chanels until it get a response
+        and it then set the channel, save the address of the alpha node and initiate the key exhange
+        process. When this is done they are part of the segment.
+    2.) Gamma nodes also send  CLASS1_PROTOCOL, VSCP_TYPE_PROTOCOL_NEW_NODE_ONLINE when they wake up.
+        This is just to get a response so they can synd the timestamp for further communication. Note
+        that the gamma node needs
+  */
+  if (/*(VSCP_ESPNOW_STATE_PROBE == s_stateVscpEspNow) &&*/ (node_type != VSCP_DROPLET_ALPHA) &&
+      (VSCP_CLASS1_PROTOCOL == pev->vscp_class) && (VSCP_TYPE_PROTOCOL_NEW_NODE_ONLINE == pev->vscp_type) &&
+      (16 == pev->sizeData)) {
 
     ESP_LOGI(TAG, "Probe: New node on-line");
 
     // Send probe response if probe node is all zero or same as probing
     if (!memcmp(VSCP_ESPNOW_ADDR_PROBE_NODE, VSCP_ESPNOW_ADDR_NONE, 6)) {
-      printf("---------------------> 1  channel = %d\n", rx_ctrl->channel);
+      ESP_LOGI(TAG, "Sending probe event on channel %d", rx_ctrl->channel);
       rv = vscp_espnow_send_probe_event(ESPNOW_ADDR_BROADCAST, rx_ctrl->channel, 1000);
       xEventGroupSetBits(s_vscp_espnow_event_group, VSCP_ESPNOW_WAIT_PROBE_RESPONSE_BIT);
       s_stateVscpEspNow   = VSCP_ESPNOW_STATE_IDLE;
       g_vscp_espnow_probe = true;
     }
     else if (!memcmp(VSCP_ESPNOW_ADDR_PROBE_NODE, src_addr, 6)) {
-      printf("--------------------->  channel = %d\n", rx_ctrl->channel);
+      ESP_LOGI(TAG, "Sending addressed probe event on channel %d", rx_ctrl->channel);
       rv = vscp_espnow_send_probe_event(src_addr, rx_ctrl->channel, 1000);
       xEventGroupSetBits(s_vscp_espnow_event_group, VSCP_ESPNOW_WAIT_PROBE_RESPONSE_BIT);
-      s_stateVscpEspNow = VSCP_ESPNOW_STATE_IDLE;
+      s_stateVscpEspNow   = VSCP_ESPNOW_STATE_IDLE;
+      g_vscp_espnow_probe = true;
     }
     else {
-      ESP_LOGI(TAG, "Strange probe address: " MACSTR, MAC2STR(VSCP_ESPNOW_ADDR_PROBE_NODE));
+      ESP_LOGE(TAG, "Strange probe address: " MACSTR, MAC2STR(VSCP_ESPNOW_ADDR_PROBE_NODE));
     }
   }
-#elif (PRJDEF_NODE_TYPE == VSCP_DROPLET_BETA)
-  if ((VSCP_ESPNOW_STATE_PROBE == s_stateVscpEspNow) && (VSCP_CLASS1_PROTOCOL == pev->vscp_class) &&
-      (VSCP_TYPE_PROTOCOL_NEW_NODE_ONLINE == pev->vscp_type) && (16 == pev->sizeData)) {
+  /*
+    1. Beta/Gamma nodes set channel and save src address of alpha node when they get the probe respons.
+    2. Gamma nodes also send a probe when they wakeup. To be able to communicate further they
+       store the time also at this state.
+  */
+#elif ((PRJDEF_NODE_TYPE == VSCP_DROPLET_BETA) || (PRJDEF_NODE_TYPE == VSCP_DROPLET_GAMMA))
+  if ((node_type == VSCP_DROPLET_ALPHA) && (VSCP_ESPNOW_STATE_PROBE == s_stateVscpEspNow) &&
+      (VSCP_CLASS1_PROTOCOL == pev->vscp_class) && (VSCP_TYPE_PROTOCOL_NEW_NODE_ONLINE == pev->vscp_type) &&
+      (16 == pev->sizeData)) {
 
     ESP_LOGI(TAG, "Probe: New node on-line");
 
@@ -1140,34 +1415,68 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
     }
 
     // Save channel to persistent storage
-    if (ESP_OK != (ret = nvs_set_u8(g_nvsHandle, "channel", rx_ctrl->channel))) {
+    if (ESP_OK != (ret = nvs_set_u8(s_nvsHandle, "channel", rx_ctrl->channel))) {
       ESP_LOGE(TAG, "[%s, %d]: Failed to update espnow nvs channel %X", __func__, __LINE__, ret);
     }
 
-    // Save sender MAC address to persistent storage
+    // Save sender MAC address of alpha node to persistent storage
     size_t length = 6;
-    rv            = nvs_set_blob(g_nvsHandle, "keyorg", src_addr, length);
+    rv            = nvs_set_blob(s_nvsHandle, "keyorg", src_addr, length);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to write originating max to nvs. rv=%d", rv);
     }
-  }
 
-  // Check if we got a heartbeat from an alpha node
-  if ((VSCP_CLASS1_PROTOCOL == pev->vscp_class) && (VSCP_TYPE_PROTOCOL_SEGCTRL_HEARTBEAT == pev->vscp_type) &&
-      (pev->sizeData >= 5)) {
+#if (PRJDEF_NODE_TYPE == VSCP_DROPLET_GAMMA)
     struct timeval tm;
 
     tm.tv_sec  = (long long int) (((uint32_t) pev->pdata[1] << 24) + ((uint32_t) pev->pdata[2] << 16) +
                                  ((uint32_t) pev->pdata[3] << 8) + pev->pdata[4]);
     tm.tv_usec = 0;
+
+    ESP_LOGI(TAG, "Gamma: Setting/updating system time.");
+    if (-1 == settimeofday(&tm, NULL)) {
+      ESP_LOGE(TAG, "Gamma: Failed to set time.");
+    }
+    diff = abs(node_time - tv_now.tv_sec);
+#endif
+  }
+
+  // Check if we got a heartbeat from an alpha node. If we do we set/update the time
+  // for this node
+  if ((node_type == VSCP_DROPLET_ALPHA) && (VSCP_CLASS1_PROTOCOL == pev->vscp_class) &&
+      (VSCP_TYPE_PROTOCOL_SEGCTRL_HEARTBEAT == pev->vscp_type) && (pev->sizeData >= 5)) {
+
+    struct timeval tm;
+
+    tm.tv_sec  = (long long int) (((uint32_t) pev->pdata[1] << 24) + ((uint32_t) pev->pdata[2] << 16) +
+                                 ((uint32_t) pev->pdata[3] << 8) + pev->pdata[4]);
+    tm.tv_usec = 0;
+
+    ESP_LOGI(TAG, "Setting/updating system time.");
     if (-1 == settimeofday(&tm, NULL)) {
       ESP_LOGE(TAG, "Failed to set time.");
     }
+    diff = abs(node_time - tv_now.tv_sec);
   }
 #endif
 
+  // ----------------------------------------------------------------
+  //                   Replay protection point
+  // ----------------------------------------------------------------
+
+  /*
+    We only handle events that are "not recent" from this point. A
+    recent events is one that have a timestamp that is max one second
+    from the current clock in this node.
+  */
+
+  if (diff > 1) {
+    ESP_LOGE(TAG, "Event have timestamp out of range.");
+    goto EXIT;
+  }
+
   ESP_LOGI(TAG,
-           "<<< esp-now data received. len=%zd ch=%d src=" MACSTR
+           "<<< 2.) esp-now data received: len=%zd ch=%d src=" MACSTR
            " rssi=%d class=%d, type=%d sizedata=%d timestamp=%lX",
            size,
            rx_ctrl->channel,
@@ -1178,7 +1487,9 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
            pev->sizeData,
            pev->timestamp);
 
-  // EXIT:
+  vscp_espnow_event_process(pev);
+
+EXIT:
   vscp_fwhlp_deleteEvent(&pev);
 }
 
@@ -1191,7 +1502,7 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
 void
 vscp_espnow_heartbeat_task(void *pvParameter)
 {
-  time_t now;
+  // time_t now;
 
   // vscp_espnow_heart_beat_t *pconfig = (vscp_espnow_heart_beat_t *) pvParameter;
   // if (NULL == pconfig) {
@@ -1287,16 +1598,110 @@ ERROR:
 // vscp_espnow_init
 //
 
+static int
+readPersistentConfigs(void)
+{
+  esp_err_t rv;
+
+  // Start Delay (seconds)
+  rv = nvs_get_u16(s_nvsHandle, "nickname", &s_vscp_persistent.nickname);
+  switch (rv) {
+
+    case ESP_OK:
+      ESP_LOGI(TAG, "Nickname = %d", s_vscp_persistent.nickname);
+      break;
+
+    case ESP_ERR_NVS_NOT_FOUND:
+      rv = nvs_set_u16(s_nvsHandle, "nickname", 0xff);
+      if (rv != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to update nickname");
+      }
+      break;
+
+    default:
+      ESP_LOGE(TAG, "Error (%s) reading!", esp_err_to_name(rv));
+      break;
+  }
+
+  // User if 0
+  rv = nvs_get_u8(s_nvsHandle, "usrid0", &s_vscp_persistent.userid0);
+  if (ESP_OK != rv) {
+    rv = nvs_set_u8(s_nvsHandle, "usrid0", s_vscp_persistent.userid0);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to update userid0");
+    }
+  }
+
+  // User if 1
+  rv = nvs_get_u8(s_nvsHandle, "usrid1", &s_vscp_persistent.userid1);
+  if (ESP_OK != rv) {
+    rv = nvs_set_u8(s_nvsHandle, "usrid1", s_vscp_persistent.userid1);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to update userid1");
+    }
+  }
+
+  // User if 2
+  rv = nvs_get_u8(s_nvsHandle, "usrid2", &s_vscp_persistent.userid2);
+  if (ESP_OK != rv) {
+    rv = nvs_set_u8(s_nvsHandle, "usrid2", s_vscp_persistent.userid2);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to update userid2");
+    }
+  }
+
+  // User if 3
+  rv = nvs_get_u8(s_nvsHandle, "usrid3", &s_vscp_persistent.userid3);
+  if (ESP_OK != rv) {
+    rv = nvs_set_u8(s_nvsHandle, "usrid3", s_vscp_persistent.userid3);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to update userid3");
+    }
+  }
+
+  // User if 4
+  rv = nvs_get_u8(s_nvsHandle, "usrid4", &s_vscp_persistent.userid4);
+  if (ESP_OK != rv) {
+    rv = nvs_set_u8(s_nvsHandle, "usrid4", s_vscp_persistent.userid4);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to update userid4");
+    }
+  }
+
+  rv = nvs_commit(s_nvsHandle);
+  if (rv != ESP_OK) {
+    ESP_LOGI(TAG, "Failed to commit updates to nvs\n");
+  }
+
+  return VSCP_ERROR_SUCCESS;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// vscp_espnow_init
+//
+
 esp_err_t
 vscp_espnow_init(const vscp_espnow_config_t *pconfig)
 {
   esp_err_t ret;
   s_stateVscpEspNow = VSCP_ESPNOW_STATE_IDLE;
 
+  // ----------------------------------------------------------------------------
+  //                        NVS - Persistent storage
+  // ----------------------------------------------------------------------------
+
+  // Init persistent storage
+  ret = nvs_open("vscp", NVS_READWRITE, &s_nvsHandle);
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG, "Error (%s) opening NVS handle!\n", esp_err_to_name(ret));
+  }
+  else {
+    // Read (or set to defaults) persistent values
+    readPersistentConfigs();
+  }
+
   // Create signaling bits
   s_vscp_espnow_event_group = xEventGroupCreate();
-
-  s_vscp_espnow_config.pguid = pconfig->pguid;
 
   ret = espnow_set_config_for_data_type(ESPNOW_DATA_TYPE_DATA, true, vscp_espnow_data_cb);
   if (ESP_OK != ret) {

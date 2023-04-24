@@ -40,11 +40,11 @@
 #include <vscp.h>
 #include <vscp-espnow.h>
 
-//#define NODETYPE VSCP_DROPLET_ALPHA
+// #define NODETYPE VSCP_DROPLET_ALPHA
 
-#define ESP_NOW_VER_MAJOR   2 
-#define ESP_NOW_VER_MINOR   1
-#define ESP_NOW_VER_PATCH   1
+#define ESP_NOW_VER_MAJOR 2
+#define ESP_NOW_VER_MINOR 1
+#define ESP_NOW_VER_PATCH 1
 
 #define CONNECTED_LED_GPIO_NUM 2
 #define ACTIVE_LED_GPIO_NUM    3
@@ -56,8 +56,6 @@
   Default values stored in non volatile memory
   on start up.
 */
-
-#define DEFAULT_GUID "" // Empty constructs from MAC, "-" all nills, "xx:yy:..." set GUID
 
 // ----------------------------------------------------------------------------
 
@@ -76,13 +74,12 @@ typedef enum {
 typedef struct {
 
   // Module
-  char nodeName[32];    // Friendly name for node
-  uint8_t pmk[16];      // Primary key (This key is static and set to VSCP default. Dont change!)
-  uint8_t lmk[16];      // Local key (This key is static and set to VSCP default)
-  uint8_t nodeGuid[16]; // GUID for node (default: Constructed from MAC address)
-  uint8_t queueSize;   // espnow queue size
-  uint8_t startDelay;   // Delay before wifi is enabled (to charge cap)
-  uint32_t bootCnt;     // Number of restarts (not editable)
+  char nodeName[32];  // Friendly name for node
+  uint8_t pmk[16];    // Primary key (This key is static and set to VSCP default. Dont change!)
+  uint8_t lmk[16];    // Local key (This key is static and set to VSCP default)
+  uint8_t queueSize;  // espnow queue size
+  uint8_t startDelay; // Delay before wifi is enabled (to charge cap)
+  uint32_t bootCnt;   // Number of restarts (not editable)
 
   // Logging
   uint8_t logwrite2Stdout; // Enable write Logging to STDOUT
@@ -105,7 +102,7 @@ typedef struct {
   bool espnowEnable;
   bool espnowLongRange;             // Enable long range mode
   uint8_t espnowSizeQueue;          // Input queue size
-  uint8_t espnowChannel;           // Channel to use (zero is current)
+  uint8_t espnowChannel;            // Channel to use (zero is current)
   uint8_t espnowTtl;                // Default ttl
   bool espnowForwardEnable;         // Forward when packets are received
   uint8_t espnowEncryption;         // 0=no encryption, 1=AES-128, 2=AES-192, 3=AES-256
@@ -130,23 +127,22 @@ typedef struct {
   int mqttRetain;
   char mqttSub[128];
   char mqttPub[128];
-  char mqttVerification[32*1024];   // For server certificate
+  char mqttVerification[32 * 1024]; // For server certificate
   char mqttLwTopic[128];
   char mqttLwMessage[128];
   uint8_t mqttLwQos;
   bool mqttLwRetain;
 } node_persistent_config_t;
 
-
 // ----------------------------------------------------------------------------
 
 /*!
   ESP-NOW
 */
-#define ESPNOW_SIZE_TX_BUF 10 /*!< Size for transmitt buffer >*/
-#define ESPNOW_SIZE_RX_BUF 20 /*!< Size for receive buffer >*/
-#define ESPNOW_MAXDELAY 512 // Ticks to wait for send queue access
-#define ESPNOW_QUEUE_SIZE 6
+#define ESPNOW_SIZE_TX_BUF 10  /*!< Size for transmitt buffer >*/
+#define ESPNOW_SIZE_RX_BUF 20  /*!< Size for receive buffer >*/
+#define ESPNOW_MAXDELAY    512 // Ticks to wait for send queue access
+#define ESPNOW_QUEUE_SIZE  6
 
 #define IS_BROADCAST_ADDR(addr) (memcmp(addr, s_vscp_broadcast_mac, ESP_NOW_ETH_ALEN) == 0)
 
@@ -199,8 +195,6 @@ typedef enum {
 
 // ----------------------------------------------------------------------------
 
-
-
 /**
  * @brief Read processor on chip temperature
  * @return Temperature as floating point value
@@ -228,9 +222,9 @@ receive_cb(const vscpEvent *pev, void *userdata);
 
 /**
  * @brief Start security initiator
- * 
- * @return esp_err_t 
- * 
+ *
+ * @return esp_err_t
+ *
  * Key exchange is started here. If a 32 byte key+iv is not
  * already set and is configured it is generated here.
  * Scanning is done for nodes that are set into key exchange mode
@@ -242,7 +236,7 @@ app_sec_initiator(void);
 /**
  * @fn app_initiate_firmware_upload(const char *url)
  * @brief Initiate espnow firmware update
- * 
+ *
  * @param url Pointer to string for url to binary that should be uploaded to remote node.
  *  If url is set to NULL the project configured file PRJDEF_FIRMWARE_UPGRADE_URL is used.
  * @return int ESP_OK is returned if all is OK. Else error code.
@@ -251,12 +245,11 @@ app_sec_initiator(void);
 int
 app_initiate_firmware_upload(const char *url);
 
-
 /**
- * @brief 
- * 
- * @param firmware_size 
- * @param sha 
+ * @brief
+ *
+ * @param firmware_size
+ * @param sha
  */
 
 void
@@ -264,7 +257,7 @@ app_firmware_send(size_t firmware_size, uint8_t sha[ESPNOW_OTA_HASH_LEN]);
 
 /**
  * @brief Download firmware form server
- * 
+ *
  * @param url Url to resource
  * @return size_t Size of downloaded image
  */

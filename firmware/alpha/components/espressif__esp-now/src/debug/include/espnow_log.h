@@ -45,6 +45,10 @@ extern "C" {
 #define DEBUG_LOG_MALLOC malloc
 #define DEBUG_LOG_FREE   free
 
+#ifndef CONFIG_ESPNOW_DEBUG_SECURITY
+#define CONFIG_ESPNOW_DEBUG_SECURITY   0
+#endif
+
 /**
  * @brief Enumerated list of debug event id
  */

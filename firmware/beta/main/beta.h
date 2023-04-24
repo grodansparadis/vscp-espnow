@@ -61,7 +61,6 @@ typedef struct {
   char nodeName[32];    // User name for node
   uint8_t pmk[16];      // Primary key (This key is static and set to VSCP default. Dont change!)
   uint8_t lmk[16];      // Local key (This key is static and set to VSCP default)
-  uint8_t nodeGuid[16]; // GUID for node (default: Constructed from MAC address)
   uint8_t keyOrigin[6]; // MAC address for node that sent common system key
   uint8_t queueSize;    // espnow queue size
   uint8_t startDelay;   // Delay before wifi is enabled (to charge cap.)
@@ -78,9 +77,10 @@ typedef struct {
   int8_t espnowFilterWeakSignal;    // Filter on RSSI (zero is no rssi filtering)
 
   // beta common
-  uint8_t logLevelUart;   // Log level to uart
+  uint8_t logLevelUart;   // Log level to uart  
   uint8_t logLevelEspNow; // Log level to espnow
   uint8_t logLevelFlash;  // Log level to flash
+  
 } node_persistent_config_t;
 
 // ----------------------------------------------------------------------------

@@ -89,6 +89,9 @@ static const char *TAG = "app";
 #define ESPNOW_VERSION CONFIG_ESPNOW_VERSION
 #endif
 
+// Handle for nvs storage
+nvs_handle_t g_nvsHandle = 0;
+
 extern bool g_vscp_espnow_probe;
 
 /*
@@ -133,8 +136,7 @@ typedef enum {
 
 static app_wifi_prov_status_t s_wifi_prov_status = APP_WIFI_PROV_INIT;
 
-// Handle for nvs storage
-nvs_handle_t g_nvsHandle = 0;
+
 
 ///////////////////////////////////////////////////////////
 //                   P E R S I S T A N T
@@ -149,7 +151,6 @@ node_persistent_config_t g_persistent = {
   .nodeName   = VSCP_PROJDEF_DEVICE_NAME,
   .pmk        = { 0 },
   .lmk        = { 0 },
-  .nodeGuid   = { 0 }, // GUID for unit
   .startDelay = 2,
   .bootCnt    = 0,
   .queueSize  = CONFIG_APP_ESPNOW_QUEUE_SIZE,
@@ -984,46 +985,6 @@ readPersistentConfigs(void)
     }
   }
 
-  // GUID
-  length = 16;
-  rv     = nvs_get_blob(g_nvsHandle, "guid", g_persistent.nodeGuid, &length);
-
-  if (rv != ESP_OK) {
-    // FF:FF:FF:FF:FF:FF:FF:FE:MAC1:MAC2:MAC3:MAC4:MAC5:MAC6:NICKNAME1:NICKNAME2
-    memset(g_persistent.nodeGuid, 0xff, 7);
-    g_persistent.nodeGuid[7] = 0xfe;
-    // rv                       = esp_efuse_mac_get_default(g_persistent.nodeGuid + 8);
-    //  ESP_MAC_WIFI_STA
-    //  ESP_MAC_WIFI_SOFTAP
-    rv = esp_read_mac(g_persistent.nodeGuid + 8, ESP_MAC_WIFI_STA);
-    if (rv != ESP_OK) {
-      ESP_LOGE(TAG, "esp_efuse_mac_get_default failed to get GUID. rv=%d", rv);
-    }
-
-    rv = nvs_set_blob(g_nvsHandle, "guid", g_persistent.nodeGuid, 16);
-    if (rv != ESP_OK) {
-      ESP_LOGE(TAG, "Failed to write node GUID to nvs. rv=%d", rv);
-    }
-  }
-  ESP_LOGI(TAG,
-           "GUID for node: %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X",
-           g_persistent.nodeGuid[0],
-           g_persistent.nodeGuid[1],
-           g_persistent.nodeGuid[2],
-           g_persistent.nodeGuid[3],
-           g_persistent.nodeGuid[4],
-           g_persistent.nodeGuid[5],
-           g_persistent.nodeGuid[6],
-           g_persistent.nodeGuid[7],
-           g_persistent.nodeGuid[8],
-           g_persistent.nodeGuid[9],
-           g_persistent.nodeGuid[10],
-           g_persistent.nodeGuid[11],
-           g_persistent.nodeGuid[12],
-           g_persistent.nodeGuid[13],
-           g_persistent.nodeGuid[14],
-           g_persistent.nodeGuid[15]);
-
   // espnow queueSize
   rv = nvs_get_u8(g_nvsHandle, "queue_size", &g_persistent.queueSize);
   if (ESP_OK != rv) {
@@ -1761,7 +1722,7 @@ app_main()
     esp_fill_random(key_info, APP_KEY_LEN);
   }
 
-  ESP_LOGI(TAG, "Security Key: " KEYSTR, KEY2STR(key_info));
+  //ESP_LOGI(TAG, "Security Key: " KEYSTR, KEY2STR(key_info));
   espnow_set_key(key_info);
 
   // Simple test to set a common key
@@ -1818,7 +1779,6 @@ app_main()
   // xTaskCreate(&vscp_espnow_heartbeat_task, "vscp_hb", 1024 * 3, NULL, 1, NULL);
 
   vscp_espnow_config_t vscp_espnow_conf;
-  vscp_espnow_conf.pguid = g_persistent.nodeGuid;
 
   // Initialize VSCP espnow
   if (ESP_OK != vscp_espnow_init(&vscp_espnow_conf)) {
@@ -1833,7 +1793,7 @@ app_main()
 
   // Start MQTT client
   if (g_persistent.mqttEnable) {
-    // mqtt_start();
+    mqtt_start();
   }
 
   // Start the VSCP Link Protocol Server

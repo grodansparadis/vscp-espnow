@@ -144,7 +144,21 @@ mqtt_send_vscp_event(const char *topic, const vscpEvent *pev)
     {{class}}       - Event class
     {{type}}        - Event type
     {{nickname}}    - Node nickname (16-bit)
+    {{ecnickname}}  - Node nickname (16-bit) for node sending event
     {{sindex}}      - Sensor index (if any)
+    --------------------------------------------
+    {{timestamp}}   - Timestamep for event
+    {{index}}       - Index (data byte 0) (if any)
+    {{zone}}        - Zone (data byte 1) (if any)
+    {{subzone}}     - Sub Zone (data byte 2) (if any)
+    {{d[n]}}        - Data byte n (if any)
+    {{year}}        - Two digit year of event (Time always in GMT).
+    {{fyear}}       - Four digit year of event (Time always in GMT).
+    {{month}}       - Two digit month of event (Time always in GMT).
+    {{day}}         - Two digit day of event (Time always in GMT).
+    {{hour}}        - Two digit hour of event (Time always in GMT).
+    {{minute}}      - Two digit minute of event (Time always in GMT).
+    {{second}}      - Two digit second of event (Time always in GMT).
 
     Typical topic
     vscp/FF:FF:FF:FF:FF:FF:FF:F5:01:00:00:00:00:00:00:02/20/9/2
@@ -158,11 +172,13 @@ mqtt_send_vscp_event(const char *topic, const vscpEvent *pev)
   strcpy(saveTopic, newTopic);
 
   // GUID
-  vscp_fwhlp_writeGuidToString(workbuf, g_persistent.nodeGuid);
+  uint8_t GUID[16];
+  vscp_espnow_get_node_guid(GUID);
+  vscp_fwhlp_writeGuidToString(workbuf, GUID);
   vscp_fwhlp_strsubst(newTopic, sizeof(newTopic), saveTopic, "{{guid}}", workbuf);
   strcpy(saveTopic, newTopic);
 
-  // GUID
+  // Event GUID
   vscp_fwhlp_writeGuidToString(workbuf, pev->GUID);
   vscp_fwhlp_strsubst(newTopic, sizeof(newTopic), saveTopic, "{{evguid}}", workbuf);
   strcpy(saveTopic, newTopic);
@@ -178,8 +194,13 @@ mqtt_send_vscp_event(const char *topic, const vscpEvent *pev)
   strcpy(saveTopic, newTopic);
 
   // nickname
-  sprintf(workbuf, "%d", ((pev->GUID[14] << 8) + (pev->GUID[15])));
+  sprintf(workbuf, "%d", ((GUID[14] << 8) + (GUID[15])));
   vscp_fwhlp_strsubst(newTopic, sizeof(newTopic), saveTopic, "{{nickname}}", workbuf);
+  strcpy(saveTopic, newTopic);
+
+  // event nickname
+  sprintf(workbuf, "%d", ((pev->GUID[14] << 8) + (pev->GUID[15])));
+  vscp_fwhlp_strsubst(newTopic, sizeof(newTopic), saveTopic, "{{evnickname}}", workbuf);
   strcpy(saveTopic, newTopic);
 
   // sensor index
@@ -341,7 +362,9 @@ mqtt_start(void)
   strcpy(save, clientid);
 
   // GUID
-  vscp_fwhlp_writeGuidToString(workbuf, g_persistent.nodeGuid);
+  uint8_t GUID[16];
+  vscp_espnow_get_node_guid(GUID);
+  vscp_fwhlp_writeGuidToString(workbuf, GUID);
   vscp_fwhlp_strsubst(clientid, sizeof(clientid), save, "{{guid}}", workbuf);
 
   char uri[64];
