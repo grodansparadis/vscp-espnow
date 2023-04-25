@@ -172,7 +172,7 @@ static esp_err_t espnow_config_data_handler(uint32_t session_id, const uint8_t *
                                         uint8_t **outbuf, ssize_t *outlen, void *priv_data)
 {
     ESP_PARAM_CHECK(inlen >= APP_KEY_LEN);
-    printf("inlen = %zu\n",inlen);
+
     memcpy(app_key, inbuf, APP_KEY_LEN);
     /* Mark as configured */
     g_sec_info.sec_ver = ESPNOW_SEC_VER_V1_0;
@@ -185,7 +185,7 @@ static esp_err_t espnow_config_data_handler(uint32_t session_id, const uint8_t *
         return ESP_ERR_NO_MEM;
     }
     memcpy(*outbuf, inbuf, inlen);
-    ESP_LOG_BUFFER_HEXDUMP(TAG, inbuf, APP_KEY_LEN, ESP_LOG_ERROR);
+
     ESP_LOGI(TAG, "Get APP key");
 
     return espnow_set_key(app_key);

@@ -1643,7 +1643,7 @@ app_main()
 
   memcpy(espnow_config.pmk, g_persistent.pmk, 16);
   espnow_config.qsize                  = g_persistent.queueSize; // CONFIG_APP_ESPNOW_QUEUE_SIZE;
-  espnow_config.sec_enable             = true;
+  espnow_config.sec_enable             = true;  // Must be enabled for all security enabled functions to work
   espnow_config.forward_enable         = true;
   espnow_config.forward_switch_channel = 0;
   espnow_config.send_retry_num         = 10;
