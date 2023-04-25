@@ -12,7 +12,10 @@
 - [Alpha-nodes](#Alpha-nodes)
 - [Beta-nodes](#Beta-nodes)
 - [Gamma-nodes](#Gamma-Nodes)
-- [Testing](Testing)
+- [Testing](#Testing)
+- [MQTT](#MQTT)
+- [Using VSCP Works with vscp-espnow](#Using VSCP Works with vscp-espnow)
+- [Using a VSCP daemon with vscp-espnow](#Using a VSCP daemon with vscp-espnow)
 - [License](#license)
 - [Contribution](#contribution)
 
