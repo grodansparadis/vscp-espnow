@@ -1064,12 +1064,12 @@ provisioning_get_handler(httpd_req_t *req)
     VSCP_FREE(req_buf);
   }
 
-  sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "Node provisioning");
+  sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "Node pairing");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   sprintf(buf,
-          "<div>After provisioning is started on our node press the init-button on the client node to start the "
-          "provisioning process.</div><br>");
+          "<div>After node pairing is started here press the init-button on the client node to start the "
+          "node paring process. When the green status LED on the node lights steady it is paired.</div><br>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   sprintf(buf, "<div><form id=but3 class=\"button\" action='/doprov' method='get'><fieldset>");
@@ -1211,14 +1211,14 @@ doprov_get_handler(httpd_req_t *req)
   // Get application info data
   const esp_app_desc_t *appDescr = esp_app_get_description();
 
-  ESP_LOGD(TAG, " ======== Web initiated provisioning started! ========");
+  ESP_LOGD(TAG, " ======== Web initiated node pairing started! ========");
 
-  sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "Node provisioning");
+  sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "Node pairing");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   for (int i = 0; i < 20; i++) {
     sprintf(buf,
-            "<p style='text-align:center;border: 3px solid green;'>Provisioning in progress %d of 20 seconds ...</p>",
+            "<p style='text-align:center;border: 3px solid green;'>Pairing in progress %d of 20 seconds ...</p>",
             i);
     httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -1412,7 +1412,7 @@ mainpg_get_handler(httpd_req_t *req)
 
   sprintf(buf,
           "<p><form id=but4 class=\"button\" action='provisioning' "
-          "method='get'><button>Node provisioning</button></form></p>");
+          "method='get'><button>Node pairing</button></form></p>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   sprintf(buf,

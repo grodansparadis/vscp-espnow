@@ -19,9 +19,11 @@
 - [License](#license)
 - [Contribution](#contribution)
 
+_An initial note on [espnow](https://github.com/espressif/esp-now) vs. [esp-now](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/network/esp_now.html). Below when we say **esp-now** it is esp-now as of the protocol developed by Espressif and is part of esp-idf. When we say **espnow** we talk about the component for espnow that is developed to sit over esp-now for more usability. Espnow also is developed by Espressif._
+
 ## Overview
 
-vscp-espnow implements esp-now for ESP32 nodes using the VSCP protocol for application level communication. vscp-espnow is using the [esp-idf framework](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html).
+vscp-espnow implements esp-now/espnow for ESP32 nodes using the VSCP protocol for application level communication. vscp-espnow is using the [esp-idf framework](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html).
 
 - All communication is encrypted.
 - VSCP level II events is used to control and share information. Giving a common way for equipment with different origin to work together. 
@@ -39,19 +41,21 @@ vscp-espnow implements esp-now for ESP32 nodes using the VSCP protocol for appli
 [esp-now](https://www.espressif.com/en/solutions/low-power-solutions/esp-now?ct=t(EMAIL_CAMPAIGN_4_12_2023_2_38)&mc_cid=1dec54c698&mc_eid=1bb5ed46d4) is a protocol developed by [Espressif](https://www.espressif.com/en) for use with the ESP32/ESP8266 it allows for secure communication between wireless devices without a wifi connection. [espnow](https://github.com/espressif/esp-now) is a software component that makes esp-now more friendly for developers to work with.
 
 # Alpha-nodes
-Alpha nodes are nodes that are always powered. They always connect to a wifi router. Alpha nodes can be connected together user either wifi or esp-now. 
+Alpha nodes are devices that are always powered. They are also always connect to a wifi router. Alpha nodes can be connected together user either wifi or esp-now. 
 
 Alpha nodes are provisioned (connected to wifi) using BLE.
 
-Alpha nodes can have there firmware OTA updated. It is possible to update firmware over OTA from a remote web server or from a local file on a connected computer. Alpha nodes can also OTA update firmware on Beta and Gamma nodes. 
+Alpha nodes can have there firmware OTA updated. It is possible to update firmware over OTA from a remote web server or from a local file on a connected computer. Alpha nodes can also OTA update firmware on remote Beta and Gamma nodes. 
 
-Have a web server. This web server allows for configuration of wifi, esp-now, VSCP, webserver, MQTT and logging etc. It can give technical information about the device. Initiating of firmware OTA upgrade is possible. Both from a secure web server and locally from a file and it can also initiate OTA for Beta/Gamma nodes if they are setup top receive upgrades.
+Alpha nodes have a local web server. This web server allows for configuration of wifi, esp-now, VSCP, webserver, MQTT and logging etc. It can give technical and status information about the device. Initiating of firmware OTA upgrade is possible. Both from a secure web server and locally from a file and it can also initiate OTA for Beta/Gamma nodes if they are setup to receive upgrades.
 
 Alpha nodes can connect with a MQTT HUB to send/receive VSCP events. 
 
 Alpha nodes optionally have a VSCP tcp/ip link interface that can be used for sending and receiving of VSCP events as an alternative to the MQTT link.
 
 Remote logging is possible to setup for udp, tcp/ip, web and MQTT.
+
+Alpha nodes act as time severs for the segment they are on. Keeping clocks updated an all nodes in a segment.
 
 Alpha nodes implement [VSCP registers](https://grodansparadis.github.io/vscp-doc-spec/#/./vscp_register_abstraction_model) and have an optional [decision matrix](https://grodansparadis.github.io/vscp-doc-spec/#/./vscp_decision_matrix) and can be configured and controlled using VSCP events. A VSCP [MDF file](https://grodansparadis.github.io/vscp-doc-spec/#/./vscp_module_description_file) describe the node for higher level software.
 
@@ -88,7 +92,7 @@ All alpha nodes have an init button.
 
 # Gamma-Nodes
 
-Gamma nodes are nodes that are battery powered and sleep most of the time. They communicate using VSCP over esp-now and connect to alpha nodes, beta nodes and other gamma-nodes. 
+Gamma nodes are nodes that are battery powered and sleep most of the time. They communicate using VSCP over esp-now and connect to alpha nodes, beta nodes and other gamma-nodes. They can be very low power by just wake up for short time ehen needed and  when that hgappens tell the system they are awake, send events (measuremenst, alarms, key-clicks etc) they have to send and receive and act on data that is waiting to it. A MQTT broker can be used as a postbox to hold events that the gamma node is the received of. An Alpha node takes care of this transfer when the Gamma node awakes.
 
 Gamma nodes implement [VSCP registers](https://grodansparadis.github.io/vscp-doc-spec/#/./vscp_register_abstraction_model) and have an optional [decision matrix](https://grodansparadis.github.io/vscp-doc-spec/#/./vscp_decision_matrix) and can be configured and controlled using VSCP events. A VSCP [MDF file](https://grodansparadis.github.io/vscp-doc-spec/#/./vscp_module_description_file) describe the node for higher level software.
 
@@ -195,8 +199,8 @@ The VSCP daemon is available [here](https://github.com/grodansparadis/vscp)
 If you have further ideas or you found some bugs, great! Create an [issue](https://github.com/grodansparadis/vscp-espnow/issues) or if you are able and willing to fix it by yourself, clone the repository and create a pull request.
 
 ## License
-The whole source code is published under the [MIT license](http://choosealicense.com/licenses/mit/). Espnow is licensed as under the  [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
-Consider the different licenses of the used third party libraries too!
+The whole source code is published under the [MIT license](http://choosealicense.com/licenses/mit/). Espnow is licensed under the  [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
+Consider the different licenses of possible third party libraries too!
 
 ## Contribution
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, shall be licensed as above, without any
