@@ -34,25 +34,23 @@ static const char* TAG = "espnow_sec_resp";
 static uint8_t app_key[APP_KEY_LEN] = { 0 };
 static protocomm_t *g_espnow_pc = NULL;
 static espnow_sec_info_t g_sec_info = { 0 };
+static espnow_frame_head_t g_frame_config = { 0 };
 
 static esp_err_t espnow_sec_info(const uint8_t *src_addr)
 {
     esp_err_t ret = ESP_OK;
     size_t size = sizeof(espnow_sec_info_t);
     espnow_sec_info_t *info = &g_sec_info;
-    espnow_frame_head_t frame_head = {
-        .security         = true,
-    };
 
     info->type = ESPNOW_SEC_TYPE_INFO;
 
-    ret = espnow_send(ESPNOW_DATA_TYPE_SECURITY_STATUS, src_addr, info, size, &frame_head, portMAX_DELAY);
+    ret = espnow_send(ESPNOW_DATA_TYPE_SECURITY_STATUS, src_addr, info, size, &g_frame_config, portMAX_DELAY);
 
     ESP_ERROR_RETURN(ret != ESP_OK, ret, "espnow_write");
 
-    ESP_LOGI(TAG, "Security information:");
-    ESP_LOGI(TAG, "Version:          %d", info->sec_ver);
-    ESP_LOGI(TAG, "Client MAC:       " MACSTR "", MAC2STR(info->client_mac));
+    ESP_LOGD(TAG, "Security information:");
+    ESP_LOGD(TAG, "Version:          %d", info->sec_ver);
+    ESP_LOGD(TAG, "Client MAC:       " MACSTR "", MAC2STR(info->client_mac));
 
     return ESP_OK;
 }
@@ -78,7 +76,6 @@ static esp_err_t espnow_sec_handle(const char *ep_name, uint8_t resp_type, const
     espnow_frame_head_t frame_head = {
         .retransmit_count = 1,
         .broadcast        = false,
-        .security         = true,
         .filter_adjacent_channel = true,
         .forward_ttl      = 0,
     };
@@ -128,31 +125,29 @@ static esp_err_t espnow_sec_responder_process(uint8_t *src_addr, void *data,
     ESP_PARAM_CHECK(data);
     ESP_PARAM_CHECK(size);
     ESP_PARAM_CHECK(rx_ctrl);
-    
+
     esp_err_t ret = ESP_OK;
     uint8_t data_type = ((uint8_t *)data)[0];
     espnow_add_peer(src_addr, NULL);
-    
-    ESP_LOGI(TAG, "VSCP espnow_sec_responder_process data type=%d", data_type);
 
     switch (data_type) {
     case ESPNOW_SEC_TYPE_REQUEST:
-        ESP_LOGI(TAG, "ESPNOW_SEC_TYPE_INFO");
+        ESP_LOGD(TAG, "ESPNOW_SEC_TYPE_INFO");
         ret = espnow_sec_info(src_addr);
         break;
 
     case ESPNOW_SEC_TYPE_REST:
-        ESP_LOGI(TAG, "ESPNOW_SEC_TYPE_REST");
+        ESP_LOGD(TAG, "ESPNOW_SEC_TYPE_REST");
         ret = espnow_sec_reset_info(src_addr);
         break;
 
     case ESPNOW_SEC_TYPE_HANDSHAKE:
-        ESP_LOGI(TAG, "ESPNOW_SEC_TYPE_HANDSHAKE");
+        ESP_LOGD(TAG, "ESPNOW_SEC_TYPE_HANDSHAKE");
         ret = espnow_sec_handle("espnow-session", ESPNOW_SEC_TYPE_HANDSHAKE, src_addr, data, size);
         break;
 
     case ESPNOW_SEC_TYPE_KEY:
-        ESP_LOGI(TAG, "ESPNOW_SEC_TYPE_KEY");
+        ESP_LOGD(TAG, "ESPNOW_SEC_TYPE_KEY");
         ret = espnow_sec_handle("espnow-config", ESPNOW_SEC_TYPE_KEY_RESP, src_addr, data, size);
         break;
 
@@ -180,7 +175,7 @@ static esp_err_t espnow_config_data_handler(uint32_t session_id, const uint8_t *
 
     memcpy(app_key, inbuf, APP_KEY_LEN);
     /* Mark as configured */
-    g_sec_info.sec_ver = ESPNOW_SEC_VER_V1_1;
+    g_sec_info.sec_ver = ESPNOW_SEC_VER_V1_0;
 
     /* return the origin message */
     *outlen = inlen;

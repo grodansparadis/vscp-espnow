@@ -1722,7 +1722,7 @@ app_main()
     esp_fill_random(key_info, APP_KEY_LEN);
   }
 
-  //ESP_LOGI(TAG, "Security Key: " KEYSTR, KEY2STR(key_info));
+  ESP_LOGI(TAG, "Security Key: " KEYSTR, KEY2STR(key_info));
   espnow_set_key(key_info);
 
   // Simple test to set a common key
@@ -1882,6 +1882,9 @@ app_main()
   // uint8_t addr[] = { 0xcc, 0x50, 0xe3, 0x80, 0x10, 0xbc };
   uint8_t addr[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
+  //esp_log_level_set("espnow_sec_init", ESP_LOG_DEBUG); 
+ 
+
   uint8_t ttt = 0;
   while (1) {
     // esp_task_wdt_reset();
@@ -1929,7 +1932,7 @@ app_main()
       gettimeofday(&tv_now, NULL);
       int64_t time_us = (int64_t) tv_now.tv_sec * 1000000L + (int64_t) tv_now.tv_usec;
 
-      ESP_LOGI(TAG, "The current date/time GMT is: %lld %s", tv_now.tv_sec, strftime_buf);
+      ESP_LOGI(TAG, ">>> The current date/time GMT is: %lld %s", tv_now.tv_sec, strftime_buf);
 
       pev->vscp_class = VSCP_CLASS1_INFORMATION;
       pev->vscp_type  = VSCP_TYPE_INFORMATION_TIME;

@@ -187,7 +187,7 @@ typedef struct {
  * @brief Initialize the configuration of esp-now
  */
 typedef struct {
-  uint8_t *ttt; // Placeholder
+  //nvs_handle_t nvsHandle;   // Handle to persistent storage
 } vscp_espnow_config_t;
 
 
@@ -228,7 +228,7 @@ typedef struct {
 } vscp_espnow_prov_data_t;
 
 #define KEYSTR                                                                                                         \
-  "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x%02x:%02x:%02x:%02x:%02x:%02x:%02x"   \
+  "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x"   \
   ":%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x"
 #define KEY2STR(a)                                                                                                     \
   (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5], (a)[6], (a)[7], (a)[8], (a)[9], (a)[10], (a)[11], (a)[12], (a)[13],  \

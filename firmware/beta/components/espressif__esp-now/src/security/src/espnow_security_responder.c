@@ -48,9 +48,9 @@ static esp_err_t espnow_sec_info(const uint8_t *src_addr)
 
     ESP_ERROR_RETURN(ret != ESP_OK, ret, "espnow_write");
 
-    ESP_LOGI(TAG, "Security information:");
-    ESP_LOGI(TAG, "Version:          %d", info->sec_ver);
-    ESP_LOGI(TAG, "Client MAC:       " MACSTR "", MAC2STR(info->client_mac));
+    ESP_LOGD(TAG, "Security information:");
+    ESP_LOGD(TAG, "Version:          %d", info->sec_ver);
+    ESP_LOGD(TAG, "Client MAC:       " MACSTR "", MAC2STR(info->client_mac));
 
     return ESP_OK;
 }
@@ -125,31 +125,29 @@ static esp_err_t espnow_sec_responder_process(uint8_t *src_addr, void *data,
     ESP_PARAM_CHECK(data);
     ESP_PARAM_CHECK(size);
     ESP_PARAM_CHECK(rx_ctrl);
-    
+
     esp_err_t ret = ESP_OK;
     uint8_t data_type = ((uint8_t *)data)[0];
     espnow_add_peer(src_addr, NULL);
-    
-    ESP_LOGI(TAG, "VSCP espnow_sec_responder_process data type=%d", data_type);
 
     switch (data_type) {
     case ESPNOW_SEC_TYPE_REQUEST:
-        ESP_LOGI(TAG, "ESPNOW_SEC_TYPE_INFO");
+        ESP_LOGD(TAG, "ESPNOW_SEC_TYPE_INFO");
         ret = espnow_sec_info(src_addr);
         break;
 
     case ESPNOW_SEC_TYPE_REST:
-        ESP_LOGI(TAG, "ESPNOW_SEC_TYPE_REST");
+        ESP_LOGD(TAG, "ESPNOW_SEC_TYPE_REST");
         ret = espnow_sec_reset_info(src_addr);
         break;
 
     case ESPNOW_SEC_TYPE_HANDSHAKE:
-        ESP_LOGI(TAG, "ESPNOW_SEC_TYPE_HANDSHAKE");
+        ESP_LOGD(TAG, "ESPNOW_SEC_TYPE_HANDSHAKE");
         ret = espnow_sec_handle("espnow-session", ESPNOW_SEC_TYPE_HANDSHAKE, src_addr, data, size);
         break;
 
     case ESPNOW_SEC_TYPE_KEY:
-        ESP_LOGI(TAG, "ESPNOW_SEC_TYPE_KEY");
+        ESP_LOGD(TAG, "ESPNOW_SEC_TYPE_KEY");
         ret = espnow_sec_handle("espnow-config", ESPNOW_SEC_TYPE_KEY_RESP, src_addr, data, size);
         break;
 
@@ -174,10 +172,10 @@ static esp_err_t espnow_config_data_handler(uint32_t session_id, const uint8_t *
                                         uint8_t **outbuf, ssize_t *outlen, void *priv_data)
 {
     ESP_PARAM_CHECK(inlen >= APP_KEY_LEN);
-
+    printf("inlen = %zu\n",inlen);
     memcpy(app_key, inbuf, APP_KEY_LEN);
     /* Mark as configured */
-    g_sec_info.sec_ver = ESPNOW_SEC_VER_V1_1;
+    g_sec_info.sec_ver = ESPNOW_SEC_VER_V1_0;
 
     /* return the origin message */
     *outlen = inlen;
@@ -187,7 +185,7 @@ static esp_err_t espnow_config_data_handler(uint32_t session_id, const uint8_t *
         return ESP_ERR_NO_MEM;
     }
     memcpy(*outbuf, inbuf, inlen);
-
+    ESP_LOG_BUFFER_HEXDUMP(TAG, inbuf, APP_KEY_LEN, ESP_LOG_ERROR);
     ESP_LOGI(TAG, "Get APP key");
 
     return espnow_set_key(app_key);

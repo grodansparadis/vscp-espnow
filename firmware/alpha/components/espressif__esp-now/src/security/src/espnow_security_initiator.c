@@ -146,7 +146,6 @@ esp_err_t espnow_sec_initiator_scan(espnow_sec_responder_t **info_list, size_t *
     espnow_frame_head_t frame_head = {
         .retransmit_count = 10,
         .broadcast        = true,
-        .security         = true,
         .magic            = esp_random(),
         .filter_adjacent_channel = true,
         .forward_ttl      = CONFIG_ESPNOW_SEC_SEND_FORWARD_TTL,
@@ -249,7 +248,6 @@ static esp_err_t protocomm_espnow_initiator_start(const protocomm_security_t *pr
     uint8_t *outbuf = NULL;
     int32_t session_id = 0;
     espnow_frame_head_t frame_head = {
-        .security         = true,
         .retransmit_count = CONFIG_ESPNOW_SEC_SEND_RETRY_NUM,
         .filter_adjacent_channel = true,
         .forward_ttl      = CONFIG_ESPNOW_SEC_SEND_FORWARD_TTL,

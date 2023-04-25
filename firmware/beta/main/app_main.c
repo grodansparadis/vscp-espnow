@@ -376,6 +376,7 @@ readPersistentConfigs(void)
 
   // Channel
   rv = nvs_get_u8(s_nvsHandle, "channel", &g_persistent.espnowChannel);
+  printf("reading channel %d\n", g_persistent.espnowChannel);
   if (ESP_OK != rv) {
     rv = nvs_set_u8(s_nvsHandle, "channel", g_persistent.espnowChannel);
     if (rv != ESP_OK) {
@@ -765,6 +766,7 @@ app_main()
 
   // Set the probed channel
   if (g_persistent.espnowChannel) {
+    ESP_LOGI(TAG, "Setting channel from persistent storage to %d", g_persistent.espnowChannel);
     esp_wifi_set_channel(g_persistent.espnowChannel, WIFI_SECOND_CHAN_NONE);
   }
 
@@ -788,8 +790,11 @@ app_main()
   uint8_t key_info[APP_KEY_LEN];
   if (ESP_OK == espnow_get_key(key_info)) {
 
-    // Set the key permanently
+    ESP_LOGI(TAG, "Security Key: " KEYSTR, KEY2STR(key_info));
     espnow_set_key(key_info);
+
+    // Set the key permanently
+    //espnow_set_key(key_info);
 
     // Initializing OTA
     // espnow_ota_config_t ota_config = {
@@ -843,6 +848,7 @@ app_main()
   // Setup VSCP esp-now
 
   vscp_espnow_config_t vscp_espnow_conf;
+  //vscp_espnow_conf.nvsHandle = s_nvsHandle;
   
 
   // Set default primary key

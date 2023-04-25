@@ -1217,6 +1217,7 @@ vscp_espnow_probe(void)
 {
   int rv = VSCP_ERROR_SUCCESS;
   int ret;
+  bool bProbeAck = false;
   // uint8_t primary           = 0;
   // wifi_second_chan_t second = 0;
 
@@ -1250,22 +1251,28 @@ vscp_espnow_probe(void)
                                            pdMS_TO_TICKS(100));
     if (bits & VSCP_ESPNOW_WAIT_PROBE_RESPONSE_BIT) {
       printf("Probe ack\n");
+      bProbeAck = true;
       break;
     }
     // taskYIELD();
   } // for
 
-  EventBits_t bits = xEventGroupWaitBits(s_vscp_espnow_event_group,
-                                         VSCP_ESPNOW_WAIT_PROBE_RESPONSE_BIT,
-                                         pdFALSE,
-                                         pdFALSE,
-                                         pdMS_TO_TICKS(1000));
-  if (!(bits & VSCP_ESPNOW_WAIT_PROBE_RESPONSE_BIT)) {
+  // EventBits_t bits = xEventGroupWaitBits(s_vscp_espnow_event_group,
+  //                                        VSCP_ESPNOW_WAIT_PROBE_RESPONSE_BIT,
+  //                                        pdFALSE,
+  //                                        pdFALSE,
+  //                                        pdMS_TO_TICKS(1000));
+  // if (!(bits & VSCP_ESPNOW_WAIT_PROBE_RESPONSE_BIT)) {
+  //   ESP_LOGW(TAG, "Timeout waiting for response");
+  //   rv = VSCP_ERROR_TIMEOUT;
+  // }
+  
+  ESP_LOGI(TAG, "Probe ending %d", rv);
+
+  if (!bProbeAck) {
     ESP_LOGW(TAG, "Timeout waiting for response");
     rv = VSCP_ERROR_TIMEOUT;
   }
-
-  ESP_LOGI(TAG, "Probe ending %d", rv);
 
 #if (PRJDEF_NODE_TYPE == VSCP_DROPLET_ALPHA)
   s_stateVscpEspNow = VSCP_ESPNOW_STATE_IDLE;
@@ -1376,7 +1383,7 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
       (VSCP_CLASS1_PROTOCOL == pev->vscp_class) && (VSCP_TYPE_PROTOCOL_NEW_NODE_ONLINE == pev->vscp_type) &&
       (16 == pev->sizeData)) {
 
-    ESP_LOGI(TAG, "Probe: New node on-line");
+    ESP_LOGI(TAG, "Probe Alpha: New node on-line");
 
     // Send probe response if probe node is all zero or same as probing
     if (!memcmp(VSCP_ESPNOW_ADDR_PROBE_NODE, VSCP_ESPNOW_ADDR_NONE, 6)) {
@@ -1407,7 +1414,7 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
       (VSCP_CLASS1_PROTOCOL == pev->vscp_class) && (VSCP_TYPE_PROTOCOL_NEW_NODE_ONLINE == pev->vscp_type) &&
       (16 == pev->sizeData)) {
 
-    ESP_LOGI(TAG, "Probe: New node on-line");
+    ESP_LOGI(TAG, "Probe Beta: New node on-line");
 
     xEventGroupSetBits(s_vscp_espnow_event_group, VSCP_ESPNOW_WAIT_PROBE_RESPONSE_BIT);
     if (ESP_OK != (ret = esp_wifi_set_channel(rx_ctrl->channel, WIFI_SECOND_CHAN_NONE))) {
@@ -1691,7 +1698,7 @@ vscp_espnow_init(const vscp_espnow_config_t *pconfig)
   // ----------------------------------------------------------------------------
 
   // Init persistent storage
-  ret = nvs_open("vscp", NVS_READWRITE, &s_nvsHandle);
+  ret = nvs_open("config", NVS_READWRITE, &s_nvsHandle);
   if (ret != ESP_OK) {
     ESP_LOGE(TAG, "Error (%s) opening NVS handle!\n", esp_err_to_name(ret));
   }

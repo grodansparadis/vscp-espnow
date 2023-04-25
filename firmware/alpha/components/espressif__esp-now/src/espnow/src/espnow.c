@@ -524,7 +524,7 @@ esp_err_t espnow_send(espnow_data_type_t type, const espnow_addr_t dest_addr, co
         esp_fill_random(iv_info, IV_LEN);
         memcpy(key_info + KEY_LEN, iv_info, IV_LEN);
         espnow_set_key(key_info);
-        
+
         ret = espnow_sec_auth_encrypt(g_espnow_sec, data, size, espnow_data->payload, size + g_espnow_sec->tag_len, &enc_len, g_espnow_sec->tag_len);
         espnow_data->size = enc_len + IV_LEN;
         if (ret == ESP_OK) {
