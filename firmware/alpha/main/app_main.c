@@ -136,8 +136,6 @@ typedef enum {
 
 static app_wifi_prov_status_t s_wifi_prov_status = APP_WIFI_PROV_INIT;
 
-
-
 ///////////////////////////////////////////////////////////
 //                   P E R S I S T A N T
 ///////////////////////////////////////////////////////////
@@ -1641,9 +1639,9 @@ app_main()
 
   s_wifi_event_group = xEventGroupCreate();
 
-  memcpy(espnow_config.pmk, g_persistent.pmk, 16);
+  memcpy((uint8_t *)espnow_config.pmk, g_persistent.pmk, 16);
   espnow_config.qsize                  = g_persistent.queueSize; // CONFIG_APP_ESPNOW_QUEUE_SIZE;
-  espnow_config.sec_enable             = true;  // Must be enabled for all security enabled functions to work
+  espnow_config.sec_enable             = true; // Must be enabled for all security enabled functions to work
   espnow_config.forward_enable         = true;
   espnow_config.forward_switch_channel = 0;
   espnow_config.send_retry_num         = 10;
@@ -1722,7 +1720,8 @@ app_main()
     esp_fill_random(key_info, APP_KEY_LEN);
   }
 
-  ESP_LOGI(TAG, "Security Key: " KEYSTR, KEY2STR(key_info));
+  // !!! Use only for key setting debug. NEVER DISCLOSE !!!
+  // ESP_LOGI(TAG, "Security Key: " KEYSTR, KEY2STR(key_info));
   espnow_set_key(key_info);
 
   // Simple test to set a common key
@@ -1882,8 +1881,7 @@ app_main()
   // uint8_t addr[] = { 0xcc, 0x50, 0xe3, 0x80, 0x10, 0xbc };
   uint8_t addr[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
-  //esp_log_level_set("espnow_sec_init", ESP_LOG_DEBUG); 
- 
+  // esp_log_level_set("espnow_sec_init", ESP_LOG_DEBUG);
 
   uint8_t ttt = 0;
   while (1) {
@@ -1919,38 +1917,41 @@ app_main()
       ESP_LOGE(TAG, "64 bit timer is not supported.");
 #endif
 
-      time_t now;
-      char strftime_buf[64];
-      struct tm timeinfo;
+      // We send timesync only if we have fetched time from NTP server
+      if (espnow_timesync_check()) {
+        time_t now;
+        char strftime_buf[64];
+        struct tm timeinfo;
 
-      time(&now);
+        time(&now);
 
-      localtime_r(&now, &timeinfo);
-      strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-      
-      struct timeval tv_now;
-      gettimeofday(&tv_now, NULL);
-      int64_t time_us = (int64_t) tv_now.tv_sec * 1000000L + (int64_t) tv_now.tv_usec;
+        localtime_r(&now, &timeinfo);
+        strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
 
-      ESP_LOGI(TAG, ">>> The current date/time GMT is: %lld %s", tv_now.tv_sec, strftime_buf);
+        struct timeval tv_now;
+        gettimeofday(&tv_now, NULL);
+        int64_t time_us = (int64_t) tv_now.tv_sec * 1000000L + (int64_t) tv_now.tv_usec;
 
-      pev->vscp_class = VSCP_CLASS1_INFORMATION;
-      pev->vscp_type  = VSCP_TYPE_INFORMATION_TIME;
-      pev->sizeData   = 8;
-      pev->pdata[0]   = 0x00;                           // Index
-      pev->pdata[1]   = 0xff;                           // Zone
-      pev->pdata[2]   = 0xff;                           // Sub-Zone
-      pev->pdata[3]   = timeinfo.tm_hour;               // Hour
-      pev->pdata[4]   = timeinfo.tm_min;                // Minutes
-      pev->pdata[5]   = timeinfo.tm_sec;                // Seconds
-      pev->pdata[6]   = ((time_us / 1000) >> 8) & 0xff; // Milliseconds (MSB)
-      pev->pdata[7]   = (time_us / 1000) & 0xff;        // Milliseconds (LSB)
-      pev->timestamp  = esp_timer_get_time();
+        ESP_LOGI(TAG, ">>> The current date/time GMT is: %lld %s", tv_now.tv_sec, strftime_buf);
 
-      vscp_espnow_sendEvent(ESPNOW_ADDR_BROADCAST, pev, true, pdMS_TO_TICKS(1000));
+        pev->vscp_class = VSCP_CLASS1_INFORMATION;
+        pev->vscp_type  = VSCP_TYPE_INFORMATION_TIME;
+        pev->sizeData   = 8;
+        pev->pdata[0]   = 0x00;                           // Index
+        pev->pdata[1]   = 0xff;                           // Zone
+        pev->pdata[2]   = 0xff;                           // Sub-Zone
+        pev->pdata[3]   = timeinfo.tm_hour;               // Hour
+        pev->pdata[4]   = timeinfo.tm_min;                // Minutes
+        pev->pdata[5]   = timeinfo.tm_sec;                // Seconds
+        pev->pdata[6]   = ((time_us / 1000) >> 8) & 0xff; // Milliseconds (MSB)
+        pev->pdata[7]   = (time_us / 1000) & 0xff;        // Milliseconds (LSB)
+        pev->timestamp  = esp_timer_get_time();
 
-      if (NULL != pev) {
-        vscp_fwhlp_deleteEvent(&pev);
+        vscp_espnow_sendEvent(ESPNOW_ADDR_BROADCAST, pev, true, pdMS_TO_TICKS(1000));
+
+        if (NULL != pev) {
+          vscp_fwhlp_deleteEvent(&pev);
+        }
       }
     }
   }

@@ -14,8 +14,8 @@
 - [Gamma-nodes](#Gamma-Nodes)
 - [Testing](#Testing)
 - [MQTT](#MQTT)
-- [Using VSCP Works with vscp-espnow](#Using VSCP Works with vscp-espnow)
-- [Using a VSCP daemon with vscp-espnow](#Using a VSCP daemon with vscp-espnow)
+- [VSCP-Works](#Using VSCP Works with vscp-espnow)
+- [VSCP-Daemon](#Using a VSCP daemon with vscp-espnow)
 - [License](#license)
 - [Contribution](#contribution)
 
@@ -35,6 +35,8 @@ vscp-espnow implements esp-now/espnow for ESP32 nodes using the VSCP protocol fo
    - **Gamma nodes** are nodes that connect to a cluster using esp-now and sleep most of the time. A gamma node is added to the cluster by interaction with an Alpha node. Normally they are *__battery powered__*.
 - All nodes can have firmware updated over the AIR (OTA).
 - All nodes can do remote logging for easy monitoring and debugging of a device.
+
+The vscp-espnow firmware is **NOT** a ready made solutions that you can upload into a device and start to use. The code here is the initial development code for modules based on vscp-espnow firmware containg low level functionality. [Grodans Paradis AB](https://www.grodansparadis.com) will develop such modules and hopefully others will do so to. A list will be provided later.
 
 [VSCP (Very Simple Control Protocol)](https://www.vscp.org) is a protocol for IoT/m2m tasks that work of different transport mediums such as CAN, RS-232, Ethernet. 
 

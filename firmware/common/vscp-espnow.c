@@ -81,6 +81,12 @@
 
 static const char *TAG = "vscpnow";
 
+/*
+  This is the lowest time we will see in the system
+  taken from espnow_timesync.c
+*/
+#define VSCP_ESPNOW_REF_TIME        1577808000 /* 2020-01-01 00:00:00 */
+
 // Globals
 bool g_vscp_espnow_probe = false;
 
@@ -193,7 +199,7 @@ int
 vscp_espnow_read_reg(uint32_t address, uint16_t cnt)
 {
   // vscp espnow can't handle 512 byte frames and cnt
-  // can be 508 so we may need to do more than one 
+  // can be 508 so we may need to do more than one
   // read/write reply
   return VSCP_ERROR_SUCCESS;
 }
@@ -411,7 +417,7 @@ vscp_espnow_event_process(const vscpEvent *pev)
               return vscp_espnow_read_standard_reg(reg, cnt);
             }
             else {
-              return vscp_espnow_read_reg(reg,cnt);
+              return vscp_espnow_read_reg(reg, cnt);
             }
           }
         }
@@ -574,7 +580,7 @@ vscp_espnow_to_me(const uint8_t *pguid)
 {
   uint8_t GUID[16];
   vscp_espnow_get_node_guid(GUID);
-  return  (0==memcmp(GUID,pguid, 16)) ? true : false;
+  return (0 == memcmp(GUID, pguid, 16)) ? true : false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -684,7 +690,7 @@ vscp_espnow_evToFrame(uint8_t *buf, uint8_t len, const vscpEvent *pev)
   buf[VSCP_ESPNOW_POS_TIME_STAMP + 2] = (tv_now.tv_sec >> 8) & 0xff;
   buf[VSCP_ESPNOW_POS_TIME_STAMP + 3] = tv_now.tv_sec & 0xff;
 
-  long long int node_time =
+  long long node_time =
     (long long int) (((uint32_t) buf[VSCP_ESPNOW_POS_TIME_STAMP] << 24) +
                      ((uint32_t) buf[VSCP_ESPNOW_POS_TIME_STAMP + 1] << 16) +
                      ((uint32_t) buf[VSCP_ESPNOW_POS_TIME_STAMP + 2] << 8) + buf[VSCP_ESPNOW_POS_TIME_STAMP + 3]);
@@ -1150,33 +1156,48 @@ vscp_espnow_send_probe_event(const uint8_t *dest_addr, uint8_t channel, TickType
   memcpy(pev->pdata, s_VSCP_ESPNOW_GUID_UNINIT, VSCP_SIZE_GUID);
 
   size_t len    = vscp_espnow_getMinBufSizeEv(pev);
-  uint8_t *pbuf = VSCP_MALLOC(len);
-  if (NULL == pbuf) {
+  uint8_t *buf = VSCP_MALLOC(len);
+  if (NULL == buf) {
     ESP_LOGE(TAG, "Failed to allocate memory for event buffer");
     vscp_fwhlp_deleteEvent(&pev);
     return VSCP_ERROR_MEMORY;
   }
 
-  if (VSCP_ERROR_SUCCESS != (rv = vscp_espnow_evToFrame(pbuf, len, pev))) {
+  if (VSCP_ERROR_SUCCESS != (rv = vscp_espnow_evToFrame(buf, len, pev))) {
     ESP_LOGE(TAG, "Failed to convert event to frame");
     return rv;
   }
 
+  // Set timestamp (in seconds)
+  // struct timeval tv_now;
+  // gettimeofday(&tv_now, NULL);
+  // buf[VSCP_ESPNOW_POS_TIME_STAMP]     = (tv_now.tv_sec >> 24) & 0xff;
+  // buf[VSCP_ESPNOW_POS_TIME_STAMP + 1] = (tv_now.tv_sec >> 16) & 0xff;
+  // buf[VSCP_ESPNOW_POS_TIME_STAMP + 2] = (tv_now.tv_sec >> 8) & 0xff;
+  // buf[VSCP_ESPNOW_POS_TIME_STAMP + 3] = tv_now.tv_sec & 0xff;
+  
+  // We set timestamp to "high value". This let the prove event
+  // be accepted as an event with an initiated time by receiving nodes
+  buf[VSCP_ESPNOW_POS_TIME_STAMP]     = 0xff;
+  buf[VSCP_ESPNOW_POS_TIME_STAMP + 1] = 0xff;
+  buf[VSCP_ESPNOW_POS_TIME_STAMP + 2] = 0xff;
+  buf[VSCP_ESPNOW_POS_TIME_STAMP + 3] = 0xff;
+
   espnow_frame_head_t espnowhead = {
     .security                = false,
     .broadcast               = true,
-    .retransmit_count        = 1,
+    .retransmit_count        = 10,
     .magic                   = esp_random(),
     .ack                     = true,
     .filter_adjacent_channel = true,
     .channel                 = channel,
     .forward_ttl             = 10,
-    .forward_rssi            = -85,
+    .forward_rssi            = -65,
     .filter_weak_signal      = false,
   };
 
   for (int count = 0; count < 3; ++count) {
-    ret = espnow_send(ESPNOW_DATA_TYPE_DATA, dest_addr, pbuf, len, &espnowhead, pdMS_TO_TICKS(wait_ticks));
+    ret = espnow_send(ESPNOW_DATA_TYPE_DATA, dest_addr, buf, len, &espnowhead, pdMS_TO_TICKS(wait_ticks));
     if (ESP_OK != ret) {
 
       if (ESP_ERR_INVALID_ARG == ret) {
@@ -1204,7 +1225,7 @@ vscp_espnow_send_probe_event(const uint8_t *dest_addr, uint8_t channel, TickType
 
 EXIT:
   vscp_fwhlp_deleteEvent(&pev);
-  VSCP_FREE(pbuf);
+  VSCP_FREE(buf);
   return rv;
 }
 
@@ -1266,7 +1287,7 @@ vscp_espnow_probe(void)
   //   ESP_LOGW(TAG, "Timeout waiting for response");
   //   rv = VSCP_ERROR_TIMEOUT;
   // }
-  
+
   ESP_LOGI(TAG, "Probe ending %d", rv);
 
   if (!bProbeAck) {
@@ -1295,7 +1316,8 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
 {
   int rv;
   int ret;
-  uint32_t diff; // Time diff between node and our time from frame timestamp
+  long long node_time;  // Event node time (not VSCP timestamp)
+  long diff; // Time diff between node and our time from frame timestamp
 
   if ((src_addr == NULL) || (data == NULL) || (rx_ctrl == NULL) || (size <= 0)) {
     ESP_LOGE(TAG, "Receive cb arg error");
@@ -1343,14 +1365,27 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
   struct timeval tv_now;
   gettimeofday(&tv_now, NULL);
 
-  int node_time =
+  node_time =
     (long long) (((uint32_t) data[VSCP_ESPNOW_POS_TIME_STAMP] << 24) +
                  ((uint32_t) data[VSCP_ESPNOW_POS_TIME_STAMP + 1] << 16) +
-                 ((uint32_t) data[VSCP_ESPNOW_POS_TIME_STAMP + 2] << 8) + data[VSCP_ESPNOW_POS_TIME_STAMP + 3]);
+                 ((uint32_t) data[VSCP_ESPNOW_POS_TIME_STAMP + 2] << 8) + data[VSCP_ESPNOW_POS_TIME_STAMP + 3]);  
 
-  diff = abs(node_time - (int) tv_now.tv_sec);
 
-  ESP_LOGD(TAG, "node_time  time: %d, tv: %lld ---------> diff: %lu\n", node_time, tv_now.tv_sec, diff);
+  /*
+    We skip frames with node_time < VSCP_ESPNOW_REF_TIME here. For a node that
+    scan for a channel, which is not initiated time wise will have a "high value"
+    here that makes the fram being accepted. 
+  */
+  if (node_time < VSCP_ESPNOW_REF_TIME) {
+    ESP_LOGW(TAG, "Node time stamp is lower then reference time");
+    return;
+  }
+
+
+  //diff = abs(node_time - (int) tv_now.tv_sec);
+  diff = node_time - tv_now.tv_sec;
+
+  ESP_LOGI(TAG, "node_time  node_time: %lld, tv_now: %lld ---------> diff: %ld\n", node_time, tv_now.tv_sec, diff);
 
   vscpEvent *pev = vscp_fwhlp_newEvent();
   if (NULL == pev) {
@@ -1433,7 +1468,7 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
       ESP_LOGE(TAG, "Failed to write originating max to nvs. rv=%d", rv);
     }
 
-#if (PRJDEF_NODE_TYPE == VSCP_DROPLET_GAMMA)
+    // Sync time with alpha node
     struct timeval tm;
 
     tm.tv_sec  = (long long int) (((uint32_t) pev->pdata[1] << 24) + ((uint32_t) pev->pdata[2] << 16) +
@@ -1444,8 +1479,25 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
     if (-1 == settimeofday(&tm, NULL)) {
       ESP_LOGE(TAG, "Gamma: Failed to set time.");
     }
-    diff = abs(node_time - tv_now.tv_sec);
-#endif
+    
+    diff = 0;
+
+// #if (PRJDEF_NODE_TYPE == VSCP_DROPLET_GAMMA)
+//     struct timeval tm;
+
+//     tm.tv_sec  = (long long int) (((uint32_t) pev->pdata[1] << 24) + ((uint32_t) pev->pdata[2] << 16) +
+//                                  ((uint32_t) pev->pdata[3] << 8) + pev->pdata[4]);
+//     tm.tv_usec = 0;
+
+//     ESP_LOGI(TAG, "Gamma: Setting/updating system time.");
+//     if (-1 == settimeofday(&tm, NULL)) {
+//       ESP_LOGE(TAG, "Gamma: Failed to set time.");
+//     }
+
+//     diff = 0;
+//     //diff = abs(node_time - tv_now.tv_sec);
+//     //node_time - tv_now.tv_sec;
+// #endif
   }
 
   // Check if we got a heartbeat from an alpha node. If we do we set/update the time
@@ -1463,7 +1515,10 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
     if (-1 == settimeofday(&tm, NULL)) {
       ESP_LOGE(TAG, "Failed to set time.");
     }
-    diff = abs(node_time - tv_now.tv_sec);
+
+    diff = 0;
+    //diff = abs(node_time - tv_now.tv_sec);
+    //node_time - tv_now.tv_sec;
   }
 #endif
 
@@ -1472,13 +1527,23 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
   // ----------------------------------------------------------------
 
   /*
-    We only handle events that are "not recent" from this point. A
-    recent events is one that have a timestamp that is max one second
-    from the current clock in this node.
+    Time can never be back in time. We don't accept events in that case,
+
+    If our node have a non initiated time and the originating node is initiated the diff will be a very 
+    high positive value here and the frame should not be accepted because replay frames could sneak in.
+    This is typically also the case for a time sync.
+    
+    If the originating node is not initiated but we are the diff will be a high negative value
+    and the frame will be dropped here until time is synced.
+
+    If both originator and we are unsynced we will have a either a negative or a positive number
+    with a low value.
+
+    If both originating node and we are initiated we will have a low value (0,1) here.
   */
 
   if (diff > 1) {
-    ESP_LOGE(TAG, "Event have timestamp out of range.");
+    ESP_LOGE(TAG, "Event have timestamp out of range. diff = %lu", diff);
     goto EXIT;
   }
 
@@ -1586,8 +1651,10 @@ vscp_espnow_heartbeat_task(void *pvParameter)
       pev->pdata[2]   = 0xff; // subzone
 #endif
 
-      pev->timestamp = vscp_espnow_timestamp(); // esp_timer_get_time();
-      vscp_espnow_sendEvent(ESPNOW_ADDR_BROADCAST, pev, false, pdMS_TO_TICKS(1000));
+      if (espnow_timesync_check()) {
+        pev->timestamp = vscp_espnow_timestamp(); // esp_timer_get_time();
+        vscp_espnow_sendEvent(ESPNOW_ADDR_BROADCAST, pev, false, pdMS_TO_TICKS(1000));
+      }
     }
 
     vTaskDelay(pdMS_TO_TICKS(VSCP_ESPNOW_HEART_BEAT_INTERVAL));

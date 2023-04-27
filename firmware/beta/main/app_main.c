@@ -790,11 +790,13 @@ app_main()
   uint8_t key_info[APP_KEY_LEN];
   if (ESP_OK == espnow_get_key(key_info)) {
 
-    ESP_LOGI(TAG, "Security Key: " KEYSTR, KEY2STR(key_info));
+    // Set the key permanently
     espnow_set_key(key_info);
 
-    // Set the key permanently
-    //espnow_set_key(key_info);
+    // !!! Use only for key setting debug. NEVER DISCLOSE !!!
+    //ESP_LOGI(TAG, "Security Key: " KEYSTR, KEY2STR(key_info));
+
+    
 
     // Initializing OTA
     // espnow_ota_config_t ota_config = {
@@ -819,10 +821,10 @@ app_main()
     .log_level_flash  = g_persistent.logLevelFlash,
   };
 
-  // if (ESP_OK != (ret = espnow_log_init(&log_config))) {
-  //   ESP_LOGE(TAG, "Failed to init espnow logging");
-  // }
-  // esp_log_level_set("*", ESP_LOG_INFO);
+  if (ESP_OK != (ret = espnow_log_init(&log_config))) {
+    ESP_LOGE(TAG, "Failed to init espnow logging");
+  }
+  esp_log_level_set("*", ESP_LOG_INFO);
 
   // esp_wifi_set_channel(3, WIFI_SECOND_CHAN_NONE);
 
