@@ -14,8 +14,8 @@
 - [Gamma-nodes](#Gamma-Nodes)
 - [Testing](#Testing)
 - [MQTT](#MQTT)
-- [VSCP-Works](#Using VSCP Works with vscp-espnow)
-- [VSCP-Daemon](#Using a VSCP daemon with vscp-espnow)
+- [Using VSCP Works with vscp-espnow](#Using-VSCP-Works-with-vscp-espnow)
+- [Using the VSCP daemon with vscp-espnow](#Using-the-VSCP-daemon-with-vscp-espnow)
 - [License](#license)
 - [Contribution](#contribution)
 
@@ -175,8 +175,8 @@ And you can publish events to the bus by publish them on this topic on JSON form
 
 Other options you have are
 
-| Mustach token | Description |
-| ============= | =========== |
+| Mustache token | Description |
+| -------------- | ----------- |
 | {{node}}        | Node name in clear text of Alpha node |
 | {{guid}}        | Node GUID for Alpha node |
 | {{evguid}}      | Event GUID for the event published |
@@ -192,7 +192,7 @@ Will be added.
 
 VSCP Works is available [here](https://github.com/grodansparadis/vscp-works-qt) and old version is [here](https://github.com/grodansparadis/vscpworks).
 
-## Using a VSCP daemon with vscp-espnow
+## Using the VSCP daemon with vscp-espnow
 Will be added.
 
 The VSCP daemon is available [here](https://github.com/grodansparadis/vscp)
