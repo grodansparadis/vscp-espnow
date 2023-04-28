@@ -49,6 +49,9 @@ typedef struct {
   uint32_t nPub;            // # published frames
   uint32_t nPubFailures;    // Number of publish failures
   uint32_t nPubConfirm;     // # of OK publish
+  uint32_t nPubLog;         // # published logframes
+  uint32_t nPubLogFailures; // Number of publish log failures
+  uint32_t nPubLogConfirm;  // # of OK log publish
   uint32_t nSub;            // # received events
 } mqtt_stats_t;
 
@@ -73,7 +76,7 @@ mqtt_stop(void);
 /**
  * @fn mqtt_send_vscp_event
  * @brief Send VSCP event on configured topic
- * @param topic Topic to publish event on. 
+ * @param topic Topic to publish event on.
  *        If set to NULL configured topic will be used.
  * @param pev Pointer to event to publish
  * @return int VSCP_ERROR_SUCCESS if OK, else error code.
@@ -81,5 +84,20 @@ mqtt_stop(void);
 
 int
 mqtt_send_vscp_event(const char *topic, const vscpEvent *pev);
+
+/**
+ * @fn mqtt_log
+ * @brief Log message to MQTT
+ *
+ * @param buf Null terminated log message
+ * @return VSCP_ERROR_SUCCESS is returned if all is OK. Error code else.
+ *
+ * A log message is sent to the MQTT broker if the broker is started. Log format
+ * is [mac-address][channel]rssi]: Log message where the mac-address is the mac-address
+ * for the device that sent the log message.
+ */
+
+int
+mqtt_log(const char *msg);
 
 #endif

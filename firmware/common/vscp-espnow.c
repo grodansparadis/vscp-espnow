@@ -1629,10 +1629,10 @@ vscp_espnow_heartbeat_task(void *pvParameter)
       pev->pdata[2]   = (tv_now.tv_sec >> 16) & 0xff;
       pev->pdata[3]   = (tv_now.tv_sec >> 8) & 0xff;
       pev->pdata[4]   = tv_now.tv_sec & 0xff;
-      printf("now=%lld  %lld\n",
-             tv_now.tv_sec,
-             (long long int) (((uint32_t) pev->pdata[1] << 24) + ((uint32_t) pev->pdata[2] << 16) +
-                              ((uint32_t) pev->pdata[3] << 8) + pev->pdata[4]));
+      // printf("now=%lld  %lld\n",
+      //        tv_now.tv_sec,
+      //        (long long int) (((uint32_t) pev->pdata[1] << 24) + ((uint32_t) pev->pdata[2] << 16) +
+      //                         ((uint32_t) pev->pdata[3] << 8) + pev->pdata[4]));
 #elif (PRJDEF_NODE_TYPE == VSCP_DROPLET_BETA)
       // Beta nodes send information heartbeat
       pev->vscp_class = VSCP_CLASS1_INFORMATION;

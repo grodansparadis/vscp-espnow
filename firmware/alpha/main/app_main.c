@@ -187,6 +187,7 @@ node_persistent_config_t g_persistent = {
   .mqttRetain       = 0,
   .mqttSub          = "vscp/{{guid}}/pub/#",
   .mqttPub          = "vscp/{{guid}}/{{class}}/{{type}}/{{index}}",
+  .mqttPubLog       = "vscp/log/{{guid}}",
   .mqttVerification = { 0 },
   .mqttLwTopic      = { 0 },
   .mqttLwMessage    = { 0 },
@@ -342,15 +343,38 @@ app_led_init(void)
 static esp_err_t
 app_espnow_debug_recv_process(uint8_t *src_addr, void *data, size_t size, wifi_pkt_rx_ctrl_t *rx_ctrl)
 {
+  char *recv_data    = (char *) data;
+  const char *buf    = NULL;
+  size_t size_buffer = 50 + size;
+
   ESP_PARAM_CHECK(src_addr);
   ESP_PARAM_CHECK(data);
   ESP_PARAM_CHECK(size);
   ESP_PARAM_CHECK(rx_ctrl);
 
-  char *recv_data = (char *) data;
+  if (g_persistent.mqttEnable) {
 
-  printf("[" MACSTR "][%d][%d]: %.*s", MAC2STR(src_addr), rx_ctrl->channel, rx_ctrl->rssi, size, recv_data);
-  fflush(stdout);
+    buf = VSCP_CALLOC(size_buffer);
+    if (NULL == buf) {
+      ESP_LOGE(TAG, "Unable to allocate buffer for log message.");
+      return ESP_ERR_NO_MEM;
+    }
+
+    snprintf(buf,
+             size_buffer,
+             "[" MACSTR "][%d][%d]: %.*s",
+             MAC2STR(src_addr),
+             size,
+             rx_ctrl->channel,
+             rx_ctrl->rssi,
+             recv_data);
+             
+    mqtt_log(buf);
+    VSCP_FREE(buf);
+  }
+
+  // printf("[" MACSTR "][%d][%d]: %.*s", MAC2STR(src_addr), rx_ctrl->channel, rx_ctrl->rssi, size, recv_data);
+  // fflush(stdout);
 
   return ESP_OK;
 }
@@ -1223,6 +1247,17 @@ readPersistentConfigs(void)
     }
   }
 
+  // MQTT publish log
+  length = sizeof(g_persistent.mqttPubLog);
+  rv     = nvs_get_str(g_nvsHandle, "mqtt_pub_log", g_persistent.mqttPubLog, &length);
+  if (rv != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to read 'MQTT pub log' will be set to default. ret=%d", rv);
+    rv = nvs_set_str(g_nvsHandle, "mqtt_pub_log", g_persistent.mqttPubLog);
+    if (rv != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to save MQTT pub log");
+    }
+  }
+
   // WEB server ----------------------------------------------------------------
 
   // WEB enable
@@ -1639,7 +1674,7 @@ app_main()
 
   s_wifi_event_group = xEventGroupCreate();
 
-  memcpy((uint8_t *)espnow_config.pmk, g_persistent.pmk, 16);
+  memcpy((uint8_t *) espnow_config.pmk, g_persistent.pmk, 16);
   espnow_config.qsize                  = g_persistent.queueSize; // CONFIG_APP_ESPNOW_QUEUE_SIZE;
   espnow_config.sec_enable             = true; // Must be enabled for all security enabled functions to work
   espnow_config.forward_enable         = true;
@@ -1932,7 +1967,7 @@ app_main()
         gettimeofday(&tv_now, NULL);
         int64_t time_us = (int64_t) tv_now.tv_sec * 1000000L + (int64_t) tv_now.tv_usec;
 
-        ESP_LOGI(TAG, ">>> The current date/time GMT is: %lld %s", tv_now.tv_sec, strftime_buf);
+        // ESP_LOGI(TAG, ">>> The current date/time GMT is: %lld %s", tv_now.tv_sec, strftime_buf);
 
         pev->vscp_class = VSCP_CLASS1_INFORMATION;
         pev->vscp_type  = VSCP_TYPE_INFORMATION_TIME;

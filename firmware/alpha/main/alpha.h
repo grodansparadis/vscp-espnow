@@ -127,6 +127,7 @@ typedef struct {
   int mqttRetain;
   char mqttSub[128];
   char mqttPub[128];
+  char mqttPubLog[128];
   char mqttVerification[32 * 1024]; // For server certificate
   char mqttLwTopic[128];
   char mqttLwMessage[128];

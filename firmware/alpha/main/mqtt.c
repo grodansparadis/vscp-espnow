@@ -55,15 +55,15 @@
 #include "mqtt.h"
 
 // Global stuff
-extern node_persistent_config_t g_persistent;        // main
-//extern transport_t g_tr_tcpsrv[MAX_TCP_CONNECTIONS]; // tcpsrv
+extern node_persistent_config_t g_persistent; // main
+// extern transport_t g_tr_tcpsrv[MAX_TCP_CONNECTIONS]; // tcpsrv
 
 static const char *TAG = "MQTT";
 
 esp_mqtt_client_handle_t g_mqtt_client;
 
 // Static stuff
-static bool s_mqtt_connected = false;  // true when connected
+static bool s_mqtt_connected = false; // true when connected
 
 static mqtt_stats_t s_mqtt_statistics = { 0 };
 
@@ -97,6 +97,117 @@ extern const uint8_t mqtt_eclipse_io_pem_end[] asm("_binary_mqtt_eclipse_io_pem_
 // }
 
 ///////////////////////////////////////////////////////////////////////////////
+// mqtt_topic_subst
+//
+// Substitute mustache tags to real value in string.
+// pev Pointer to event can be NULL.
+//
+
+static int
+mqtt_topic_subst(char *newTopic, size_t len, const char *pTopic, const vscpEvent *pev)
+{
+  int rv;
+  char workbuf[48];
+
+  ESP_PARAM_CHECK(newTopic);
+  ESP_PARAM_CHECK(pTopic);
+
+  /*
+    {{node}}        - Node name
+    {{guid}}        - Node GUID
+    {{evguid}}      - Event GUID
+    {{class}}       - Event class
+    {{type}}        - Event type
+    {{nickname}}    - Node nickname (16-bit)
+    {{ecnickname}}  - Node nickname (16-bit) for node sending event
+    {{sindex}}      - Sensor index (if any)
+    --------------------------------------------
+    {{timestamp}}   - Timestamep for event
+    {{index}}       - Index (data byte 0) (if any)
+    {{zone}}        - Zone (data byte 1) (if any)
+    {{subzone}}     - Sub Zone (data byte 2) (if any)
+    {{d[n]}}        - Data byte n (if any)
+    {{year}}        - Two digit year of event (Time always in GMT).
+    {{fyear}}       - Four digit year of event (Time always in GMT).
+    {{month}}       - Two digit month of event (Time always in GMT).
+    {{day}}         - Two digit day of event (Time always in GMT).
+    {{hour}}        - Two digit hour of event (Time always in GMT).
+    {{minute}}      - Two digit minute of event (Time always in GMT).
+    {{second}}      - Two digit second of event (Time always in GMT).
+
+    Typical topic
+    vscp/FF:FF:FF:FF:FF:FF:FF:F5:01:00:00:00:00:00:00:02/20/9/2
+    vscp/{{guid}}/{{class}}/{{type}}/{{index}}
+  */
+
+  strncpy(newTopic, pTopic, MIN(len,strlen(pTopic)));
+
+  //printf("newtopic=%s\n", newTopic);
+  //fflush(stdout);
+
+  char *saveTopic = (char *)VSCP_CALLOC(len);
+  if (NULL == saveTopic) {
+    return VSCP_ERROR_MEMORY;
+  }
+
+  // Node name
+  vscp_fwhlp_strsubst(newTopic, len, pTopic, "{{node}}", g_persistent.nodeName);
+  strncpy(saveTopic, newTopic, MIN(strlen(newTopic), len));
+
+  // GUID
+  uint8_t GUID[16];
+  vscp_espnow_get_node_guid(GUID);
+  vscp_fwhlp_writeGuidToString(workbuf, GUID);
+  vscp_fwhlp_strsubst(newTopic, len, saveTopic, "{{guid}}", workbuf);
+  strcpy(saveTopic, newTopic);
+
+  // Skip event related escapes if no event set
+  if (NULL != pev) {
+
+    // Event GUID
+    vscp_fwhlp_writeGuidToString(workbuf, pev->GUID);
+    vscp_fwhlp_strsubst(newTopic, len, saveTopic, "{{evguid}}", workbuf);
+    strcpy(saveTopic, newTopic);
+
+    // Class
+    sprintf(workbuf, "%d", pev->vscp_class);
+    vscp_fwhlp_strsubst(newTopic, len, saveTopic, "{{class}}", workbuf);
+    strcpy(saveTopic, newTopic);
+
+    // Type
+    sprintf(workbuf, "%d", pev->vscp_type);
+    vscp_fwhlp_strsubst(newTopic, len, saveTopic, "{{type}}", workbuf);
+    strcpy(saveTopic, newTopic);
+
+    // nickname
+    sprintf(workbuf, "%d", ((GUID[14] << 8) + (GUID[15])));
+    vscp_fwhlp_strsubst(newTopic, len, saveTopic, "{{nickname}}", workbuf);
+    strcpy(saveTopic, newTopic);
+
+    // event nickname
+    sprintf(workbuf, "%d", ((pev->GUID[14] << 8) + (pev->GUID[15])));
+    vscp_fwhlp_strsubst(newTopic, len, saveTopic, "{{evnickname}}", workbuf);
+    strcpy(saveTopic, newTopic);
+
+    // sensor index
+    if (VSCP_ERROR_SUCCESS == vscp_fwhlp_isMeasurement(pev)) {
+      sprintf(workbuf, "%d", vscp_fwhlp_getMeasurementSensorIndex(pev));
+    }
+    else {
+      memset(workbuf, 0, sizeof(workbuf));
+    }
+    vscp_fwhlp_strsubst(newTopic, len, saveTopic, "{{sindex}}", workbuf);
+    // strcpy(saveTopic, newTopic);
+  }
+
+  VSCP_FREE(saveTopic);
+
+  return VSCP_ERROR_SUCCESS;
+}
+
+#define MQTT_SUBST_BUF_LEN 2048
+
+///////////////////////////////////////////////////////////////////////////////
 // mqtt_send_vscp_event
 //
 
@@ -123,7 +234,7 @@ mqtt_send_vscp_event(const char *topic, const vscpEvent *pev)
   }
 
   // We publish VSCP event on JSON form
-  char *pbuf = VSCP_MALLOC(2048);
+  char *pbuf = VSCP_MALLOC(MQTT_SUBST_BUF_LEN);
   if (NULL == pbuf) {
     ESP_LOGE(TAG, "Unable to allocate JSON buffer for conversion");
     return VSCP_ERROR_MEMORY;
@@ -165,72 +276,140 @@ mqtt_send_vscp_event(const char *topic, const vscpEvent *pev)
     vscp/{{guid}}/{{class}}/{{type}}/{{index}}
   */
 
-  char newTopic[128], saveTopic[128], workbuf[48];
+  // char newTopic[128], saveTopic[128], workbuf[48];
+  // cccc
+  //   // Node name
+  //   vscp_fwhlp_strsubst(newTopic, sizeof(newTopic), pTopic, "{{node}}", g_persistent.nodeName);
+  // strcpy(saveTopic, newTopic);
 
-  // Node name
-  vscp_fwhlp_strsubst(newTopic, sizeof(newTopic), pTopic, "{{node}}", g_persistent.nodeName);
-  strcpy(saveTopic, newTopic);
+  // // GUID
+  // uint8_t GUID[16];
+  // vscp_espnow_get_node_guid(GUID);
+  // vscp_fwhlp_writeGuidToString(workbuf, GUID);
+  // vscp_fwhlp_strsubst(newTopic, sizeof(newTopic), saveTopic, "{{guid}}", workbuf);
+  // strcpy(saveTopic, newTopic);
 
-  // GUID
-  uint8_t GUID[16];
-  vscp_espnow_get_node_guid(GUID);
-  vscp_fwhlp_writeGuidToString(workbuf, GUID);
-  vscp_fwhlp_strsubst(newTopic, sizeof(newTopic), saveTopic, "{{guid}}", workbuf);
-  strcpy(saveTopic, newTopic);
+  // // Event GUID
+  // vscp_fwhlp_writeGuidToString(workbuf, pev->GUID);
+  // vscp_fwhlp_strsubst(newTopic, sizeof(newTopic), saveTopic, "{{evguid}}", workbuf);
+  // strcpy(saveTopic, newTopic);
 
-  // Event GUID
-  vscp_fwhlp_writeGuidToString(workbuf, pev->GUID);
-  vscp_fwhlp_strsubst(newTopic, sizeof(newTopic), saveTopic, "{{evguid}}", workbuf);
-  strcpy(saveTopic, newTopic);
+  // // Class
+  // sprintf(workbuf, "%d", pev->vscp_class);
+  // vscp_fwhlp_strsubst(newTopic, sizeof(newTopic), saveTopic, "{{class}}", workbuf);
+  // strcpy(saveTopic, newTopic);
 
-  // Class
-  sprintf(workbuf, "%d", pev->vscp_class);
-  vscp_fwhlp_strsubst(newTopic, sizeof(newTopic), saveTopic, "{{class}}", workbuf);
-  strcpy(saveTopic, newTopic);
+  // // Type
+  // sprintf(workbuf, "%d", pev->vscp_type);
+  // vscp_fwhlp_strsubst(newTopic, sizeof(newTopic), saveTopic, "{{type}}", workbuf);
+  // strcpy(saveTopic, newTopic);
 
-  // Type
-  sprintf(workbuf, "%d", pev->vscp_type);
-  vscp_fwhlp_strsubst(newTopic, sizeof(newTopic), saveTopic, "{{type}}", workbuf);
-  strcpy(saveTopic, newTopic);
+  // // nickname
+  // sprintf(workbuf, "%d", ((GUID[14] << 8) + (GUID[15])));
+  // vscp_fwhlp_strsubst(newTopic, sizeof(newTopic), saveTopic, "{{nickname}}", workbuf);
+  // strcpy(saveTopic, newTopic);
 
-  // nickname
-  sprintf(workbuf, "%d", ((GUID[14] << 8) + (GUID[15])));
-  vscp_fwhlp_strsubst(newTopic, sizeof(newTopic), saveTopic, "{{nickname}}", workbuf);
-  strcpy(saveTopic, newTopic);
+  // // event nickname
+  // sprintf(workbuf, "%d", ((pev->GUID[14] << 8) + (pev->GUID[15])));
+  // vscp_fwhlp_strsubst(newTopic, sizeof(newTopic), saveTopic, "{{evnickname}}", workbuf);
+  // strcpy(saveTopic, newTopic);
 
-  // event nickname
-  sprintf(workbuf, "%d", ((pev->GUID[14] << 8) + (pev->GUID[15])));
-  vscp_fwhlp_strsubst(newTopic, sizeof(newTopic), saveTopic, "{{evnickname}}", workbuf);
-  strcpy(saveTopic, newTopic);
+  // // sensor index
+  // if (VSCP_ERROR_SUCCESS == vscp_fwhlp_isMeasurement(pev)) {
+  //   sprintf(workbuf, "%d", vscp_fwhlp_getMeasurementSensorIndex(pev));
+  // }
+  // else {
+  //   memset(workbuf, 0, sizeof(workbuf));
+  // }
+  // vscp_fwhlp_strsubst(newTopic, sizeof(newTopic), saveTopic, "{{sindex}}", workbuf);
+  // strcpy(saveTopic, newTopic);
 
-  // sensor index
-  if (VSCP_ERROR_SUCCESS == vscp_fwhlp_isMeasurement(pev)) {
-    sprintf(workbuf, "%d", vscp_fwhlp_getMeasurementSensorIndex(pev));
+  char *newTopic = VSCP_CALLOC(MQTT_SUBST_BUF_LEN);
+  if (NULL == newTopic) {
+    ESP_LOGE(TAG, "Unable to allocate memory.");
+    VSCP_FREE(pbuf);
+    return VSCP_ERROR_MEMORY;
   }
-  else {
-    memset(workbuf, 0, sizeof(workbuf));
-  }
-  vscp_fwhlp_strsubst(newTopic, sizeof(newTopic), saveTopic, "{{sindex}}", workbuf);
-  strcpy(saveTopic, newTopic);
 
-  strcpy(newTopic,"xxx/");
+  mqtt_topic_subst(newTopic, MQTT_SUBST_BUF_LEN, pTopic, pev);
 
-  int msgid =
-     esp_mqtt_client_publish(g_mqtt_client, newTopic, pbuf, strlen(pbuf), 0,0/*g_persistent.mqttQos, g_persistent.mqttRetain*/);
+  printf("%s\n", newTopic);
+  // strcpy(newTopic, "xxx/");
 
-  //int msgid = 
-  //esp_mqtt_client_enqueue(g_mqtt_client, newTopic, pbuf, strlen(pbuf), 0,0/*g_persistent.mqttQos, g_persistent.mqttRetain*/, false);
+  int msgid = esp_mqtt_client_publish(g_mqtt_client,
+                                      newTopic,
+                                      pbuf,
+                                      strlen(pbuf),
+                                      0,
+                                      0 /*g_persistent.mqttQos, g_persistent.mqttRetain*/);
+
+  // int msgid =
+  // esp_mqtt_client_enqueue(g_mqtt_client, newTopic, pbuf, strlen(pbuf), 0,0/*g_persistent.mqttQos,
+  // g_persistent.mqttRetain*/, false);
   if (-1 != msgid) {
-    //ESP_LOGI(TAG, "Published MQTT message. id=%d topic=%s outbox-size = %d", msgid, newTopic, esp_mqtt_client_get_outbox_size(g_mqtt_client));
-    s_mqtt_statistics.nPub++; 
+    // ESP_LOGI(TAG, "Published MQTT message. id=%d topic=%s outbox-size = %d", msgid, newTopic,
+    // esp_mqtt_client_get_outbox_size(g_mqtt_client));
+    s_mqtt_statistics.nPub++;
   }
   else {
     s_mqtt_statistics.nPubFailures++;
-    ESP_LOGE(TAG, "Failed to publish MQTT message. id=%d Topic=%s outbox-size = %d", msgid, newTopic, esp_mqtt_client_get_outbox_size(g_mqtt_client));
+    ESP_LOGE(TAG,
+             "Failed to publish MQTT message. id=%d Topic=%s outbox-size = %d",
+             msgid,
+             newTopic,
+             esp_mqtt_client_get_outbox_size(g_mqtt_client));
   }
 
+  VSCP_FREE(newTopic);
   VSCP_FREE(pbuf);
 
+  return VSCP_ERROR_SUCCESS;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// mqtt_log
+//
+
+int
+mqtt_log(const char *msg)
+{
+  char *pbuf = msg;
+  ESP_PARAM_CHECK(msg);
+
+  // Noting to do if no message
+  if (!strlen(msg)) {
+    return VSCP_ERROR_SUCCESS;
+  }
+
+  if (strlen(g_persistent.mqttPubLog)) {
+
+    char *newTopic = VSCP_CALLOC(MQTT_SUBST_BUF_LEN);
+    if (NULL == newTopic) {
+      ESP_LOGE(TAG, "Unable to allocate memory.");
+      VSCP_FREE(pbuf);
+      return VSCP_ERROR_MEMORY;
+    }
+
+    const char *pTopic = g_persistent.mqttPubLog;
+    mqtt_topic_subst(newTopic, MQTT_SUBST_BUF_LEN, pTopic, NULL);
+
+    int msgid = esp_mqtt_client_publish(g_mqtt_client, newTopic, pbuf, strlen(pbuf), 0, 0);
+    if (-1 != msgid) {
+      s_mqtt_statistics.nPubLog++;
+    }
+    else {
+      s_mqtt_statistics.nPubLogFailures++;
+      ESP_LOGE(TAG,
+               "Failed to publish MQTT log message. id=%d Topic=%s outbox-size = %d",
+               msgid,
+               g_persistent.mqttPubLog,
+               esp_mqtt_client_get_outbox_size(g_mqtt_client));
+    }
+
+    VSCP_FREE(newTopic);
+  }
+
+  
   return VSCP_ERROR_SUCCESS;
 }
 
@@ -281,7 +460,7 @@ mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, 
       s_mqtt_connected = false;
       s_mqtt_statistics.nDisconnect++;
       ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
-      //esp_mqtt_client_reconnect(client);
+      // esp_mqtt_client_reconnect(client);
       break;
 
     case MQTT_EVENT_SUBSCRIBED:
@@ -303,10 +482,7 @@ mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, 
       ESP_LOGI(TAG, "MQTT_EVENT_DATA");
       printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
       printf("DATA=%.*s\r\n", event->data_len, event->data);
-      if (strncmp(event->data, "send binary please", event->data_len) == 0) {
-        ESP_LOGI(TAG, "Sending the binary");
-        // send_binary(client);
-      }
+      fflush(stdout);
       break;
 
     case MQTT_EVENT_ERROR:
@@ -396,15 +572,15 @@ mqtt_start(void)
 #endif
   // clang-format on
 
-  //ESP_LOGI(TAG, "[APP] Free memory: %lu bytes", esp_get_free_heap_size());
+  // ESP_LOGI(TAG, "[APP] Free memory: %lu bytes", esp_get_free_heap_size());
   g_mqtt_client = esp_mqtt_client_init(&mqtt_cfg);
   // The last argument may be used to pass data to the event handler, in this example mqtt_event_handler
   if (ESP_OK != esp_mqtt_client_register_event(g_mqtt_client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL)) {
-    ESP_LOGE(TAG,"Failed to start MQTT client");
+    ESP_LOGE(TAG, "Failed to start MQTT client");
   }
 
   if (ESP_OK != esp_mqtt_client_start(g_mqtt_client)) {
-    ESP_LOGE(TAG,"Failed to start MQTT client");
+    ESP_LOGE(TAG, "Failed to start MQTT client");
   }
 
   ESP_LOGI(TAG, "Outbox-size = %d", esp_mqtt_client_get_outbox_size(g_mqtt_client));
