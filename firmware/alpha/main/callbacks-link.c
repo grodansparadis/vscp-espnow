@@ -59,7 +59,7 @@
 extern node_persistent_config_t g_persistent;
 extern QueueHandle_t g_queueDroplet; // Received events from VSCP link clients
 // extern SemaphoreHandle_t g_droplet_send_lock; // From droplet
-//  extern vscpctx_t g_ctx[MAX_TCP_CONNECTIONS];
+//  extern vscpctx_t g_ctx[CONFIG_APP_MAX_TCP_CONNECTIONS];
 
 // Constants from droplet
 extern const uint8_t DROPLET_ADDR_NONE[6];

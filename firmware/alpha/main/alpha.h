@@ -40,12 +40,6 @@
 #include <vscp.h>
 #include <vscp-espnow.h>
 
-// #define NODETYPE VSCP_DROPLET_ALPHA
-
-#define ESP_NOW_VER_MAJOR 2
-#define ESP_NOW_VER_MINOR 1
-#define ESP_NOW_VER_PATCH 1
-
 #define CONNECTED_LED_GPIO_NUM 2
 #define ACTIVE_LED_GPIO_NUM    3
 #define GPIO_OUTPUT_PIN_SEL    ((1ULL << CONNECTED_LED_GPIO_NUM) | (1ULL << ACTIVE_LED_GPIO_NUM))
@@ -140,8 +134,8 @@ typedef struct {
 /*!
   ESP-NOW
 */
-#define ESPNOW_SIZE_TX_BUF 10  /*!< Size for transmitt buffer >*/
-#define ESPNOW_SIZE_RX_BUF 20  /*!< Size for receive buffer >*/
+#define ESPNOW_SIZE_TX_BUF 10  // Size for transmitt buffer 
+#define ESPNOW_SIZE_RX_BUF 20  // Size for receive buffer 
 #define ESPNOW_MAXDELAY    512 // Ticks to wait for send queue access
 #define ESPNOW_QUEUE_SIZE  6
 

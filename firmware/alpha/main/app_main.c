@@ -146,7 +146,7 @@ static app_wifi_prov_status_t s_wifi_prov_status = APP_WIFI_PROV_INIT;
 node_persistent_config_t g_persistent = {
 
   // General
-  .nodeName   = VSCP_PROJDEF_DEVICE_NAME,
+  .nodeName   = CONFIG_APP_VSCP_NODE_NAME,
   .pmk        = { 0 },
   .lmk        = { 0 },
   .startDelay = 2,
@@ -292,7 +292,7 @@ static void
 app_led_init(void)
 {
   led_indicator_gpio_config_t led_indicator_gpio_red_config = {
-    .gpio_num             = PRJDEF_INDICATOR_LED_PIN_RED, /**< num of GPIO */
+    .gpio_num             = CONFIG_APP_VSCP_GPIO_OPERATION_LED, /**< num of GPIO */
     .is_active_level_high = 1,
   };
 
@@ -311,7 +311,7 @@ app_led_init(void)
   }
 
   led_indicator_gpio_config_t led_indicator_gpio_green_config = {
-    .gpio_num             = PRJDEF_INDICATOR_LED_PIN_GREEN, /**< num of GPIO */
+    .gpio_num             = CONFIG_APP_VSCP_GPIO_STATUS_LED, /**< num of GPIO */
     .is_active_level_high = 1,
   };
 
@@ -439,18 +439,18 @@ ota_task(void *pvParameter)
   ESP_LOGI(TAG, "Bind interface name is %s", ifr.ifr_name);
 #endif
   esp_http_client_config_t config_http = {
-    .url = PRJDEF_FIRMWARE_UPGRADE_URL,
+    .url = CONFIG_APP_OTA_URL,
     //.cert_pem          = (char *) server_cert_pem_start,
     .crt_bundle_attach = esp_crt_bundle_attach,
     .event_handler     = _http_event_handler,
     .keep_alive_enable = true,
-#ifdef CONFIG_EXAMPLE_FIRMWARE_UPGRADE_BIND_IF
+#ifdef CONFIG_APP_OTA_BIND_IF
     .if_name = &ifr,
 #endif
   };
 
-#ifdef CONFIG_EXAMPLE_SKIP_COMMON_NAME_CHECK
-  config.skip_cert_common_name_check = true;
+#ifdef CONFIG_APP_OTA_SKIP_COMMON_NAME_CHECK
+  config_http.skip_cert_common_name_check = true;
 #endif
 
   esp_https_ota_config_t config = {
@@ -705,7 +705,7 @@ app_initiate_firmware_upload(const char *url)
   const esp_partition_t *data_partition = esp_ota_get_next_update_partition(NULL);
 
   if (NULL == url) {
-    url_to_upload = PRJDEF_FIRMWARE_UPGRADE_URL;
+    url_to_upload = CONFIG_APP_OTA_URL;
   }
 
   size_t firmware_size = app_firmware_download(url_to_upload);
@@ -1107,7 +1107,7 @@ readPersistentConfigs(void)
   rv     = nvs_get_str(g_nvsHandle, "vscp_url", g_persistent.vscplinkUrl, &length);
   if (rv != ESP_OK) {
     ESP_LOGE(TAG, "Failed to read 'VSCP link host' will be set to default. ret=%d", rv);
-    rv = nvs_set_str(g_nvsHandle, "vscp_url", PRJDEF_DEFAULT_TCPIP_USER);
+    rv = nvs_set_str(g_nvsHandle, "vscp_url", CONFIG_APP_DEFAULT_USER);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to save VSCP link host");
     }
@@ -1138,7 +1138,7 @@ readPersistentConfigs(void)
   rv     = nvs_get_str(g_nvsHandle, "vscp_user", g_persistent.vscplinkUsername, &length);
   if (rv != ESP_OK) {
     ESP_LOGE(TAG, "Failed to read 'VSCP Username' will be set to default. ret=%d", rv);
-    rv = nvs_set_str(g_nvsHandle, "vscp_user", PRJDEF_DEFAULT_TCPIP_USER);
+    rv = nvs_set_str(g_nvsHandle, "vscp_user", CONFIG_APP_DEFAULT_USER);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to save VSCP username");
     }
@@ -1149,7 +1149,7 @@ readPersistentConfigs(void)
   rv     = nvs_get_str(g_nvsHandle, "vscp_password", g_persistent.vscplinkPassword, &length);
   if (rv != ESP_OK) {
     ESP_LOGE(TAG, "Failed to read 'VSCP password' will be set to default. ret=%d", rv);
-    nvs_set_str(g_nvsHandle, "vscp_password", PRJDEF_DEFAULT_TCPIP_PASSWORD);
+    nvs_set_str(g_nvsHandle, "vscp_password", CONFIG_APP_DEFAULT_PASSWORD);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to save VSCP password");
     }
@@ -1208,7 +1208,7 @@ readPersistentConfigs(void)
   rv     = nvs_get_str(g_nvsHandle, "mqtt_user", g_persistent.mqttUsername, &length);
   if (rv != ESP_OK) {
     ESP_LOGE(TAG, "Failed to read 'MQTT user' will be set to default. ret=%d", rv);
-    rv = nvs_set_str(g_nvsHandle, "mqtt_user", PRJDEF_DEFAULT_TCPIP_USER);
+    rv = nvs_set_str(g_nvsHandle, "mqtt_user", CONFIG_APP_DEFAULT_USER);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to save MQTT username");
     }
@@ -1219,7 +1219,7 @@ readPersistentConfigs(void)
   rv     = nvs_get_str(g_nvsHandle, "mqtt_password", g_persistent.mqttPassword, &length);
   if (rv != ESP_OK) {
     ESP_LOGE(TAG, "Failed to read 'MQTT password' will be set to default. ret=%d", rv);
-    nvs_set_str(g_nvsHandle, "mqtt_password", PRJDEF_DEFAULT_TCPIP_PASSWORD);
+    nvs_set_str(g_nvsHandle, "mqtt_password", CONFIG_APP_DEFAULT_PASSWORD);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to save MQTT password");
     }
@@ -1288,7 +1288,7 @@ readPersistentConfigs(void)
   rv     = nvs_get_str(g_nvsHandle, "web_user", g_persistent.webUsername, &length);
   if (rv != ESP_OK) {
     ESP_LOGE(TAG, "Failed to read 'Web server user' will be set to default. ret=%d", rv);
-    rv = nvs_set_str(g_nvsHandle, "web_user", PRJDEF_DEFAULT_TCPIP_USER);
+    rv = nvs_set_str(g_nvsHandle, "web_user", CONFIG_APP_DEFAULT_USER);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to save Web Server username");
     }
@@ -1299,7 +1299,7 @@ readPersistentConfigs(void)
   rv     = nvs_get_str(g_nvsHandle, "web_password", g_persistent.webPassword, &length);
   if (rv != ESP_OK) {
     ESP_LOGE(TAG, "Failed to read 'Web server password' will be set to default. ret=%d", rv);
-    nvs_set_str(g_nvsHandle, "web_password", PRJDEF_DEFAULT_TCPIP_PASSWORD);
+    nvs_set_str(g_nvsHandle, "web_password", CONFIG_APP_DEFAULT_PASSWORD);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to save Web server password");
     }
@@ -1472,7 +1472,7 @@ app_system_event_handler(void *arg, esp_event_base_t event_base, int32_t event_i
 
         ESP_LOGI(TAG, "--------------> sta disconnect");
 
-        if (s_retry_num < VSCP_PROJDEF_ESP_MAXIMUM_RETRY) {
+        if (s_retry_num < CONFIG_APP_WIFI_CONNECT_RETRIES) {
           s_retry_num++;
           ESP_LOGI(TAG, "retry to connect to the AP");
           app_led_switch_blink_type(s_led_handle_green, BLINK_RECONNECTING);

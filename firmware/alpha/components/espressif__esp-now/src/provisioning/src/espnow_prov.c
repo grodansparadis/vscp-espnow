@@ -48,8 +48,12 @@ typedef struct {
 
 #define ESPNOW_PROV_BEACON_INTERVAL 100
 
+#ifdef CONFIG_ESPNOW_ALL_SECURITY
+#define CONFIG_ESPNOW_PROV_SECURITY 1
+#else
 #ifndef CONFIG_ESPNOW_PROV_SECURITY
-#define CONFIG_ESPNOW_PROV_SECURITY   0
+#define CONFIG_ESPNOW_PROV_SECURITY 0
+#endif
 #endif
 
 static const char *TAG = "espnow_prov";

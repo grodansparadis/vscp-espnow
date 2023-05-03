@@ -240,7 +240,7 @@
 /**
  * URL to MDF file
  */
-#define THIS_FIRMWARE_MDF_URL "eurosource.se/wcang0.mdf"
+#define THIS_FIRMWARE_MDF_URL "eurosource.se/frankwifi0.mdf"
 
 /**
  * 16-bit firmware code for this device

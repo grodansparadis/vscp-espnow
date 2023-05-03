@@ -86,14 +86,14 @@ static uint8_t cntClients = 0; // Holds current number of clients
 // SemaphoreHandle_t g_mutexQueueDroplet;
 
 // Buffers
-// static transport_t s_tr_tcpsrv[MAX_TCP_CONNECTIONS];
+// static transport_t s_tr_tcpsrv[CONFIG_APP_MAX_TCP_CONNECTIONS];
 
 /*!
   This is the socket context for open channels. It holds all
   contect data including the socket it's state and the output
   queue to the VSCP tcp/ip link client
 */
-static vscpctx_t g_ctx[MAX_TCP_CONNECTIONS]; // Socket context
+static vscpctx_t g_ctx[CONFIG_APP_VSCP_LINK_MAX_TCP_CONNECTIONS]; // Socket context
 
 ///////////////////////////////////////////////////////////////////////////////
 // tcpsrv_setContextDefaults
@@ -123,7 +123,7 @@ tcpsrv_setContextDefaults(vscpctx_t *pctx)
 int
 tcpsrv_sendEventExToAllClients(const vscpEvent *pev)
 {
-  for (int i = 0; i < MAX_TCP_CONNECTIONS; i++) {
+  for (int i = 0; i < CONFIG_APP_VSCP_LINK_MAX_TCP_CONNECTIONS; i++) {
     if (g_ctx[i].sock && (NULL != g_ctx[i].queueClient)) {
       vscpEvent *pnew = vscp_fwhlp_mkEventCopy(pev);
       if (NULL == pnew) {
@@ -365,7 +365,7 @@ tcpsrv_task(void *pvParameters)
 
   ESP_LOGI(TAG, "VSCP tcp/ip Link server started.");
 
-  for (int i = 0; i < MAX_TCP_CONNECTIONS; i++) {
+  for (int i = 0; i < CONFIG_APP_VSCP_LINK_MAX_TCP_CONNECTIONS; i++) {
     // g_tr_tcpsrv[i].msg_queue = xQueueCreate(10, VSCP_ESPNOW_MAX_FRAME); // tcp/ip link channel i
     g_ctx[i].id         = i;
     g_ctx[i].sock       = 0;
@@ -451,7 +451,7 @@ tcpsrv_task(void *pvParameters)
 
     ESP_LOGI(TAG, "Socket accepted ip address: %s", addr_str);
 
-    if (cntClients >= MAX_TCP_CONNECTIONS) {
+    if (cntClients >= CONFIG_APP_VSCP_LINK_MAX_TCP_CONNECTIONS) {
       ESP_LOGW(TAG, "Max number of clients %d. Closing connection", cntClients);
       send(sock, MSG_MAX_CLIENTS, sizeof(MSG_MAX_CLIENTS), 0);
       close(sock);
@@ -459,7 +459,7 @@ tcpsrv_task(void *pvParameters)
     }
 
     // Start task
-    for (int i = 0; i < MAX_TCP_CONNECTIONS; i++) {
+    for (int i = 0; i < CONFIG_APP_VSCP_LINK_MAX_TCP_CONNECTIONS; i++) {
       if (!g_ctx[i].sock) {
         g_ctx[i].sock = sock;
         // Create VSCP Link tcp/ip client task

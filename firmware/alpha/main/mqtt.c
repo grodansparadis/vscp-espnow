@@ -56,7 +56,7 @@
 
 // Global stuff
 extern node_persistent_config_t g_persistent; // main
-// extern transport_t g_tr_tcpsrv[MAX_TCP_CONNECTIONS]; // tcpsrv
+// extern transport_t g_tr_tcpsrv[CONFIG_APP_MAX_TCP_CONNECTIONS]; // tcpsrv
 
 static const char *TAG = "MQTT";
 

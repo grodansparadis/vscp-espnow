@@ -1,4 +1,7 @@
-menu "Example Configuration"
+menu "Alpha module Configuration"
+
+  menu "ESPNOW Configuration"
+
     choice APP_ESPNOW_SOLUTION_MODE
         bool "ESP-NOW Mode"
         default APP_ESPNOW_INITIATOR
@@ -15,12 +18,11 @@ menu "Example Configuration"
             bool "Responder Mode"
             help
                 Select the ESP-NOW responder Mode.
-
     endchoice
 
     config APP_ESPNOW_QUEUE_SIZE
         int "Size of packet buffer queue"
-        default 32
+        default 100
         help
             Default is 32. If devices of initiator and responders is more than 32, please increase 
             this number to decrease ESP-NOW send queue fail error. For example, set 100 when the
@@ -52,7 +54,7 @@ menu "Example Configuration"
 
     config APP_ESPNOW_SESSION_POP
         string "Proof of Possession"
-        default "espnow_pop"
+        default "VSCPDEVICE"
         depends on APP_ESPNOW_SECURITY
         help
             Proof of Possession (PoP) string used to authorize session and derive shared key.
@@ -66,7 +68,7 @@ menu "Example Configuration"
 
     config APP_FLASH_LOG_POST_URL
         string "URL of HTTP server"
-        default "http://192.168.0.3:8070/flash_log"
+        default "http://192.168.1.9:8070/flash_log"
         depends on APP_POST_LOG_TO_HTTP_SERVER
         help
             Flash log URL of HTTP server.
@@ -150,4 +152,149 @@ menu "Example Configuration"
         default y
         help
             Enable ESP-NOW provision.
+  
+  endmenu
+
+  menu "VSCP Configuration"
+
+    config APP_VSCP_NODE_NAME
+      string "Node name"
+      default "alpha-node"
+      help
+          Name of alpha node. Can be set here or in web-configuration interface. 
+
+    config APP_PROVISIONING_PRODUCT_ID
+        string
+        default "VSCP ESPNOW"
+        prompt "ID for provisioning"
+        help
+            Max 16 byte product id used for provisioning
+
+    choice APP_VSCP_NODE_TYPE
+
+        prompt "VSCP ESPNOW node type"
+        default APP_VSCP_NODE_TYPE_ALPHA
+        help
+            Select the node type (alpha/beta/gamma).
+
+        config APP_VSCP_NODE_TYPE_ALPHA
+            bool "Alpha"
+            help
+              Build an always powered node with espnow and wifi.
+
+        config APP_VSCP_NODE_TYPE_BETA
+            bool "Beta"
+            help
+                Build an always powered node with espnow but without wifi.
+
+        config APP_VSCP_NODE_TYPE_GAMMA
+            bool "Gamma"
+            help
+                Build a mostly sleeping node. Normally battery powered.               
+    endchoice
+
+    config APP_VSCP_NICKNAME_ID
+        int
+        default 0
+        prompt "Nickname id 0-65535"
+        help
+            VSCP nickname id to use for node. Form lowest two bytes of GUID.
+
+    config APP_VSCP_GPIO_INIT_PIN
+        int
+        default 0
+        prompt "GPIO pin to use for VSCP init button."
+        help
+            GPIO pin to use for VSCP init button.        
+
+    config APP_VSCP_GPIO_STATUS_LED
+        int
+        default 2
+        prompt "GPIO pin to use for status (green) LED ."
+        help
+            GPIO pin to use for VSCP status (green) LED.        
+
+    config APP_VSCP_GPIO_OPERATION_LED
+        int
+        default 3
+        prompt "GPIO pin to use for operation (red) LED ."
+        help
+            GPIO pin to use for VSCP operation (red) LED.  
+
+    config APP_DEFAULT_USER
+        string
+        default "vscp"
+        prompt "Default VSCP user"
+        help
+          Default user name for VSCP interfaces. 
+
+    config APP_DEFAULT_PASSWORD
+        string
+        default "secret"
+        prompt "Default VSCP password"
+        help
+          Default user password for VSCP interfaces.         
+
+    config APP_OTA_URL_MAX_SIZE
+        int
+        default 256
+        prompt "Max OTA URL size"
+        help
+          The max size for the OTA URL.
+
+    config APP_OTA_URL
+        string
+        default "https://eurosource.se:443/download/alpha/vscp_espnow_alpha.bin"
+        prompt "OTA URL"
+        help
+            OTA URL to the latest firmware for this device.  
+
+    
+    config APP_OTA_SKIP_COMMON_NAME_CHECK
+        bool "Skip OTA CN field validation"
+        default n
+        help
+          This allows you to skip the validation of OTA server certificate CN field.           
+
+    config APP_OTA_BIND_IF
+        bool "Skip OTA CN field validation"
+        default n
+        help
+          This allows you to bind specified interface in OTA example.  
+
+    config APP_WIFI_CONNECT_RETRIES
+        int
+        default 5
+        prompt "Wifi connect retries"
+        help
+            Number of times we should try to connect to wifi access point before giving up.
+
+    config APP_VSCP_LINK_MAX_TCP_CONNECTIONS
+        int
+        default 2
+        prompt "Max # tcp/ip connections"
+        help
+          Max number of VSCP tcp/ip link simultaneous connections.
+
+    config APP_VSCP_LINK_ENABLE_RCVLOOP_CMD 
+        bool "Enable tcp/ip rcvloop commands"
+        default y
+        help
+          Enable command also when rcvloop is active. Only 'quit' and 'quitloop' will work if
+          set to false.      
+
+    config APP_VSCP_LINK_MAX_BUFFER
+        int
+        default 2680
+        prompt "Max tcp/ip buffer size"
+        help
+          Max buffer for level II events. The buffer size is needed to
+          convert an event to string. To handle all level II events
+          512*5 + 110 = 2670 bytes is needed. In reality this is
+          seldom needed so the value can be set to a lower value. In this
+          case one should check the max data size for events that are of
+          interest and set the max size accordingly
+
+  endmenu
+
 endmenu

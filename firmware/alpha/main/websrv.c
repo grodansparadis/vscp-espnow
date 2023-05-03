@@ -662,7 +662,7 @@ upgrade_get_handler(httpd_req_t *req)
   sprintf(buf, "<div><form id=but3 class=\"button\" action='/upgrdsrv' method='get'><fieldset>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf, "OTA URL:<input type=\"text\"  id=\"url\" name=\"url\" value=\"%s\" >", PRJDEF_FIRMWARE_UPGRADE_URL);
+  sprintf(buf, "OTA URL:<input type=\"text\"  id=\"url\" name=\"url\" value=\"%s\" >", CONFIG_APP_OTA_URL);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   sprintf(buf, "<button class=\"bgrn bgrn:hover\" >Start Upgrade</button></fieldset></form></div>");
@@ -697,7 +697,7 @@ upgrade_get_handler(httpd_req_t *req)
 
   sprintf(buf,
           "OTA URL:<input type=\"text\"  id=\"url\" name=\"url\" value=\"%s\" >",
-          PRJDEF_BETA_FIRMWARE_UPGRADE_URL);
+          CONFIG_APP_OTA_URL);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   sprintf(buf, "<button class=\"bgrn bgrn:hover\" >Start Upgrade</button></fieldset></form></div>");
@@ -880,7 +880,7 @@ upgrdsibling_get_handler(httpd_req_t *req)
   char *buf = NULL;
   char *req_buf;
   size_t req_buf_len;
-  char url[PRJDEF_OTA_URL_SIZE];
+  char url[CONFIG_APP_OTA_URL_MAX_SIZE];
 
   buf = (char *) VSCP_CALLOC(CHUNK_BUFSIZE);
   if (NULL == buf) {
@@ -913,8 +913,8 @@ upgrdsibling_get_handler(httpd_req_t *req)
           return ESP_ERR_ESPNOW_NO_MEM;
         }
 
-        memset(url, 0, PRJDEF_OTA_URL_SIZE);
-        strncpy(url, pdecoded, MIN(strlen(pdecoded), (PRJDEF_OTA_URL_SIZE - 1)));
+        memset(url, 0, CONFIG_APP_OTA_URL_MAX_SIZE);
+        strncpy(url, pdecoded, MIN(strlen(pdecoded), (CONFIG_APP_OTA_URL_MAX_SIZE - 1)));
 
         ESP_LOGD(TAG, "Found query parameter => url=%s", url);
 
@@ -3498,7 +3498,7 @@ default_get_handler(httpd_req_t *req)
       ESP_LOGE(TAG, "No auth value received");
     }
 
-    char *auth_credentials = http_auth_basic(PRJDEF_DEFAULT_TCPIP_USER, PRJDEF_DEFAULT_TCPIP_PASSWORD);
+    char *auth_credentials = http_auth_basic(CONFIG_APP_DEFAULT_USER, CONFIG_APP_DEFAULT_PASSWORD);
     if (!auth_credentials) {
       ESP_LOGE(TAG, "No enough memory for basic authorization credentials");
       VSCP_FREE(buf);

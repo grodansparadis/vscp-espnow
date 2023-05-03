@@ -308,7 +308,7 @@ CONFIG_PARTITION_TABLE_MD5=y
 # end of Partition Table
 
 #
-# Example Configuration
+# VSCP Alpha Configuration
 #
 CONFIG_APP_ESPNOW_INITIATOR=y
 # CONFIG_APP_ESPNOW_RESPONDER is not set
