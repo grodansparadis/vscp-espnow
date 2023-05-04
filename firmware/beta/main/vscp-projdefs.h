@@ -16,6 +16,12 @@
 */
 
 /**
+ * Device name for level II device
+ * capabilities event
+ */
+#define THIS_FIRMWARE_DEVICE_NAME   "Beta node"
+
+/**
  * Firmware version
  */
 
@@ -130,8 +136,6 @@
  */
 #define THIS_FIRMWARE_FAMILY_TYPE (0)
 
-
-
 // ----------------------------------------------------------------------------
 //                        VSCP helper lib defines
 // ----------------------------------------------------------------------------
@@ -139,5 +143,11 @@
 #define VSCP_FWHLP_CRYPTO_SUPPORT // AES crypto support
 #define VSCP_FWHLP_JSON_SUPPORT   // Enable JSON support (Need cJSON lib)
 
+
+// ----------------------------------------------------------------------------
+//                        VSCP Link protocol
+// ----------------------------------------------------------------------------
+
+#define VSCP_LINK_MAX_BUFFER  2300
 
 #endif // _VSCP_PROJDEFS_H_
