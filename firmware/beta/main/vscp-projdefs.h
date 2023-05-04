@@ -148,6 +148,16 @@
 //                        VSCP Link protocol
 // ----------------------------------------------------------------------------
 
-#define VSCP_LINK_MAX_BUFFER  2300
+/**
+ * 
+ * 
+ */
+#define VSCP_TCPIP_LINK_ENABLE_RCVLOOP_CMD true
+
+/**
+ * 
+ * 
+ */
+#define VSCP_TCPIP_LINK_MAX_BUFFER  2300
 
 #endif // _VSCP_PROJDEFS_H_

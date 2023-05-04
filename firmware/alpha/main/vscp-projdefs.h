@@ -150,10 +150,20 @@
 //                        VSCP Link protocol
 // ----------------------------------------------------------------------------
 
-#define VSCP_LINK_MAX_BUFFER  2300
+/**
+ * Set to non-zero to enable commands when rcvloop is active
+ * 
+ */
+#define THIS_FIRMWARE_TCPIP_LINK_ENABLE_RCVLOOP_CMD   1
 
-
-
-
+/**
+ * Max buffer for level II events. The buffer size is needed to
+ * convert an event to string. To handle all level II events
+ * 512*5 + 110 = 2670 bytes is needed. In reality this is
+ * seldom needed so the value can be set to a lower value. In this
+ * case one should check the max data size for events that are of
+ * interest and set the max size accordingly 
+ */
+#define THIS_FIRMWARE_TCPIP_LINK_MAX_BUFFER  2300
 
 #endif // _VSCP_PROJDEFS_H_
