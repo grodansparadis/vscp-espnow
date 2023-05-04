@@ -65,7 +65,7 @@
 static espnow_addr_t ESPNOW_ADDR_SELF = { 0 };
 
 static const char *TAG = "app";
-static const char *POP = VSCP_PROJDEF_ESPNOW_SESSION_POP;
+static const char *POP = CONFIG_APP_ESPNOW_SESSION_POP;
 
 static beta_node_states_t s_stateNode = BETA_STATE_VIRGIN;
 
@@ -183,7 +183,7 @@ static void
 app_led_init(void)
 {
   led_indicator_gpio_config_t led_indicator_gpio_red_config = {
-    .gpio_num             = PRJDEF_INDICATOR_LED_PIN_RED, /**< num of GPIO */
+    .gpio_num             = CONFIG_APP_VSCP_GPIO_OPERATION_LED, /**< num of GPIO */
     .is_active_level_high = 1,
   };
 
@@ -202,7 +202,7 @@ app_led_init(void)
   }
 
   led_indicator_gpio_config_t led_indicator_gpio_green_config = {
-    .gpio_num             = PRJDEF_INDICATOR_LED_PIN_GREEN, /**< num of GPIO */
+    .gpio_num             = CONFIG_APP_VSCP_GPIO_STATUS_LED, /**< num of GPIO */
     .is_active_level_high = 1,
   };
 

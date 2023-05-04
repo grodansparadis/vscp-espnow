@@ -1,4 +1,4 @@
-menu "Alpha module Configuration"
+menu "Alpha Module Configuration"
 
   menu "ESPNOW Configuration"
 

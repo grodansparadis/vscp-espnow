@@ -1,4 +1,7 @@
-menu "Example Configuration"
+menu "Beta Module Configuration"
+
+  menu "ESPNOW Configuration"
+
     choice APP_ESPNOW_SOLUTION_MODE
         bool "ESP-NOW Mode"
         default APP_ESPNOW_INITIATOR
@@ -150,4 +153,123 @@ menu "Example Configuration"
         default y
         help
             Enable ESP-NOW provision.
+
+  endmenu          
+
+  menu "VSCP Configuration"
+
+    config APP_VSCP_NODE_NAME
+      string "Node name"
+      default "beta-node"
+      help
+          Name of alpha node. Can be set here or in web-configuration interface. 
+
+    config APP_PROVISIONING_PRODUCT_ID
+        string
+        default "VSCP ESPNOW"
+        prompt "ID for provisioning"
+        help
+            Max 16 byte product id used for provisioning
+
+    choice APP_VSCP_NODE_TYPE
+
+        prompt "VSCP ESPNOW node type"
+        default APP_VSCP_NODE_TYPE_BETA
+        help
+            Select the node type (alpha/beta/gamma).
+
+        config APP_VSCP_NODE_TYPE_ALPHA
+            bool "Alpha"
+            help
+              Build an always powered node with espnow and wifi.
+
+        config APP_VSCP_NODE_TYPE_BETA
+            bool "Beta"
+            help
+                Build an always powered node with espnow but without wifi.
+
+        config APP_VSCP_NODE_TYPE_GAMMA
+            bool "Gamma"
+            help
+                Build a mostly sleeping node. Normally battery powered.               
+    endchoice
+
+    config APP_VSCP_NICKNAME_ID
+        int
+        default 0
+        prompt "Nickname id 0-65535"
+        help
+            VSCP nickname id to use for node. Form lowest two bytes of GUID.
+
+    config APP_VSCP_GPIO_INIT_PIN
+        int
+        default 0
+        prompt "GPIO pin to use for VSCP init button."
+        help
+            GPIO pin to use for VSCP init button.        
+
+    config APP_VSCP_GPIO_STATUS_LED
+        int
+        default 2
+        prompt "GPIO pin to use for status (green) LED ."
+        help
+            GPIO pin to use for VSCP status (green) LED.        
+
+    config APP_VSCP_GPIO_OPERATION_LED
+        int
+        default 3
+        prompt "GPIO pin to use for operation (red) LED ."
+        help
+            GPIO pin to use for VSCP operation (red) LED.  
+
+    config APP_DEFAULT_USER
+        string
+        default "vscp"
+        prompt "Default VSCP user"
+        help
+          Default user name for VSCP interfaces. 
+
+    config APP_DEFAULT_PASSWORD
+        string
+        default "secret"
+        prompt "Default VSCP password"
+        help
+          Default user password for VSCP interfaces.         
+
+    config APP_OTA_URL_MAX_SIZE
+        int
+        default 256
+        prompt "Max OTA URL size"
+        help
+          The max size for the OTA URL.
+
+    config APP_OTA_URL
+        string
+        default "https://eurosource.se:443/download/alpha/vscp_espnow_beta.bin"
+        prompt "OTA URL"
+        help
+            OTA URL to the latest firmware for this device.  
+
+    
+    config APP_OTA_SKIP_COMMON_NAME_CHECK
+        bool "Skip OTA CN field validation"
+        default n
+        help
+          This allows you to skip the validation of OTA server certificate CN field.           
+
+    config APP_OTA_BIND_IF
+        bool "Skip OTA CN field validation"
+        default n
+        help
+          This allows you to bind specified interface in OTA example.  
+
+    config APP_WIFI_CONNECT_RETRIES
+        int
+        default 5
+        prompt "Wifi connect retries"
+        help
+            Number of times we should try to connect to wifi access point before giving up.
+
+  endmenu
+
 endmenu
