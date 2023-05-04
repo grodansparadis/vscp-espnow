@@ -144,20 +144,4 @@
 #define VSCP_FWHLP_JSON_SUPPORT   // Enable JSON support (Need cJSON lib)
 
 
-// ----------------------------------------------------------------------------
-//                        VSCP Link protocol
-// ----------------------------------------------------------------------------
-
-/**
- * 
- * 
- */
-#define VSCP_TCPIP_LINK_ENABLE_RCVLOOP_CMD true
-
-/**
- * 
- * 
- */
-#define VSCP_TCPIP_LINK_MAX_BUFFER  2300
-
 #endif // _VSCP_PROJDEFS_H_

@@ -55,7 +55,7 @@ menu "Beta Module Configuration"
 
     config APP_ESPNOW_SESSION_POP
         string "Proof of Possession"
-        default "espnow_pop"
+        default "VSCPDEVICE"
         depends on APP_ESPNOW_SECURITY
         help
             Proof of Possession (PoP) string used to authorize session and derive shared key.
@@ -258,7 +258,7 @@ menu "Beta Module Configuration"
           This allows you to skip the validation of OTA server certificate CN field.           
 
     config APP_OTA_BIND_IF
-        bool "Skip OTA CN field validation"
+        bool "OTA bind to specific interface"
         default n
         help
           This allows you to bind specified interface in OTA example.  

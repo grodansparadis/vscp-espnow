@@ -90,6 +90,17 @@ static const char *TAG = "vscpnow";
 // Globals
 bool g_vscp_espnow_probe = false;
 
+// Our  node type
+#ifdef CONFIG_APP_VSCP_NODE_TYPE_ALPHA
+uint8_t s_my_node_type = VSCP_DROPLET_ALPHA;
+#endif
+#ifdef CONFIG_APP_VSCP_NODE_TYPE_BETA
+uint8_t s_my_node_type = VSCP_DROPLET_BETA;
+#endif
+#ifdef CONFIG_APP_VSCP_NODE_TYPE_GAMMA
+uint8_t s_my_node_type = VSCP_DROPLET_GAMMA;
+#endif
+
 // Static
 nvs_handle_t s_nvsHandle; // From app main
 
@@ -143,7 +154,7 @@ const uint8_t VSCP_ESPNOW_ADDR_BROADCAST[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0X
   initialization is started and this address is all zero any node will
   get a response form the initialization process.
 */
-#if (PRJDEF_NODE_TYPE == VSCP_DROPLET_ALPHA)
+#if (s_my_node_type == VSCP_DROPLET_ALPHA)
 uint8_t VSCP_ESPNOW_ADDR_PROBE_NODE[6] = { 0 };
 #endif
 
@@ -674,18 +685,18 @@ vscp_espnow_evToFrame(uint8_t *buf, uint8_t len, const vscpEvent *pev)
   buf[VSCP_ESPNOW_POS_ID]     = VSCP_ESPNOW_ID_MSB;
   buf[VSCP_ESPNOW_POS_ID + 1] = VSCP_ESPNOW_ID_LSB;
 
-  // Set encryption
-  #ifdef CONFIG_APP_VSCP_NODE_TYPE_ALPHA
+// Set encryption
+#ifdef CONFIG_APP_VSCP_NODE_TYPE_ALPHA
   buf[VSCP_ESPNOW_POS_TYPE_VER] = (VSCP_DROPLET_ALPHA << 6) + (VSCP_ESPNOW_VERSION << 4) + (0 & 0x0f);
-  #endif
+#endif
 
-  #ifdef CONFIG_APP_VSCP_NODE_TYPE_BETA
+#ifdef CONFIG_APP_VSCP_NODE_TYPE_BETA
   buf[VSCP_ESPNOW_POS_TYPE_VER] = (VSCP_DROPLET_BETA << 6) + (VSCP_ESPNOW_VERSION << 4) + (0 & 0x0f);
-  #endif
+#endif
 
-  #ifdef CONFIG_APP_VSCP_NODE_TYPE_GAMMA
+#ifdef CONFIG_APP_VSCP_NODE_TYPE_GAMMA
   buf[VSCP_ESPNOW_POS_TYPE_VER] = (VSCP_DROPLET_GAMMA << 6) + (VSCP_ESPNOW_VERSION << 4) + (0 & 0x0f);
-  #endif
+#endif
 
   // Set seq count
   buf[VSCP_ESPNOW_POS_SEQ] = s_vscp_espnow_seq++;
@@ -759,18 +770,18 @@ vscp_espnow_exToFrame(uint8_t *buf, uint8_t len, const vscpEventEx *pex)
   buf[VSCP_ESPNOW_POS_ID]     = VSCP_ESPNOW_ID_MSB;
   buf[VSCP_ESPNOW_POS_ID + 1] = VSCP_ESPNOW_ID_LSB;
 
-  // Set encryption
-  #ifdef CONFIG_APP_VSCP_NODE_TYPE_ALPHA
+// Set encryption
+#ifdef CONFIG_APP_VSCP_NODE_TYPE_ALPHA
   buf[VSCP_ESPNOW_POS_TYPE_VER] = (VSCP_DROPLET_ALPHA << 6) + (VSCP_ESPNOW_VERSION << 4) + (0 & 0x0f);
-  #endif
+#endif
 
-  #ifdef CONFIG_APP_VSCP_NODE_TYPE_BETA
+#ifdef CONFIG_APP_VSCP_NODE_TYPE_BETA
   buf[VSCP_ESPNOW_POS_TYPE_VER] = (VSCP_DROPLET_BETA << 6) + (VSCP_ESPNOW_VERSION << 4) + (0 & 0x0f);
-  #endif
+#endif
 
-  #ifdef CONFIG_APP_VSCP_NODE_TYPE_GAMMA
+#ifdef CONFIG_APP_VSCP_NODE_TYPE_GAMMA
   buf[VSCP_ESPNOW_POS_TYPE_VER] = (VSCP_DROPLET_GAMMA << 6) + (VSCP_ESPNOW_VERSION << 4) + (0 & 0x0f);
-  #endif
+#endif
 
   // Set seq count
   buf[VSCP_ESPNOW_POS_SEQ] = s_vscp_espnow_seq++;
@@ -1064,19 +1075,18 @@ vscp_espnow_sendEventEx(const uint8_t *destAddr, const vscpEventEx *pex, bool bS
     ESP_LOGE(TAG, "Failed to convert event to frame. rv=%d", rv);
     return ESP_ERR_INVALID_ARG;
   }
-  // Set encryption
-  #ifdef CONFIG_APP_VSCP_NODE_TYPE_ALPHA
+// Set encryption
+#ifdef CONFIG_APP_VSCP_NODE_TYPE_ALPHA
   pbuf[VSCP_ESPNOW_POS_TYPE_VER] = (VSCP_DROPLET_ALPHA << 6) + (VSCP_ESPNOW_VERSION << 4) + (0 & 0x0f);
-  #endif
+#endif
 
-  #ifdef CONFIG_APP_VSCP_NODE_TYPE_BETA
+#ifdef CONFIG_APP_VSCP_NODE_TYPE_BETA
   pbuf[VSCP_ESPNOW_POS_TYPE_VER] = (VSCP_DROPLET_BETA << 6) + (VSCP_ESPNOW_VERSION << 4) + (0 & 0x0f);
-  #endif
+#endif
 
-  #ifdef CONFIG_APP_VSCP_NODE_TYPE_GAMMA
+#ifdef CONFIG_APP_VSCP_NODE_TYPE_GAMMA
   pbuf[VSCP_ESPNOW_POS_TYPE_VER] = (VSCP_DROPLET_GAMMA << 6) + (VSCP_ESPNOW_VERSION << 4) + (0 & 0x0f);
-  #endif
-
+#endif
 
   // ESP_LOG_BUFFER_HEXDUMP(TAG, pbuf, len, ESP_LOG_DEBUG);
 
@@ -1325,7 +1335,7 @@ vscp_espnow_probe(void)
     rv = VSCP_ERROR_TIMEOUT;
   }
 
-#if (PRJDEF_NODE_TYPE == VSCP_DROPLET_ALPHA)
+#if (s_my_node_type == VSCP_DROPLET_ALPHA)
   s_stateVscpEspNow = VSCP_ESPNOW_STATE_IDLE;
 #else
   s_stateVscpEspNow = VSCP_ESPNOW_STATE_VIRGIN;
@@ -1428,128 +1438,129 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
   //                             Channel Probing
   // ----------------------------------------------------------------------------
 
-#if (PRJDEF_NODE_TYPE == VSCP_DROPLET_ALPHA)
-  /*
-    1.) When Beta and Gamma nodes are in virgin state they don't know the secret key or the
-        channel to communicate on. Therefore a pairing has to talke place. This is done by pressing
-        a button on a alpha-node anda beta/gamma node that should be paired. Now the beta/gamma node
-        send CLASS1_PROTOCOL, VSCP_TYPE_PROTOCOL_NEW_NODE_ONLINE on all chanels until it get a response
-        and it then set the channel, save the address of the alpha node and initiate the key exhange
-        process. When this is done they are part of the segment.
-    2.) Gamma nodes also send  CLASS1_PROTOCOL, VSCP_TYPE_PROTOCOL_NEW_NODE_ONLINE when they wake up.
-        This is just to get a response so they can synd the timestamp for further communication. Note
-        that the gamma node needs
-  */
-  if (/*(VSCP_ESPNOW_STATE_PROBE == s_stateVscpEspNow) &&*/ (node_type != VSCP_DROPLET_ALPHA) &&
-      (VSCP_CLASS1_PROTOCOL == pev->vscp_class) && (VSCP_TYPE_PROTOCOL_NEW_NODE_ONLINE == pev->vscp_type) &&
-      (16 == pev->sizeData)) {
+  if (s_my_node_type == VSCP_DROPLET_ALPHA) {
+    /*
+      1.) When Beta and Gamma nodes are in virgin state they don't know the secret key or the
+          channel to communicate on. Therefore a pairing has to talke place. This is done by pressing
+          a button on a alpha-node anda beta/gamma node that should be paired. Now the beta/gamma node
+          send CLASS1_PROTOCOL, VSCP_TYPE_PROTOCOL_NEW_NODE_ONLINE on all chanels until it get a response
+          and it then set the channel, save the address of the alpha node and initiate the key exhange
+          process. When this is done they are part of the segment.
+      2.) Gamma nodes also send  CLASS1_PROTOCOL, VSCP_TYPE_PROTOCOL_NEW_NODE_ONLINE when they wake up.
+          This is just to get a response so they can synd the timestamp for further communication. Note
+          that the gamma node needs
+    */
+    if (/*(VSCP_ESPNOW_STATE_PROBE == s_stateVscpEspNow) &&*/ (node_type != VSCP_DROPLET_ALPHA) &&
+        (VSCP_CLASS1_PROTOCOL == pev->vscp_class) && (VSCP_TYPE_PROTOCOL_NEW_NODE_ONLINE == pev->vscp_type) &&
+        (16 == pev->sizeData)) {
 
-    ESP_LOGI(TAG, "Probe Alpha: New node on-line");
+      ESP_LOGI(TAG, "Probe Alpha: New node on-line");
 
-    // Send probe response if probe node is all zero or same as probing
-    if (!memcmp(VSCP_ESPNOW_ADDR_PROBE_NODE, VSCP_ESPNOW_ADDR_NONE, 6)) {
-      ESP_LOGI(TAG, "Sending probe event on channel %d", rx_ctrl->channel);
-      int rv = vscp_espnow_send_probe_event(ESPNOW_ADDR_BROADCAST, rx_ctrl->channel, 1000);
+      // Send probe response if probe node is all zero or same as probing
+      if (!memcmp(VSCP_ESPNOW_ADDR_PROBE_NODE, VSCP_ESPNOW_ADDR_NONE, 6)) {
+        ESP_LOGI(TAG, "Sending probe event on channel %d", rx_ctrl->channel);
+        int rv = vscp_espnow_send_probe_event(ESPNOW_ADDR_BROADCAST, rx_ctrl->channel, 1000);
+        xEventGroupSetBits(s_vscp_espnow_event_group, VSCP_ESPNOW_WAIT_PROBE_RESPONSE_BIT);
+        s_stateVscpEspNow   = VSCP_ESPNOW_STATE_IDLE;
+        g_vscp_espnow_probe = true;
+      }
+      else if (!memcmp(VSCP_ESPNOW_ADDR_PROBE_NODE, src_addr, 6)) {
+        ESP_LOGI(TAG, "Sending addressed probe event on channel %d", rx_ctrl->channel);
+        int rv = vscp_espnow_send_probe_event(src_addr, rx_ctrl->channel, 1000);
+        xEventGroupSetBits(s_vscp_espnow_event_group, VSCP_ESPNOW_WAIT_PROBE_RESPONSE_BIT);
+        s_stateVscpEspNow   = VSCP_ESPNOW_STATE_IDLE;
+        g_vscp_espnow_probe = true;
+      }
+      else {
+        ESP_LOGE(TAG, "Strange probe address: " MACSTR, MAC2STR(VSCP_ESPNOW_ADDR_PROBE_NODE));
+      }
+    }
+    /*
+      1. Beta/Gamma nodes set channel and save src address of alpha node when they get the probe respons.
+      2. Gamma nodes also send a probe when they wakeup. To be able to communicate further they
+         store the time also at this state.
+    */
+  }
+  else if ((s_my_node_type == VSCP_DROPLET_BETA) || (s_my_node_type == VSCP_DROPLET_GAMMA)) {
+
+    int ret;
+    printf("------------------------------------------------------------------\n");
+    if ((node_type == VSCP_DROPLET_ALPHA) && (VSCP_ESPNOW_STATE_PROBE == s_stateVscpEspNow) &&
+        (VSCP_CLASS1_PROTOCOL == pev->vscp_class) && (VSCP_TYPE_PROTOCOL_NEW_NODE_ONLINE == pev->vscp_type) &&
+        (16 == pev->sizeData)) {
+
+      ESP_LOGI(TAG, "Probe Beta: New node on-line");
+
       xEventGroupSetBits(s_vscp_espnow_event_group, VSCP_ESPNOW_WAIT_PROBE_RESPONSE_BIT);
-      s_stateVscpEspNow   = VSCP_ESPNOW_STATE_IDLE;
-      g_vscp_espnow_probe = true;
+      if (ESP_OK != (ret = esp_wifi_set_channel(rx_ctrl->channel, WIFI_SECOND_CHAN_NONE))) {
+        ESP_LOGE(TAG, "[%s, %d]: Failed to set espnow channel %X", __func__, __LINE__, ret);
+      }
+
+      // Save channel to persistent storage
+      if (ESP_OK != (ret = nvs_set_u8(s_nvsHandle, "channel", rx_ctrl->channel))) {
+        ESP_LOGE(TAG, "[%s, %d]: Failed to update espnow nvs channel %X", __func__, __LINE__, ret);
+      }
+
+      // Save sender MAC address of alpha node to persistent storage
+      size_t length = 6;
+      int rv        = nvs_set_blob(s_nvsHandle, "keyorg", src_addr, length);
+      if (rv != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to write originating max to nvs. rv=%d", rv);
+      }
+
+      // Sync time with alpha node
+      struct timeval tm;
+
+      tm.tv_sec  = (long long int) (((uint32_t) pev->pdata[1] << 24) + ((uint32_t) pev->pdata[2] << 16) +
+                                   ((uint32_t) pev->pdata[3] << 8) + pev->pdata[4]);
+      tm.tv_usec = 0;
+
+      ESP_LOGI(TAG, "Gamma: Setting/updating system time.");
+      if (-1 == settimeofday(&tm, NULL)) {
+        ESP_LOGE(TAG, "Gamma: Failed to set time.");
+      }
+
+      diff = 0;
+
+      // #if (s_my_node_type == VSCP_DROPLET_GAMMA)
+      //     struct timeval tm;
+
+      //     tm.tv_sec  = (long long int) (((uint32_t) pev->pdata[1] << 24) + ((uint32_t) pev->pdata[2] << 16) +
+      //                                  ((uint32_t) pev->pdata[3] << 8) + pev->pdata[4]);
+      //     tm.tv_usec = 0;
+
+      //     ESP_LOGI(TAG, "Gamma: Setting/updating system time.");
+      //     if (-1 == settimeofday(&tm, NULL)) {
+      //       ESP_LOGE(TAG, "Gamma: Failed to set time.");
+      //     }
+
+      //     diff = 0;
+      //     //diff = abs(node_time - tv_now.tv_sec);
+      //     //node_time - tv_now.tv_sec;
+      // #endif
     }
-    else if (!memcmp(VSCP_ESPNOW_ADDR_PROBE_NODE, src_addr, 6)) {
-      ESP_LOGI(TAG, "Sending addressed probe event on channel %d", rx_ctrl->channel);
-      int rv = vscp_espnow_send_probe_event(src_addr, rx_ctrl->channel, 1000);
-      xEventGroupSetBits(s_vscp_espnow_event_group, VSCP_ESPNOW_WAIT_PROBE_RESPONSE_BIT);
-      s_stateVscpEspNow   = VSCP_ESPNOW_STATE_IDLE;
-      g_vscp_espnow_probe = true;
-    }
-    else {
-      ESP_LOGE(TAG, "Strange probe address: " MACSTR, MAC2STR(VSCP_ESPNOW_ADDR_PROBE_NODE));
+
+    // Check if we got a heartbeat from an alpha node. If we do we set/update the time
+    // for this node
+    if ((node_type == VSCP_DROPLET_ALPHA) && (VSCP_CLASS1_PROTOCOL == pev->vscp_class) &&
+        (VSCP_TYPE_PROTOCOL_SEGCTRL_HEARTBEAT == pev->vscp_type) && (pev->sizeData >= 5)) {
+
+      struct timeval tm;
+
+      tm.tv_sec  = (long long int) (((uint32_t) pev->pdata[1] << 24) + ((uint32_t) pev->pdata[2] << 16) +
+                                   ((uint32_t) pev->pdata[3] << 8) + pev->pdata[4]);
+      tm.tv_usec = 0;
+
+      ESP_LOGI(TAG, "Setting/updating system time.");
+      if (-1 == settimeofday(&tm, NULL)) {
+        ESP_LOGE(TAG, "Failed to set time.");
+      }
+
+      diff = 0;
+      // diff = abs(node_time - tv_now.tv_sec);
+      // node_time - tv_now.tv_sec;
     }
   }
-  /*
-    1. Beta/Gamma nodes set channel and save src address of alpha node when they get the probe respons.
-    2. Gamma nodes also send a probe when they wakeup. To be able to communicate further they
-       store the time also at this state.
-  */
-#elif ((PRJDEF_NODE_TYPE == VSCP_DROPLET_BETA) || (PRJDEF_NODE_TYPE == VSCP_DROPLET_GAMMA))
-  
-  int ret;
-
-  if ((node_type == VSCP_DROPLET_ALPHA) && (VSCP_ESPNOW_STATE_PROBE == s_stateVscpEspNow) &&
-      (VSCP_CLASS1_PROTOCOL == pev->vscp_class) && (VSCP_TYPE_PROTOCOL_NEW_NODE_ONLINE == pev->vscp_type) &&
-      (16 == pev->sizeData)) {
-
-    ESP_LOGI(TAG, "Probe Beta: New node on-line");
-
-    xEventGroupSetBits(s_vscp_espnow_event_group, VSCP_ESPNOW_WAIT_PROBE_RESPONSE_BIT);
-    if (ESP_OK != (ret = esp_wifi_set_channel(rx_ctrl->channel, WIFI_SECOND_CHAN_NONE))) {
-      ESP_LOGE(TAG, "[%s, %d]: Failed to set espnow channel %X", __func__, __LINE__, ret);
-    }
-
-    // Save channel to persistent storage
-    if (ESP_OK != (ret = nvs_set_u8(s_nvsHandle, "channel", rx_ctrl->channel))) {
-      ESP_LOGE(TAG, "[%s, %d]: Failed to update espnow nvs channel %X", __func__, __LINE__, ret);
-    }
-
-    // Save sender MAC address of alpha node to persistent storage
-    size_t length = 6;
-    int rv            = nvs_set_blob(s_nvsHandle, "keyorg", src_addr, length);
-    if (rv != ESP_OK) {
-      ESP_LOGE(TAG, "Failed to write originating max to nvs. rv=%d", rv);
-    }
-
-    // Sync time with alpha node
-    struct timeval tm;
-
-    tm.tv_sec  = (long long int) (((uint32_t) pev->pdata[1] << 24) + ((uint32_t) pev->pdata[2] << 16) +
-                                 ((uint32_t) pev->pdata[3] << 8) + pev->pdata[4]);
-    tm.tv_usec = 0;
-
-    ESP_LOGI(TAG, "Gamma: Setting/updating system time.");
-    if (-1 == settimeofday(&tm, NULL)) {
-      ESP_LOGE(TAG, "Gamma: Failed to set time.");
-    }
-
-    diff = 0;
-
-    // #if (PRJDEF_NODE_TYPE == VSCP_DROPLET_GAMMA)
-    //     struct timeval tm;
-
-    //     tm.tv_sec  = (long long int) (((uint32_t) pev->pdata[1] << 24) + ((uint32_t) pev->pdata[2] << 16) +
-    //                                  ((uint32_t) pev->pdata[3] << 8) + pev->pdata[4]);
-    //     tm.tv_usec = 0;
-
-    //     ESP_LOGI(TAG, "Gamma: Setting/updating system time.");
-    //     if (-1 == settimeofday(&tm, NULL)) {
-    //       ESP_LOGE(TAG, "Gamma: Failed to set time.");
-    //     }
-
-    //     diff = 0;
-    //     //diff = abs(node_time - tv_now.tv_sec);
-    //     //node_time - tv_now.tv_sec;
-    // #endif
-  }
-
-  // Check if we got a heartbeat from an alpha node. If we do we set/update the time
-  // for this node
-  if ((node_type == VSCP_DROPLET_ALPHA) && (VSCP_CLASS1_PROTOCOL == pev->vscp_class) &&
-      (VSCP_TYPE_PROTOCOL_SEGCTRL_HEARTBEAT == pev->vscp_type) && (pev->sizeData >= 5)) {
-
-    struct timeval tm;
-
-    tm.tv_sec  = (long long int) (((uint32_t) pev->pdata[1] << 24) + ((uint32_t) pev->pdata[2] << 16) +
-                                 ((uint32_t) pev->pdata[3] << 8) + pev->pdata[4]);
-    tm.tv_usec = 0;
-
-    ESP_LOGI(TAG, "Setting/updating system time.");
-    if (-1 == settimeofday(&tm, NULL)) {
-      ESP_LOGE(TAG, "Failed to set time.");
-    }
-
-    diff = 0;
-    // diff = abs(node_time - tv_now.tv_sec);
-    // node_time - tv_now.tv_sec;
-  }
-#endif
 
   // ----------------------------------------------------------------
   //                   Replay protection point
@@ -1578,7 +1589,7 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
 
   ESP_LOGI(TAG,
            "<<< 2.) esp-now data received: len=%zd ch=%d src=" MACSTR
-           " rssi=%d class=%d, type=%d sizedata=%d timestamp=%lX",
+           " rssi=%d class=%d, type=%d size-data=%d timestamp=%lX",
            size,
            rx_ctrl->channel,
            MAC2STR(src_addr),
@@ -1617,10 +1628,10 @@ vscp_espnow_heartbeat_task(void *pvParameter)
     goto ERROR;
   }
 
-#if (PRJDEF_NODE_TYPE == VSCP_DROPLET_ALPHA)
+#if (s_my_node_type == VSCP_DROPLET_ALPHA)
   pev->pdata = VSCP_CALLOC(5);
-#elif #if (PRJDEF_NODE_TYPE == VSCP_DROPLET_BETA)
-  pev->pdata = VSCP_CALLOC(3);
+#elif (s_my_node_type == VSCP_DROPLET_BETA)
+  pev->pdata        = VSCP_CALLOC(3);
 #else
   pev->pdata = VSCP_CALLOC(3);
 #endif
@@ -1648,7 +1659,7 @@ vscp_espnow_heartbeat_task(void *pvParameter)
       struct timeval tv_now;
       gettimeofday(&tv_now, NULL);
 
-#if (PRJDEF_NODE_TYPE == VSCP_DROPLET_ALPHA)
+#if (s_my_node_type == VSCP_DROPLET_ALPHA)
       // Alpha node send protocol heartbeat
       pev->vscp_class = VSCP_CLASS1_PROTOCOL;
       pev->vscp_type  = VSCP_TYPE_PROTOCOL_SEGCTRL_HEARTBEAT;
@@ -1662,7 +1673,7 @@ vscp_espnow_heartbeat_task(void *pvParameter)
       //        tv_now.tv_sec,
       //        (long long int) (((uint32_t) pev->pdata[1] << 24) + ((uint32_t) pev->pdata[2] << 16) +
       //                         ((uint32_t) pev->pdata[3] << 8) + pev->pdata[4]));
-#elif (PRJDEF_NODE_TYPE == VSCP_DROPLET_BETA)
+#elif (s_my_node_type == VSCP_DROPLET_BETA)
       // Beta nodes send information heartbeat
       pev->vscp_class = VSCP_CLASS1_INFORMATION;
       pev->vscp_type  = VSCP_TYPE_INFORMATION_NODE_HEARTBEAT;

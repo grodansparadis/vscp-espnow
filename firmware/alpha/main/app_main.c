@@ -217,11 +217,11 @@ node_persistent_config_t g_persistent = {
 #define WIFI_PROV_KEY_GPIO GPIO_NUM_0
 
 ///////////////////////////////////////////////////////////////////////////////
-// read_onboard_temperature
+// app_read_onboard_temperature
 //
 
 float
-read_onboard_temperature(void)
+app_read_onboard_temperature(void)
 {
   // TODO
   return 0;
@@ -232,7 +232,7 @@ read_onboard_temperature(void)
 //
 
 uint32_t
-getMilliSeconds(void)
+app_getMilliSeconds(void)
 {
   return (esp_timer_get_time() / 1000);
 };
@@ -252,11 +252,11 @@ app_led_switch_blink_type(led_indicator_handle_t h, int type)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// get_device_guid
+// app_get_device_guid
 //
 
 bool
-get_device_guid(uint8_t *pguid)
+app_get_device_guid(uint8_t *pguid)
 {
   esp_err_t rv;
   size_t length = 16;
@@ -819,7 +819,7 @@ static void
 app_long_press_start_cb(void *arg, void *usr_data)
 {
   ESP_ERROR_CHECK(!(BUTTON_LONG_PRESS_START == iot_button_get_event(arg)));
-  s_main_timer = getMilliSeconds();
+  s_main_timer = app_getMilliSeconds();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1967,7 +1967,7 @@ app_main()
         gettimeofday(&tv_now, NULL);
         int64_t time_us = (int64_t) tv_now.tv_sec * 1000000L + (int64_t) tv_now.tv_usec;
 
-        // ESP_LOGI(TAG, ">>> The current date/time GMT is: %lld %s", tv_now.tv_sec, strftime_buf);
+        ESP_LOGI(TAG, ">>> The current date/time GMT is: %lld %s", tv_now.tv_sec, strftime_buf);
 
         pev->vscp_class = VSCP_CLASS1_INFORMATION;
         pev->vscp_type  = VSCP_TYPE_INFORMATION_TIME;

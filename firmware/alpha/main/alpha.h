@@ -40,11 +40,11 @@
 #include <vscp.h>
 #include <vscp-espnow.h>
 
-#define CONNECTED_LED_GPIO_NUM 2
-#define ACTIVE_LED_GPIO_NUM    3
-#define GPIO_OUTPUT_PIN_SEL    ((1ULL << CONNECTED_LED_GPIO_NUM) | (1ULL << ACTIVE_LED_GPIO_NUM))
+//#define CONNECTED_LED_GPIO_NUM 2
+//#define ACTIVE_LED_GPIO_NUM    3
+//#define GPIO_OUTPUT_PIN_SEL    ((1ULL << CONNECTED_LED_GPIO_NUM) | (1ULL << ACTIVE_LED_GPIO_NUM))
 
-#define DEV_BUFFER_LENGTH 64
+//#define DEV_BUFFER_LENGTH 64
 
 /*!
   Default values stored in non volatile memory
@@ -195,7 +195,7 @@ typedef enum {
  * @return Temperature as floating point value
  */
 float
-read_onboard_temperature(void);
+app_read_onboard_temperature(void);
 
 /**
  * @fn getMilliSeconds
@@ -204,7 +204,18 @@ read_onboard_temperature(void);
  * @return Systemtime in milliseconds
  */
 uint32_t
-getMilliSeconds(void);
+app_getMilliSeconds(void);
+
+/**
+ * @brief Get GUID for device
+ * 
+ * @param pguid  Pointer to 16-byte buffer that will get resulting GUID
+ * @return true on success.
+ * @return false on failure.
+ */
+
+bool
+app_get_device_guid(uint8_t *pguid);
 
 /**
  * @brief VSCP event over esp-now receive callback
@@ -213,7 +224,7 @@ getMilliSeconds(void);
  * @param userdata Pointer to user data.
  */
 void
-receive_cb(const vscpEvent *pev, void *userdata);
+app_receive_cb(const vscpEvent *pev, void *userdata);
 
 /**
  * @brief Start security initiator

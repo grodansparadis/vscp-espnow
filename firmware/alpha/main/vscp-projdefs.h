@@ -137,7 +137,6 @@
 #define THIS_FIRMWARE_FAMILY_TYPE (0)
 
 
-
 // ----------------------------------------------------------------------------
 //                        VSCP helper lib defines
 // ----------------------------------------------------------------------------
@@ -154,7 +153,7 @@
  * Set to non-zero to enable commands when rcvloop is active
  * 
  */
-#define THIS_FIRMWARE_TCPIP_LINK_ENABLE_RCVLOOP_CMD   1
+#define THIS_FIRMWARE_TCPIP_LINK_ENABLE_RCVLOOP_CMD   (1)
 
 /**
  * Max buffer for level II events. The buffer size is needed to
@@ -164,6 +163,6 @@
  * case one should check the max data size for events that are of
  * interest and set the max size accordingly 
  */
-#define THIS_FIRMWARE_TCPIP_LINK_MAX_BUFFER  2300
+#define THIS_FIRMWARE_TCPIP_LINK_MAX_BUFFER  (2680)
 
 #endif // _VSCP_PROJDEFS_H_

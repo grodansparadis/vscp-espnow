@@ -69,7 +69,7 @@ vscp2_protocol_callback_get_ms(const void *pdata, uint32_t *ptime)
     return VSCP_ERROR_INVALID_POINTER;
   }
 
-  *ptime = getMilliSeconds();
+  *ptime = app_getMilliSeconds();
   return VSCP_ERROR_SUCCESS;
 }
 
