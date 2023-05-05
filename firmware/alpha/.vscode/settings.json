@@ -111,6 +111,7 @@
     "sntp.h": "c",
     "espnow_utils.h": "c",
     "espnow_storage.h": "c",
-    "freertos.h": "c"
+    "freertos.h": "c",
+    "led_indicator_blink_default.h": "c"
   }
 }

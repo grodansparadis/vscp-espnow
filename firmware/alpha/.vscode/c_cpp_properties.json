@@ -5,7 +5,7 @@
             "includePath": [
               "${workspaceFolder}/**",
               "${IDF_PATH}/**",
-              "../../common/",
+              "${workspaceFolder}/../common/",
               "./components/**",
               "managed_components/**",
               "${ESPNOW_PATH}/**",

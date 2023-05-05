@@ -5,7 +5,7 @@
             "includePath": [
               "${workspaceFolder}/**",
               "./components/**",
-              "../../common/",
+              "${workspaceFolder}/../common/",
               "${IDF_PATH}/**",
               "managed_components/**",
               "${VSCP_COMMON}/**"

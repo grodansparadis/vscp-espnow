@@ -61,7 +61,7 @@
 
 // https://docs.espressif.com/projects/espressif-esp-iot-solution/en/latest/display/led_indicator.html
 #include "led_indicator.h"
-#include "led_indicator_blink_default.h"
+#include "vscp_led_indicator_blink.h"
 
 #include "net_logging.h"
 
@@ -238,20 +238,6 @@ app_getMilliSeconds(void)
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// app_led_switch_blink_type
-//
-
-void
-app_led_switch_blink_type(led_indicator_handle_t h, int type)
-{
-  static int last = 0;
-
-  led_indicator_stop(h, last);
-  led_indicator_start(s_led_handle_green, type);
-  last = type;
-}
-
-///////////////////////////////////////////////////////////////////////////////
 // app_get_device_guid
 //
 
@@ -284,6 +270,8 @@ app_get_device_guid(uint8_t *pguid)
   return true;
 }
 
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // app_led_init
 //
@@ -300,14 +288,14 @@ app_led_init(void)
   led_indicator_config_t indicator_config_red = {
     .mode                      = LED_GPIO_MODE,
     .led_indicator_gpio_config = &led_indicator_gpio_red_config,
-    .blink_lists               = default_led_indicator_blink_lists,
-    .blink_list_num            = DEFAULT_BLINK_LIST_NUM,
+    .blink_lists               = vscp_led_indicator_blink_lists,
+    .blink_list_num            = VSCP_BLINK_LIST_NUM,
   };
 
   // s_led_handle_green = led_indicator_create(PRJDEF_INDICATOR_LED_PIN_GREEN, &indicator_config_green);
   s_led_handle_green = led_indicator_create(&indicator_config_red);
   if (NULL == s_led_handle_green) {
-    ESP_LOGE(TAG, "Failed to create LED indicator green");
+    ESP_LOGE(TAG, "Failed to create status LED indicator green");
   }
 
   led_indicator_gpio_config_t led_indicator_gpio_green_config = {
@@ -319,8 +307,8 @@ app_led_init(void)
   led_indicator_config_t indicator_config_green = {
     .mode                      = LED_GPIO_MODE,
     .led_indicator_gpio_config = &led_indicator_gpio_green_config,
-    .blink_lists               = default_led_indicator_blink_lists,
-    .blink_list_num            = DEFAULT_BLINK_LIST_NUM,
+    .blink_lists               = vscp_led_indicator_blink_lists,
+    .blink_list_num            = VSCP_BLINK_LIST_NUM,
   };
   // led_indicator_config_t indicator_config_red = {
   //   .off_level = 0, // if zero, attach led positive side to esp32 gpio pin
@@ -344,7 +332,7 @@ static esp_err_t
 app_espnow_debug_recv_process(uint8_t *src_addr, void *data, size_t size, wifi_pkt_rx_ctrl_t *rx_ctrl)
 {
   char *recv_data    = (char *) data;
-  const char *buf    = NULL;
+  char *buf    = NULL;
   size_t size_buffer = 50 + size;
 
   ESP_PARAM_CHECK(src_addr);
@@ -368,7 +356,7 @@ app_espnow_debug_recv_process(uint8_t *src_addr, void *data, size_t size, wifi_p
              rx_ctrl->channel,
              rx_ctrl->rssi,
              recv_data);
-             
+
     mqtt_log(buf);
     VSCP_FREE(buf);
   }
@@ -753,7 +741,7 @@ app_wifi_prov_over_espnow_start_press_cb(void *arg, void *usr_data)
   // app_prov_responder_init();
   // vscp_espnow_sec_initiator();
 
-  app_led_switch_blink_type(s_led_handle_green, BLINK_PROVISIONING);
+  blink_switch_type(s_led_handle_green, BLINK_PROVISIONING);
 
   // if (s_wifi_prov_status == APP_WIFI_PROV_SUCCESS) {
 
@@ -771,7 +759,7 @@ app_wifi_prov_over_espnow_start_press_cb(void *arg, void *usr_data)
 
   //     app_prov_responder_init();
 
-  //     app_led_switch_blink_type(s_led_handle_green, BLINK_PROVISIONING);
+  //     blink_switch_type(s_led_handle_green, BLINK_PROVISIONING);
   //   }
   // }
   // else if (s_wifi_prov_status == APP_WIFI_PROV_START) {
@@ -799,14 +787,14 @@ app_wifi_prov_start_press_cb(void *arg, void *usr_data)
     ESP_LOGI(TAG, "Starting WiFi provisioning on initiator");
     wifi_prov();
     s_wifi_prov_status = APP_WIFI_PROV_START;
-    app_led_switch_blink_type(s_led_handle_green, BLINK_PROVISIONING);
+    blink_switch_type(s_led_handle_green, BLINK_PROVISIONING);
   }
   else if (s_wifi_prov_status == APP_WIFI_PROV_START) {
     ESP_LOGI(TAG, "WiFi provisioning is running");
   }
   else {
     ESP_LOGI(TAG, "sec initiator started.");
-    app_led_switch_blink_type(s_led_handle_green, BLINK_PROVISIONING);
+    blink_switch_type(s_led_handle_green, BLINK_PROVISIONING);
     vscp_espnow_sec_initiator();
   }
 }
@@ -1448,11 +1436,11 @@ app_system_event_handler(void *arg, esp_event_base_t event_base, int32_t event_i
 
       case WIFI_EVENT_STA_START: {
         ESP_LOGI(TAG, "Connecting........");
-      }
+      } break;
 
       case WIFI_EVENT_STA_CONNECTED: {
         wifi_event_sta_connected_t *event = (wifi_event_sta_connected_t *) event_data;
-        app_led_switch_blink_type(s_led_handle_green, BLINK_CONNECTING);
+        blink_switch_type(s_led_handle_green, BLINK_CONNECTING);
         ESP_LOGI(TAG,
                  "Connected to %s (BSSID: " MACSTR ", Channel: %d)",
                  event->ssid,
@@ -1475,13 +1463,13 @@ app_system_event_handler(void *arg, esp_event_base_t event_base, int32_t event_i
         if (s_retry_num < CONFIG_APP_WIFI_CONNECT_RETRIES) {
           s_retry_num++;
           ESP_LOGI(TAG, "retry to connect to the AP");
-          app_led_switch_blink_type(s_led_handle_green, BLINK_RECONNECTING);
+          blink_switch_type(s_led_handle_green, BLINK_RECONNECTING);
           taskYIELD();
           esp_wifi_connect();
         }
         else {
           xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
-          app_led_switch_blink_type(s_led_handle_green, BLINK_RECONNECTING);
+          blink_switch_type(s_led_handle_green, BLINK_RECONNECTING);
         }
         break;
       }
@@ -1540,7 +1528,7 @@ app_system_event_handler(void *arg, esp_event_base_t event_base, int32_t event_i
 
     s_wifi_prov_status = APP_WIFI_PROV_SUCCESS;
 
-    app_led_switch_blink_type(s_led_handle_green, BLINK_CONNECTED);
+    blink_switch_type(s_led_handle_green, BLINK_CONNECTED);
 
     // Signal main application to continue execution
     xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
@@ -1651,7 +1639,7 @@ app_main()
   espnow_config_t espnow_config = ESPNOW_INIT_CONFIG_DEFAULT();
 
   app_led_init();
-  app_led_switch_blink_type(s_led_handle_green, BLINK_CONNECTING);
+  blink_switch_type(s_led_handle_green, BLINK_CONNECTING);
 
   // Initialize button behaviour
   app_button_init();
@@ -1846,65 +1834,9 @@ app_main()
 
   ESP_LOGI(TAG, "Going to work now");
 
-  // [BLINK_FACTORY_RESET]
-  // [BLINK_UPDATING]
-  // [BLINK_CONNECTED]
-  // [BLINK_PROVISIONED]
-  // [BLINK_RECONNECTING]
-  // [BLINK_CONNECTING]
-  // [BLINK_PROVISIONING]
-  // led_indicator_start(s_led_handle_green, BLINK_FACTORY_RESET);
-  // vTaskDelay(pdMS_TO_TICKS(3000));
-  // led_indicator_stop(s_led_handle_green, BLINK_FACTORY_RESET);
 
-  // led_indicator_start(s_led_handle_green, BLINK_UPDATING);
-  // vTaskDelay(pdMS_TO_TICKS(3000));
-  // led_indicator_stop(s_led_handle_green, BLINK_UPDATING);
-
-  // led_indicator_start(s_led_handle_green, BLINK_CONNECTED);
-  // vTaskDelay(pdMS_TO_TICKS(3000));
-  // led_indicator_stop(s_led_handle_green, BLINK_CONNECTED);
-
-  // led_indicator_start(s_led_handle_green, BLINK_PROVISIONED);
-  // vTaskDelay(pdMS_TO_TICKS(3000));
-  // led_indicator_stop(s_led_handle_green, BLINK_PROVISIONED);
-
-  // led_indicator_start(s_led_handle_green, BLINK_RECONNECTING);
-  // vTaskDelay(pdMS_TO_TICKS(3000));
-  // led_indicator_stop(s_led_handle_green, BLINK_RECONNECTING);
-
-  // led_indicator_start(s_led_handle_green, BLINK_CONNECTING);
-  // vTaskDelay(pdMS_TO_TICKS(3000));
-  // led_indicator_stop(s_led_handle_green, BLINK_CONNECTING);
-
-  // led_indicator_start(s_led_handle_green, BLINK_PROVISIONING);
-  // vTaskDelay(pdMS_TO_TICKS(3000));
-  // led_indicator_stop(s_led_handle_green, BLINK_PROVISIONING);
-
-  // led_indicator_start(s_led_handle_green, BLINK_FACTORY_RESET);
-
-  // app_led_switch_blink_type(s_led_handle_green, BLINK_FACTORY_RESET);
-  // vTaskDelay(pdMS_TO_TICKS(3000));
-
-  // app_led_switch_blink_type(s_led_handle_green, BLINK_UPDATING);
-  // vTaskDelay(pdMS_TO_TICKS(3000));
-
-  // app_led_switch_blink_type(s_led_handle_green, BLINK_CONNECTED);
-  // vTaskDelay(pdMS_TO_TICKS(3000));
-
-  // app_led_switch_blink_type(s_led_handle_green, BLINK_PROVISIONED);
-  // vTaskDelay(pdMS_TO_TICKS(3000));
-
-  // app_led_switch_blink_type(s_led_handle_green, BLINK_RECONNECTING);
-  // vTaskDelay(pdMS_TO_TICKS(3000));
-
-  // app_led_switch_blink_type(s_led_handle_green, BLINK_CONNECTING);
-  // vTaskDelay(pdMS_TO_TICKS(3000));
-
-  // app_led_switch_blink_type(s_led_handle_green, BLINK_PROVISIONING);
-  // vTaskDelay(pdMS_TO_TICKS(3000));
-
-  // app_led_switch_blink_type(s_led_handle_green, BLINK_FACTORY_RESET);
+  blink_switch_type(s_led_handle_green, BLINK_ERROR);
+ 
 
   esp_wifi_get_mac(ESP_IF_WIFI_STA, ESPNOW_ADDR_SELF);
   ESP_LOGI(TAG, "mac: " MACSTR ", version: %d", MAC2STR(ESPNOW_ADDR_SELF), ESPNOW_VERSION);
@@ -1914,7 +1846,7 @@ app_main()
   tzset();
 
   // uint8_t addr[] = { 0xcc, 0x50, 0xe3, 0x80, 0x10, 0xbc };
-  uint8_t addr[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+  //uint8_t addr[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
   // esp_log_level_set("espnow_sec_init", ESP_LOG_DEBUG);
 

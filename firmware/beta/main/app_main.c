@@ -47,7 +47,7 @@
 
 // https://docs.espressif.com/projects/espressif-esp-iot-solution/en/latest/display/led_indicator.html
 #include "led_indicator.h"
-#include "led_indicator_blink_default.h"
+#include "vscp_led_indicator_blink.h"
 
 #include <vscp.h>
 #include <vscp-firmware-helper.h>
@@ -143,18 +143,6 @@ void
 sec_probe_task(void *arg);
 
 ///////////////////////////////////////////////////////////////////////////////
-// app_led_switch_blink_type
-//
-
-void
-app_led_switch_blink_type(led_indicator_handle_t h, int type)
-{
-  led_indicator_preempt_stop(h, s_blink_last);
-  led_indicator_preempt_start(s_led_handle_green, type);
-  s_blink_last = type;
-}
-
-///////////////////////////////////////////////////////////////////////////////
 // read_onboard_temperature
 //
 
@@ -191,8 +179,8 @@ app_led_init(void)
   led_indicator_config_t indicator_config_red = {
     .mode                      = LED_GPIO_MODE,
     .led_indicator_gpio_config = &led_indicator_gpio_red_config,
-    .blink_lists               = default_led_indicator_blink_lists,
-    .blink_list_num            = DEFAULT_BLINK_LIST_NUM,
+    .blink_lists               = vscp_led_indicator_blink_lists,
+    .blink_list_num            = VSCP_BLINK_LIST_NUM,
   };
 
   // s_led_handle_green = led_indicator_create(PRJDEF_INDICATOR_LED_PIN_GREEN, &indicator_config_green);
@@ -210,8 +198,8 @@ app_led_init(void)
   led_indicator_config_t indicator_config_green = {
     .mode                      = LED_GPIO_MODE,
     .led_indicator_gpio_config = &led_indicator_gpio_green_config,
-    .blink_lists               = default_led_indicator_blink_lists,
-    .blink_list_num            = DEFAULT_BLINK_LIST_NUM,
+    .blink_lists               = vscp_led_indicator_blink_lists,
+    .blink_list_num            = VSCP_BLINK_LIST_NUM,
   };
   // led_indicator_config_t indicator_config_red = {
   //   .off_level = 0, // if zero, attach led positive side to esp32 gpio pin
@@ -583,7 +571,7 @@ app_sec_init_press_cb(void *arg, void *usr_data)
     return;
   }
 
-  app_led_switch_blink_type(s_led_handle_green, BLINK_UPDATING);
+  blink_switch_type(s_led_handle_green, BLINK_UPDATING);
 
   ESP_LOGI(TAG, "Starting sec init");
   s_sec_task = (TaskHandle_t) xTaskCreate(sec_probe_task, "sec_probe", 3072, NULL, tskIDLE_PRIORITY + 1, NULL);
@@ -603,7 +591,7 @@ app_ota_start_press_cb(void *arg, void *usr_data)
     ESP_LOGI(TAG, "Deactivate OTA firmware update");
     ret = app_ota_responder_stop();
     if (ESP_OK == ret) {
-      app_led_switch_blink_type(s_led_handle_green, BLINK_CONNECTED);
+      blink_switch_type(s_led_handle_green, BLINK_CONNECTED);
       s_stateNode = BETA_STATE_IDLE;
     }
   }
@@ -611,7 +599,7 @@ app_ota_start_press_cb(void *arg, void *usr_data)
     ESP_LOGI(TAG, "Initiate OTA firmware update");
     ret = app_ota_responder_start();
     if (ESP_OK == ret) {
-      app_led_switch_blink_type(s_led_handle_green, BLINK_UPDATING);
+      blink_switch_type(s_led_handle_green, BLINK_UPDATING);
       s_stateNode = BETA_STATE_OTA;
       time_ota    = getMilliSeconds();
     }
@@ -634,8 +622,7 @@ app_restore_factory_defaults_press_cb(void *arg, void *usr_data)
 
   ESP_LOGI(TAG, "Restore factory settings");
 
-  app_led_switch_blink_type(s_led_handle_green, BLINK_CONNECTED);
-  led_indicator_preempt_stop(s_led_handle_green, s_blink_last);
+  blink_switch_type(s_led_handle_green, BLINK_FACTORY_RESET);
 
   // Erase all settings
   ret = nvs_erase_all(s_nvsHandle);
@@ -700,7 +687,7 @@ app_system_event_handler(void *arg, esp_event_base_t event_base, int32_t event_i
 
       case ESP_EVENT_ESPNOW_OTA_STARTED:
         ESP_LOGI(TAG, "ESP_EVENT_ESPNOW_OTA_STARTED");
-        app_led_switch_blink_type(s_led_handle_green, BLINK_UPDATING);
+        blink_switch_type(s_led_handle_green, BLINK_UPDATING);
         break;
 
       case ESP_EVENT_ESPNOW_OTA_STATUS: {
@@ -710,14 +697,14 @@ app_system_event_handler(void *arg, esp_event_base_t event_base, int32_t event_i
 
       case ESP_EVENT_ESPNOW_OTA_FINISH:
         ESP_LOGI(TAG, "ESP_EVENT_ESPNOW_OTA_FINISH");
-        app_led_switch_blink_type(s_led_handle_green, BLINK_CONNECTED);
+        blink_switch_type(s_led_handle_green, BLINK_CONNECTED);
         vTaskDelay(pdMS_TO_TICKS(2000));
         esp_restart();
         break;
 
       case ESP_EVENT_ESPNOW_OTA_STOPED:
         ESP_LOGI(TAG, "ESP_EVENT_ESPNOW_OTA_STOPED");
-        app_led_switch_blink_type(s_led_handle_green, BLINK_CONNECTED);
+        blink_switch_type(s_led_handle_green, BLINK_CONNECTED);
         break;
 
       case ESP_EVENT_ESPNOW_OTA_FIRMWARE_DOWNLOAD:
@@ -746,7 +733,7 @@ app_main()
   app_wifi_init();
 
   app_led_init();
-  app_led_switch_blink_type(s_led_handle_green, BLINK_CONNECTING);
+  blink_switch_type(s_led_handle_green, BLINK_CONNECTING);
 
   // ----------------------------------------------------------------------------
   //                        NVS - Persistent storage
@@ -872,7 +859,7 @@ app_main()
 
   while (1) {
     if ((BETA_STATE_VIRGIN == s_stateNode) && (ESP_OK == espnow_get_key(key_info))) {
-      app_led_switch_blink_type(s_led_handle_green, BLINK_CONNECTED);
+      blink_switch_type(s_led_handle_green, BLINK_CONNECTED);
       s_stateNode = BETA_STATE_IDLE;
     }
 
@@ -885,7 +872,7 @@ app_main()
     if ((BETA_STATE_OTA == s_stateNode) && ((getMilliSeconds() - time_ota) > 120000)) {
       ESP_LOGW(TAG, "OTA valid period over. Go back to IDLE");
       s_stateNode = BETA_STATE_IDLE;
-      app_led_switch_blink_type(s_led_handle_green, BLINK_CONNECTED);
+      blink_switch_type(s_led_handle_green, BLINK_CONNECTED);
     }
 
     // ESP_LOG_BUFFER_HEXDUMP(TAG, g_persistent.pmk, 16, ESP_LOG_INFO);
