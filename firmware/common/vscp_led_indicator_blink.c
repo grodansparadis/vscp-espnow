@@ -83,8 +83,12 @@ static const blink_step_t vscp_provisioned[] = {
  * Slow blink
  */
 static const blink_step_t vscp_provisioning[] = {
-  { LED_BLINK_HOLD, LED_STATE_ON, 1500 },
-  { LED_BLINK_HOLD, LED_STATE_OFF, 1500 },
+  { LED_BLINK_HOLD, LED_STATE_ON, 50 },
+  { LED_BLINK_HOLD, LED_STATE_OFF, 200 },
+  { LED_BLINK_HOLD, LED_STATE_ON, 50 },
+  { LED_BLINK_HOLD, LED_STATE_OFF, 200 },
+  { LED_BLINK_HOLD, LED_STATE_ON, 50 },
+  { LED_BLINK_HOLD, LED_STATE_OFF, 1200 },
   { LED_BLINK_LOOP, 0, 0 },
 };
 

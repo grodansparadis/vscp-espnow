@@ -38,20 +38,6 @@
 #include <vscp.h>
 #include <vscp-espnow.h>
 
-#define NODETYPE VSCP_DROPLET_BETA
-
-#define CONNECTED_LED_GPIO_NUM 2
-#define ACTIVE_LED_GPIO_NUM    3
-#define GPIO_OUTPUT_PIN_SEL    ((1ULL << CONNECTED_LED_GPIO_NUM) | (1ULL << ACTIVE_LED_GPIO_NUM))
-
-#define DEV_BUFFER_LENGTH 64
-
-/*!
-  Default values stored in non volatile memory
-  on start up.
-*/
-
-#define DEFAULT_GUID "" // Empty constructs from MAC, "-" all nills, "xx:yy:..." set GUID
 
 // ----------------------------------------------------------------------------
 

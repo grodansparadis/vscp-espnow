@@ -78,9 +78,6 @@ uint32_t time_ota;          // Timer for OTA state clear
 static led_indicator_handle_t s_led_handle_red;
 static led_indicator_handle_t s_led_handle_green;
 
-// Last blink state
-static int s_blink_last = 0;
-
 // Handle for the security task
 static TaskHandle_t s_sec_task;
 
@@ -211,15 +208,6 @@ app_led_init(void)
   if (NULL == s_led_handle_red) {
     ESP_LOGE(TAG, "Failed to create LED indicator green");
   }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// setPersistenDefaults
-//
-
-static void
-setPersistenDefaults(void)
-{
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -617,11 +605,9 @@ static void
 app_restore_factory_defaults_press_cb(void *arg, void *usr_data)
 {
   esp_err_t ret;
-
   ESP_ERROR_CHECK(!(BUTTON_LONG_PRESS_START == iot_button_get_event(arg)));
 
   ESP_LOGI(TAG, "Restore factory settings");
-
   blink_switch_type(s_led_handle_green, BLINK_FACTORY_RESET);
 
   // Erase all settings
@@ -631,12 +617,15 @@ app_restore_factory_defaults_press_cb(void *arg, void *usr_data)
   }
 
   // Unbound device
-  espnow_erase_key();
+  ret = espnow_erase_key();
+  if (ESP_OK != ret) {
+    ESP_LOGE(TAG, "Failed to erase key %X", ret);
+  }
 
   nvs_commit(s_nvsHandle);
 
   // set defaults
-  setPersistenDefaults();
+  readPersistentConfigs();
 
   // Disconnect from wifi
   ret = esp_wifi_disconnect();
@@ -645,7 +634,7 @@ app_restore_factory_defaults_press_cb(void *arg, void *usr_data)
   }
 
   // Restart system (set defaults)
-  espnow_reboot(pdMS_TO_TICKS(2000));
+  espnow_reboot(pdMS_TO_TICKS(4000));
   // esp_restart();
 }
 
@@ -819,8 +808,8 @@ app_main()
         .type = BUTTON_TYPE_GPIO,
         .long_press_time = 3000,
         .gpio_button_config = {
-            .gpio_num = WIFI_PROV_KEY_GPIO,
-            .active_level = 0,
+          .gpio_num = WIFI_PROV_KEY_GPIO,
+          .active_level = 0,
         },
     };
 

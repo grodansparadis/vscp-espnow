@@ -531,8 +531,7 @@ vscp_espnow_sec_initiator(void)
   esp_err_t ret;
   uint8_t key_info[APP_KEY_LEN];
 
-  // uint8_t primary;
-  // wifi_second_chan_t secondary;
+  ESP_LOGI(TAG, "----> sec initiator started");
 
   if (espnow_get_key(key_info) != ESP_OK) {
     ESP_LOGI(TAG, "----> New security key is created");
@@ -1709,7 +1708,7 @@ ERROR:
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// vscp_espnow_init
+// readPersistentConfigs
 //
 
 static int

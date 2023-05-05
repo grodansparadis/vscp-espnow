@@ -40,18 +40,17 @@
 #include <vscp.h>
 #include <vscp-espnow.h>
 
-//#define CONNECTED_LED_GPIO_NUM 2
-//#define ACTIVE_LED_GPIO_NUM    3
-//#define GPIO_OUTPUT_PIN_SEL    ((1ULL << CONNECTED_LED_GPIO_NUM) | (1ULL << ACTIVE_LED_GPIO_NUM))
-
-//#define DEV_BUFFER_LENGTH 64
-
-/*!
-  Default values stored in non volatile memory
-  on start up.
-*/
-
 // ----------------------------------------------------------------------------
+
+// Beta node states
+typedef enum {
+  ALPHA_STATE_IDLE,         // Standard working state
+  ALPHA_STATE_VIRGIN,       // Node is uninitialized (needs provisioning)
+  ALPHA_STATE_KEY_EXCHANGE, // sec initiated
+  ALPHA_STATE_PROVISIONING, // Wifi provisioning in progress
+  ALPHA_STATE_OTA,          // OTA update in progress
+  ALPHA_STATE_MAX
+} alpha_node_states_t;
 
 // ----------------------------------------------------------------------------
 
