@@ -57,9 +57,16 @@ extern "C" {
 
 // ----------------------------------------------------------------------------
 
-#define VSCP_ESPNOW_WAIT_MS_DEFAULT   1000      // One second
+#define VSCP_ESPNOW_WAIT_MS_DEFAULT 1000 // One second
 
 // ----------------------------------------------------------------------------
+
+/*
+  This is the version of VSCP we implement functionality for
+*/
+#define VSCP_STD_VERSION_MAJOR     1
+#define VSCP_STD_VERSION_MINOR     14
+#define VSCP_STD_VERSION_SUB_MINOR 10
 
 #define VSCP_ESPNOW_VERSION 0
 
@@ -144,18 +151,14 @@ typedef struct {
 } vscp_espnow_heart_beat_t;
 
 /*
-  **VSCP espnow** persistent storage
-*/
+ **VSCP espnow** persistent storage
+ */
 typedef struct {
   // VSCP
-  uint16_t nickname;      // 16-bit nickname of node (two lsb of GUID)
+  uint16_t nickname; // 16-bit nickname of node (two lsb of GUID)
 
-  // User id
-  uint8_t userid0;
-  uint8_t userid1;
-  uint8_t userid2;
-  uint8_t userid3;
-  uint8_t userid4;
+  // Standard registers
+  uint8_t userid[5];
 } vscp_espnow_persistent_t;
 
 /**
@@ -187,10 +190,8 @@ typedef struct {
  * @brief Initialize the configuration of esp-now
  */
 typedef struct {
-  //nvs_handle_t nvsHandle;   // Handle to persistent storage
+  // nvs_handle_t nvsHandle;   // Handle to persistent storage
 } vscp_espnow_config_t;
-
-
 
 /**
  * @brief Send and receive statistics
@@ -228,7 +229,7 @@ typedef struct {
 } vscp_espnow_prov_data_t;
 
 #define KEYSTR                                                                                                         \
-  "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x"   \
+  "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x" \
   ":%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x"
 #define KEY2STR(a)                                                                                                     \
   (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5], (a)[6], (a)[7], (a)[8], (a)[9], (a)[10], (a)[11], (a)[12], (a)[13],  \
@@ -252,7 +253,7 @@ typedef void (*vscp_espnow_attach_network_handler_cb_t)(wifi_pkt_rx_ctrl_t *prxd
 
 /**
  * @brief Read VSCP register(s)
- * 
+ *
  * @param reg Register to start read at (<0xffff0000)
  * @param cnt Number of bytes to read (max 508 bytes)
  * @return int Return VSCP_ERROR_SUCCESS if OK, error code if not
@@ -262,7 +263,7 @@ vscp_espnow_read_reg(uint32_t reg, uint16_t cnt);
 
 /**
  * @brief Read VSCP standard register(s)
- * 
+ *
  * @param reg Register to start read at (>=0xffff0000)
  * @param cnt Number of bytes to read
  * @return int Return VSCP_ERROR_SUCCESS if OK, error code if not
@@ -272,7 +273,7 @@ vscp_espnow_read_std_reg(uint32_t reg, uint16_t cnt);
 
 /**
  * @brief Write VSCP standard register(s)
- * 
+ *
  * @param reg Register to write (>=0xffff0000)
  * @param cnt Number of bytes to write
  * @param pdata Pointer to data to write
@@ -283,7 +284,7 @@ vscp_espnow_write_reg(uint32_t reg, uint16_t cnt, uint16_t *pdata);
 
 /**
  * @brief Write VSCP standard register(s)
- * 
+ *
  * @param reg Register to write (>=0xffff0000)
  * @param cnt Number of bytes to write
  * @param pdata Pointer to data to write
@@ -311,6 +312,18 @@ esp_err_t
 vscp_espnow_sec_initiator(void);
 
 // ----------------------------------------------------------------------------
+
+/**
+ * @brief Send error event
+ * 
+ * @param err Error code to send.
+ * @return int VSCP_ERROR_SUCCESS is returne if OK.
+ * 
+ * VSCP_CLASS1_ERROR, VSCP_TYPE_ERROR_ERROR is sent
+ * with erro code as argument.
+ */
+int
+vscp_espnow_send_error(uint8_t err);
 
 /**
  * @fn vscp_espnow_heartbeat_task
@@ -345,7 +358,7 @@ vscp_espnow_probe(void);
 
 /**
  * @brief  Check if GUID ios to me
- * 
+ *
  * @param pguid Pointer to GUID to check
  * @return Return true if GUID is same as ours
  */
@@ -505,6 +518,68 @@ vscp_espnow_parse_vscp_json(vscpEvent *pev, const char *jsonVscpEventObj);
  */
 int
 vscp_espnow_create_vscp_json(char *strObj, size_t len, vscpEvent *pev);
+
+
+
+
+// ----------------------------------------------------------------------------
+//          Callbacks that need to be implemented by module creator
+// ----------------------------------------------------------------------------
+
+
+
+/*!
+  @fn vscp2_get_ms_cb
+  @brief Get the time in milliseconds.
+
+  @param Time in milliseconds.
+*/
+
+uint32_t
+vscp2_get_ms_cb(void);
+
+/**
+ * @fn vscp2_get_stdreg_alarm_cb
+ * @brief Get standard register alarm status.
+ *
+ * @param alarm Pointer to alarm register content.
+ * @return VSCP_ERROR_SUCCESS on success.
+ * 
+ * Eight bits are available to flag alarm status. Set bit
+ * to indicate alarm. If you want more bits for alarm use user registers
+ * and only use the bits here to indicate bits are set in user alarm
+ * registers.
+ * 
+ * Alarms should be cleared when read.
+ * 
+ * If your device does not have alarm functionality
+ * just return zero here.
+ */
+
+uint8_t 
+vscp2_get_stdreg_alarm_cb(void);
+
+/**
+  @fn vscp2_get_fw_ver_cb
+  @brief Get firmware version
+
+  @param major Pointer to integer that will get major version.
+  @param minor Pointer to integer that will get minor version.
+  @param patch Pointer to integer that will get patch version.
+
+  you find the version in esp_app_desc_t which you can get
+  a pointer to by calling esp_app_get_description() The .version
+  string in this stucture holds the version set in the top cmake
+  file.
+
+  Here we use a the form  major.minor.patch  If you use another form
+  you ned to adopt the parsing to your storage format
+*/
+
+int
+vscp2_get_fw_ver_cb(int *major, int *minor, int *patch);
+
+
 
 #ifdef __cplusplus
 }

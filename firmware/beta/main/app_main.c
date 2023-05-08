@@ -634,8 +634,7 @@ app_restore_factory_defaults_press_cb(void *arg, void *usr_data)
   }
 
   // Restart system (set defaults)
-  espnow_reboot(pdMS_TO_TICKS(4000));
-  // esp_restart();
+  espnow_reboot(pdMS_TO_TICKS(5000));
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -1,6 +1,5 @@
 idf_component_register(SRCS "app_main.c"
                             "../../../vscp-firmware/common/vscp-firmware-helper.c"
-                            "../../../vscp-firmware/common/vscp-firmware-level2.c"
                             "../../../vscp-firmware/common/vscp-link-protocol.c"
                             "../../../vscp-firmware/common/vscp-aes.c"
                             "../../../vscp-firmware/common/vscp-fifo.c"

@@ -4,14 +4,15 @@
 [![Repo Status](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
 [![Release](https://img.shields.io/github/release/grodansparadis/vscp-espnow.svg)](https://github.com/grodansparadis/vscp-espnow/releases)
 
-![](./images/vscp_logo_text_box_200.png)
+![](./images/vscp-espnow-topology.png)
 
-# VSCP over [Espressif](https://www.espressif.com/) esp-now protocol
+# VSCP over Espressif esp-now protocol
 
 - [Overview](#Overview)
 - [Alpha-nodes](#Alpha-nodes)
 - [Beta-nodes](#Beta-nodes)
 - [Gamma-nodes](#Gamma-Nodes)
+- [Initiate Beta & Gama nodes][#Init]
 - [Testing](#Testing)
 - [MQTT](#MQTT)
 - [Using VSCP Works with vscp-espnow](#Using-VSCP-Works-with-vscp-espnow)
@@ -106,8 +107,7 @@ All gamma nodes have an init button.
 
 Firmware nodes wake up on even/uneven intervals and is available for control and to give status.
 
-## Test
-To test vscp-espnow you need at least two ESP32 boards. One should be loaded with the alpha firmware and one with the beta or gamma firmware depending on your needs. There is no (well there is in practice) limit on the number of Beta and Gamma nodes you can set up. It is also possible to have several Alpha nodes.
+## Init
 
 ### Set up Alpha node
 First you need to set up the Alpha node to connect to the wifi router. Start the node and it is ready for provisioning. This is done with your phone over BLE. There is an app for Android [here](https://play.google.com/store/apps/details?id=com.espressif.provble) and for iOS [here](https://apps.apple.com/in/app/esp-ble-provisioning/id1473590141). 
@@ -128,17 +128,46 @@ Hold down the init key for more then four seconds to restore factory defaults. I
 
 You can use VSCP to configure the alpha node (and nodes connected to it) once the MQTT or the VSCP link interface is configured. You can do control, configuration and remote debugging this way on  a live system.
 
-### Set up Beta node(s)
+### Restore factory defaults
 
-Power up the beta node. The led blinks to indicate it is not part of a segment yet. Press the init key shortly on both the alpha node and the beta node and wait until the status led on the beta node lights steady. Now it is part of the same segment as the Alpha node. You can activate this process using VSCP on the alpha node also if you want.
+Hold down the init key for more then four seconds to restore factory defaults. When the status led blinks fast the node will set factory defaults and you will need to add wifi credentials to the device using BLE as described above.  It may be good to backup settings in the web interface before you do this.
 
-Hold down the init key for more then four seconds to restore factory defaults. It starts to blink again when it have restarted and is ready to be paired with a node in the cluster.
+### OTA
+You starts a firmware upgrade OTA using the web interface. Yuou can update from a web server or from a file on your computer. You can also upgrade a remote alpha/gamma node using this interface.
+
+### Set up beta node(s)
+
+Power up the beta node. The led blinks to indicate it is not part of a segment yet. Press the init key shortly on both the alpha node and the beta node and wait until the status led on the beta node lights steady. Now it is part of the same segment as the alpha node. You can activate this process using VSCP if you want.
+
+The process during the initialization process is like the following
+
+- Beta/gamma node probe its surroundings by sending the VSCP event [new node online]() on all wifi channels.
+- An alfa node that recognize this event and is setup for pairing, send a heartbeat event to the node that do the probing.
+- The beta/alpha node get the response and now know what channel is used and start to use this channel.
+- At this point a secure key charing process is started to make both nodes use the same encrypting key.
+- From this point all communication is secure.
+
+### Restore factory defaults
+
+Hold down the init key for more then four seconds to restore factory defaults. When the status led blinks fast the node will set factory defaults. The node starts to blink slowly again when it have restarted to show that it is ready to be part of cluster.
+
+Hold down the init key for more then four seconds to restore factory defaults. When the status led blinks fast the node will set factory defaults and you will need to add wifi credentials to the device using BLE as described above.  It may be good to backup settings in the web interface before you do this.
+
+### OTA
 
 Double click the init button on the alpha node to start an OTA update. An alpha node will deliver a new OTA firmware image other from a local file or from a server. 
+
 
 ### Set up Gamma nodes node(s)
 
 tbd but the process is mostly like an beta-node
+
+### Beta & Gamma nodes
+
+## Test
+To test vscp-espnow you need at least two ESP32 boards. One should be loaded with the alpha firmware and one with the beta or gamma firmware depending on your needs. There is no (well there is in practice) limit on the number of Beta and Gamma nodes you can set up. It is also possible to have several Alpha nodes.
+
+
 
 ## MQTT
 As always for VSCP the segment you build is not dependent on a server. You can set ut up and the it will do it's work. Bit often one want to interact with a world outside of a vscp-now segment and then MQTT is the perfect candidate.
@@ -207,4 +236,6 @@ Consider the different licenses of possible third party libraries too!
 ## Contribution
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, shall be licensed as above, without any
 additional terms or conditions.
+
+![](./images/vscp_logo_text_box_200.png)
 

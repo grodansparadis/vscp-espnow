@@ -575,10 +575,10 @@ vscp_link_callback_get_version(const void *pdata, uint8_t *pversion)
     return VSCP_ERROR_INVALID_POINTER;
   }
 
-  pversion[0] = THIS_FIRMWARE_MAJOR_VERSION;
-  pversion[1] = THIS_FIRMWARE_MINOR_VERSION;
-  pversion[2] = THIS_FIRMWARE_RELEASE_VERSION;
-  pversion[3] = THIS_FIRMWARE_BUILD_VERSION;
+  pversion[0] = 0; // THIS_FIRMWARE_MAJOR_VERSION;
+  pversion[1] = 0; // THIS_FIRMWARE_MINOR_VERSION;
+  pversion[2] = 0; // THIS_FIRMWARE_RELEASE_VERSION;
+  pversion[3] = 0; // THIS_FIRMWARE_BUILD_VERSION;
 
   return VSCP_ERROR_SUCCESS;
 }

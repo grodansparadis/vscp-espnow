@@ -25,15 +25,6 @@
 #define THIS_FIRMWARE_DEVICE_NAME   "Beta node"
 
 /**
- * Firmware version
- */
-
-#define THIS_FIRMWARE_MAJOR_VERSION   (0)
-#define THIS_FIRMWARE_MINOR_VERSION   (0)
-#define THIS_FIRMWARE_RELEASE_VERSION (1)
-#define THIS_FIRMWARE_BUILD_VERSION   (0)
-
-/**
  * User id (this is only defaults)
  */
 #define THIS_FIRMWARE_USER_ID0 (0)
@@ -61,7 +52,7 @@
 /**
  * Set bootloader algorithm
  */
-#define THIS_FIRMWARE_BOOTLOADER_ALGORITHM (0)
+#define THIS_FIRMWARE_BOOTLOADER_ALGORITHM (0x50)
 
 /**
  * Device family code 32-bit
@@ -112,19 +103,17 @@
 #define THIS_FIRMWARE_VSCP_DISCOVER_SERVER
 
 /**
- * GUID for this node (no spaces)
- */
-#define THIS_FIRMWARE_GUID  {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x00, 0x08, 0xdc, 0x12, 0x34, 0x56, 0x00, 0x01}
-
-/**
  * URL to MDF file
  */
-#define THIS_FIRMWARE_MDF_URL "eurosource.se/frcang0.mdf"
+#define THIS_FIRMWARE_MDF_URL "eurosource.se/alpha0.mdf"
 
 /**
  * 16-bit firmware code for this device
+ * The code can be used to verify type of firmware this
+ * device expects. Such as uP used, flash size etc gives
+ * different firmware coded
  */
-#define THIS_FIRMWARE_CODE (0)
+#define THIS_FIRMWARE_CODE (0x0000)
 
 /**
  * 16-bit firmware code for this device

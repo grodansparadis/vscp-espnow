@@ -91,6 +91,12 @@ static alpha_node_states_t s_stateNode = ALPHA_STATE_VIRGIN;
 #define ESPNOW_VERSION CONFIG_ESPNOW_VERSION
 #endif
 
+/**
+ * Network time syncronization interval 
+ * in seconds
+ */
+#define TIME_SYNC_INTERVAL  10
+
 // Handle for nvs storage
 nvs_handle_t g_nvsHandle = 0;
 extern bool g_vscp_espnow_probe;
@@ -1916,7 +1922,7 @@ app_main()
     }
 
     time_sync++;
-    if (time_sync > 10) {
+    if (time_sync > TIME_SYNC_INTERVAL) {
       time_sync      = 0;
       vscpEvent *pev = vscp_fwhlp_newEvent();
       if (NULL == pev) {
@@ -1975,7 +1981,13 @@ app_main()
 
   // We should not reach here but works the same as cosmetics
 
-  stop_webserver(h_webserver);
+  if (g_persistent.mqttEnable) {
+    mqtt_stop();
+  }
+
+  if (g_persistent.webEnable) {
+    stop_webserver(h_webserver);
+  }
 
   // Unmount web spiffs partition and disable SPIFFS
   // esp_vfs_spiffs_unregister(spiffsconf.partition_label);

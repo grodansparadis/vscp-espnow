@@ -125,11 +125,8 @@ static vscp_espnow_state_t s_stateVscpEspNow = VSCP_ESPNOW_STATE_VIRGIN;
 static vscp_espnow_persistent_t s_vscp_persistent = {
   .nickname = 0xffff,
 
-  .userid0 = 0,
-  .userid1 = 0,
-  .userid2 = 0,
-  .userid3 = 0,
-  .userid4 = 0,
+  // Registers
+  .userid = { 0 },
 };
 
 #define VSCP_ESPNOW_MAX_BUFFERED_NUM                                                                                   \
@@ -218,15 +215,218 @@ vscp_espnow_read_reg(uint32_t address, uint16_t cnt)
 ///////////////////////////////////////////////////////////////////////////////
 // vscp_espnow_read_standard_reg
 //
+// Address is in range 0xffff0000 - 0xffffffff
+// Current standard register defines are 0x80 - 0xff
+// Read as 0xffffff80 - 0xffffffff
 
 int
 vscp_espnow_read_standard_reg(uint32_t address, uint16_t cnt)
 {
-  vscpEvent *pev = vscp_fwhlp_newEvent();
-  if (NULL == pev) {
-    ESP_LOGE(TAG, "[%s, %d]: Could not ", __func__, __LINE__);
+  uint32_t raddr = address & 0xff;
+  uint16_t rcnt  = 0;
+
+  // Check that we are reading a valid register
+  if (address < 0xffffff80) {
+    ESP_LOGE(TAG, "[%s, %d]: Invalid standard register address addr=%lX", __func__, __LINE__, address);
     return VSCP_ERROR_MEMORY;
   }
+
+  vscpEvent *pev = vscp_fwhlp_newEvent();
+  if (NULL == pev) {
+    ESP_LOGE(TAG, "[%s, %d]: Could not allocate memory for event", __func__, __LINE__);
+    return VSCP_ERROR_MEMORY;
+  }
+
+  pev->pdata = VSCP_CALLOC(cnt);
+  if (NULL == pev->pdata) {
+    ESP_LOGE(TAG, "[%s, %d]: Could not allocate memory for event data", __func__, __LINE__);
+    vscp_fwhlp_deleteEvent(&pev);
+    return VSCP_ERROR_MEMORY;
+  }
+
+  pev->sizeData = cnt;
+
+  // Work thrue all requested registers
+  while (rcnt < cnt) {
+
+    //  Return alarm status
+    if (VSCP_STD_REGISTER_ALARM_STATUS == raddr) {
+      pev->pdata[rcnt] = vscp2_get_stdreg_alarm_cb;
+    }
+
+    else if (VSCP_STD_REGISTER_MAJOR_VERSION == raddr) {
+      pev->pdata[rcnt] = VSCP_STD_VERSION_MAJOR;
+    }
+
+    else if (VSCP_STD_REGISTER_MINOR_VERSION == raddr) {
+      pev->pdata[rcnt] = VSCP_STD_VERSION_MINOR;
+    }
+
+    else if (VSCP_STD_REGISTER_SUB_VERSION == raddr) {
+      pev->pdata[rcnt] = VSCP_STD_VERSION_SUB_MINOR;
+    }
+
+    //  User id
+    else if ((VSCP_STD_REGISTER_USER_ID >= raddr) && ((VSCP_STD_REGISTER_USER_ID + 4) <= raddr)) {
+      pev->pdata[rcnt] = s_vscp_persistent.userid[raddr - VSCP_STD_REGISTER_USER_ID];
+    }
+
+    /*
+      Manufacturer id space
+    */
+    else if ((VSCP_STD_REGISTER_USER_MANDEV_ID >= raddr) && ((VSCP_STD_REGISTER_USER_MANDEV_ID + 3) <= raddr)) {
+
+      switch (raddr - VSCP_STD_REGISTER_USER_MANDEV_ID) {
+        case 0:
+          pev->pdata[rcnt] = THIS_FIRMWARE_MANUFACTURER_ID0;
+          break;
+
+        case 1:
+          pev->pdata[rcnt] = THIS_FIRMWARE_MANUFACTURER_ID1;
+          break;
+
+        case 2:
+          pev->pdata[rcnt] = THIS_FIRMWARE_MANUFACTURER_ID2;
+          break;
+
+        case 3:
+          pev->pdata[rcnt] = THIS_FIRMWARE_MANUFACTURER_ID3;
+          break;
+      }
+    }
+
+    /*
+      Manufacturer id space
+    */
+    else if ((VSCP_STD_REGISTER_USER_MANSUBDEV_ID >= raddr) && ((VSCP_STD_REGISTER_USER_MANSUBDEV_ID + 3) <= raddr)) {
+      switch (raddr - VSCP_STD_REGISTER_USER_MANSUBDEV_ID) {
+        case 0:
+          pev->pdata[rcnt] = THIS_FIRMWARE_MANUFACTURER_SUBID0;
+          break;
+
+        case 1:
+          pev->pdata[rcnt] = THIS_FIRMWARE_MANUFACTURER_SUBID1;
+          break;
+
+        case 2:
+          pev->pdata[rcnt] = THIS_FIRMWARE_MANUFACTURER_SUBID2;
+          break;
+
+        case 3:
+          pev->pdata[rcnt] = THIS_FIRMWARE_MANUFACTURER_SUBID3;
+          break;
+      }
+    }
+
+    // Nickname LSB
+    else if (VSCP_STD_REGISTER_NICKNAME_ID_LSB == raddr) {
+      pev->pdata = s_vscp_persistent.nickname & 0xff;
+    }
+
+    // Nickname MSB
+    else if (VSCP_STD_REGISTER_PAGE_SELECT_MSB == raddr) {
+      pev->pdata = (s_vscp_persistent.nickname >> 8) & 0xff;
+    }
+
+    // Firmware version
+    else if ((VSCP_STD_REGISTER_FIRMWARE_MAJOR >= raddr) && (VSCP_STD_REGISTER_FIRMWARE_SUBMINOR <= raddr)) {
+      int rv;
+      int major, minor, patch;
+      if (VSCP_ERROR_SUCCESS == (rv = vscp2_get_fw_ver_cb(&major, &minor, &patch))) {
+        switch (raddr) {
+
+          case VSCP_STD_REGISTER_FIRMWARE_MAJOR:
+            pev->pdata[rcnt] = major;
+            break;
+
+          case VSCP_STD_REGISTER_FIRMWARE_MINOR:
+            pev->pdata[rcnt] = minor;
+            break;
+
+          case VSCP_STD_REGISTER_FIRMWARE_SUBMINOR:
+            pev->pdata[rcnt] = patch;
+            break;
+        }
+      }
+      else {
+        ESP_LOGE(TAG, "[%s, %d]: Failed to get firmware version", __func__, __LINE__);
+        vscp_espnow_send_error(rv);
+      }
+      break;
+    }
+
+    else if (VSCP_STD_REGISTER_BOOT_LOADER == raddr) {
+      // Espressif ESP32 standard algorithm
+      pev->pdata[rcnt] = VSCP_BOOTLOADER_ESP;
+    }
+
+    else if (VSCP_STD_REGISTER_BUFFER_SIZE == raddr) {
+      // Not used
+      pev->pdata[cnt] = 0;
+    }
+
+    else if (VSCP_STD_REGISTER_PAGES_COUNT == raddr) {
+      // Not used
+      pev->pdata[cnt] = 0;
+    }
+
+    /* Unsigned 32-bit integer for family code */
+    else if ((VSCP_STD_REGISTER_FAMILY_CODE <= raddr) && ((VSCP_STD_REGISTER_FAMILY_CODE + 3) >= raddr)) {
+      // We do not use
+      pev->pdata[cnt] = 0;
+      break;
+    }
+
+    /* Unsigned 32-bit integer for device type */
+    else if ((VSCP_STD_REGISTER_DEVICE_TYPE <= raddr) && ((VSCP_STD_REGISTER_DEVICE_TYPE + 3) >= raddr)) {
+      // We do not use
+      pev->pdata[cnt] = 0;
+      break;
+    }
+
+    /* Firmware code for device (MSB). */
+    else if (VSCP_STD_REGISTER_FIRMWARE_CODE_MSB == raddr) {
+      pev->pdata[cnt] = THIS_FIRMWARE_CODE >> 8;
+    }
+
+    /* Firmware code for device (LSB). */
+    else if (VSCP_STD_REGISTER_FIRMWARE_CODE_LSB == raddr) {
+      pev->pdata[cnt] = THIS_FIRMWARE_CODE & 0xff;
+    }
+
+    /* 0xd0 - 0xdf  - GUID  */
+    else if (VSCP_STD_REGISTER_GUID == raddr) {
+      uint8_t GUID[16];
+      vscp_espnow_get_node_guid(GUID);
+    }
+
+    /* 0xe0 - 0xff  - MDF  */
+    else if (VSCP_STD_REGISTER_DEVICE_URL == raddr) {
+      uint8_t pos = raddr - VSCP_STD_REGISTER_DEVICE_URL;
+      char mdf[32];
+      if (pos < 32) {
+        memset(mdf, 0, 32);
+        strcpy(mdf, THIS_FIRMWARE_MDF_URL);
+        pev->pdata[cnt] = mdf[pos];
+      }
+    }
+
+    else {
+      pev->pdata[rcnt] = 0;
+    }
+
+    rcnt++;
+    raddr++;
+
+    // If read count is to large - break
+    // allocate new data
+    if (!raddr) {
+      pev->pdata    = realloc(pev->pdata, rcnt);
+      pev->sizeData = rcnt;
+      break;
+    }
+
+  } // while
 
   VSCP_FREE(pev);
   return VSCP_ERROR_SUCCESS;
@@ -243,6 +443,12 @@ vscp_espnow_write_reg(uint32_t reg, uint16_t cnt, uint16_t *pdata)
   if (NULL == pev) {
     return VSCP_ERROR_MEMORY;
   }
+
+  // Reset device
+  // else if (VSCP_STD_REGISTER_NODE_RESET == raddr) {
+  //   if (
+  //   if (vscp_nore_rest_time
+  // }
 
   VSCP_FREE(pev);
   return VSCP_ERROR_SUCCESS;
@@ -268,7 +474,7 @@ vscp_espnow_write_std_reg(uint32_t reg, uint16_t cnt, uint16_t *pdata)
 // vscp_espnow_send_errror
 //
 
-static int
+int
 vscp_espnow_send_error(uint8_t err)
 {
   vscpEventEx ex;
@@ -277,7 +483,7 @@ vscp_espnow_send_error(uint8_t err)
   ex.vscp_class = VSCP_CLASS1_ERROR;
   ex.vscp_type  = VSCP_TYPE_ERROR_ERROR;
   ex.sizeData   = 5;
-  ex.data[3]    = VSCP_ERROR_INVALID_SYNTAX;
+  ex.data[3]    = err;
   return vscp_espnow_sendEventEx(ESPNOW_ADDR_BROADCAST, &ex, true, 1000);
 }
 
@@ -361,6 +567,7 @@ vscp_espnow_event_process(const vscpEvent *pev)
         break;
 
       case VSCP_TYPE_PROTOCOL_RESET_DEVICE:
+        // TODO
         break;
 
       case VSCP_TYPE_PROTOCOL_PAGE_READ:
@@ -380,12 +587,15 @@ vscp_espnow_event_process(const vscpEvent *pev)
         break;
 
       case VSCP_TYPE_PROTOCOL_WHO_IS_THERE:
+        // TODO
         break;
 
       case VSCP_TYPE_PROTOCOL_GET_MATRIX_INFO:
+        // TODO
         break;
 
       case VSCP_TYPE_PROTOCOL_GET_EMBEDDED_MDF:
+        // TODO
         break;
 
       case VSCP_TYPE_PROTOCOL_EXTENDED_PAGE_READ:
@@ -397,6 +607,7 @@ vscp_espnow_event_process(const vscpEvent *pev)
         break;
 
       case VSCP_TYPE_PROTOCOL_GET_EVENT_INTEREST:
+        // TODO
         break;
     }
   }
@@ -405,6 +616,7 @@ vscp_espnow_event_process(const vscpEvent *pev)
     switch (pev->vscp_type) {
 
       case VSCP2_TYPE_PROTOCOL_READ_REGISTER: {
+
         uint32_t reg;
         uint8_t val;
         uint16_t cnt;
@@ -417,7 +629,7 @@ vscp_espnow_event_process(const vscpEvent *pev)
             reg = ((uint32_t) pev->pdata[16] << 24) + ((uint32_t) pev->pdata[17] << 16) +
                   ((uint32_t) pev->pdata[18] << 8) + pev->pdata[19];
 
-            // Get registers to read
+            // Get # registers to read
             cnt = ((uint16_t) pev->pdata[20] << 8) + pev->pdata[21];
 
             if (cnt > 508) {
@@ -1598,6 +1810,7 @@ vscp_espnow_data_cb(uint8_t *src_addr, uint8_t *data, size_t size, wifi_pkt_rx_c
            pev->sizeData,
            pev->timestamp);
 
+  // Handle incomming events
   vscp_espnow_event_process(pev);
 
 EXIT:
@@ -1736,48 +1949,12 @@ readPersistentConfigs(void)
       break;
   }
 
-  // User if 0
-  rv = nvs_get_u8(s_nvsHandle, "usrid0", &s_vscp_persistent.userid0);
+  // User id
+  rv = nvs_get_blob(s_nvsHandle, "usrid", &s_vscp_persistent.userid, 5);
   if (ESP_OK != rv) {
-    rv = nvs_set_u8(s_nvsHandle, "usrid0", s_vscp_persistent.userid0);
+    rv = nvs_set_blob(s_nvsHandle, "usrid", s_vscp_persistent.userid, 5);
     if (rv != ESP_OK) {
-      ESP_LOGE(TAG, "Failed to update userid0");
-    }
-  }
-
-  // User if 1
-  rv = nvs_get_u8(s_nvsHandle, "usrid1", &s_vscp_persistent.userid1);
-  if (ESP_OK != rv) {
-    rv = nvs_set_u8(s_nvsHandle, "usrid1", s_vscp_persistent.userid1);
-    if (rv != ESP_OK) {
-      ESP_LOGE(TAG, "Failed to update userid1");
-    }
-  }
-
-  // User if 2
-  rv = nvs_get_u8(s_nvsHandle, "usrid2", &s_vscp_persistent.userid2);
-  if (ESP_OK != rv) {
-    rv = nvs_set_u8(s_nvsHandle, "usrid2", s_vscp_persistent.userid2);
-    if (rv != ESP_OK) {
-      ESP_LOGE(TAG, "Failed to update userid2");
-    }
-  }
-
-  // User if 3
-  rv = nvs_get_u8(s_nvsHandle, "usrid3", &s_vscp_persistent.userid3);
-  if (ESP_OK != rv) {
-    rv = nvs_set_u8(s_nvsHandle, "usrid3", s_vscp_persistent.userid3);
-    if (rv != ESP_OK) {
-      ESP_LOGE(TAG, "Failed to update userid3");
-    }
-  }
-
-  // User if 4
-  rv = nvs_get_u8(s_nvsHandle, "usrid4", &s_vscp_persistent.userid4);
-  if (ESP_OK != rv) {
-    rv = nvs_set_u8(s_nvsHandle, "usrid4", s_vscp_persistent.userid4);
-    if (rv != ESP_OK) {
-      ESP_LOGE(TAG, "Failed to update userid4");
+      ESP_LOGE(TAG, "Failed to update usrid");
     }
   }
 
