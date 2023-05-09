@@ -1,0 +1,773 @@
+{
+  "_copyright": "Copyright C) 2023 Ake Hedman, Grodans Paradis AB, <akhe@grodansparadis.com>",
+
+  "module": {
+    "name": "vscp-espnow Alpha",
+    "model": "Alpha-node",
+    "version": "0.0.1",
+    "changed": "2023-05-09",
+    "description": "This is template for an Alpga vscp.espnow node",
+    "infourl": "https://github.com/grodansparadis/vscp-espnow",
+    "buffersize": 200,
+  
+    "manufacturer": {
+        "name" : "Grodans Paradis AB",
+         "address": {
+               "street": "Brattbergavägen 17",
+               "city": "Los",
+               "town": "Loos",
+               "postcode": "82770",
+               "state": "HA",
+               "Region": "Hälsingland",
+               "country" : "Sweden"
+         },
+         "telephone": [
+            {
+               "number": "+46 8 40011835",
+               "description": {
+                  "en": "Main Reception",
+                  "se": "Huvudreception"
+               }
+            }
+         ],
+         "fax": [
+            {
+               "number": "+46 8 40011835",
+               "description": {
+                  "en": "Non working fax",
+                  "se": "Icke fungerande fax"
+               }
+            }
+         ],
+         "email": [
+            {
+               "address": "support@grodansparadis.com",
+               "description": {
+            	   "en": "Support email"
+               }
+            },
+            {
+               "address": "sales@grodansparadis.com",
+               "description": "Sales inquires email"
+            },
+            {
+               "address": "info@grodansparadis.com",
+               "<description": {
+            	   "en": "General email"
+               }
+            }
+         ],
+         "web": [
+            {
+               "address": "https://www.grodansparadis.com",
+               "description": {
+            	   "en": "Main web site"
+               }
+            },
+            {
+               "url": "https://frogshop.se",
+               "description": {
+            	   "en": "on-line store"
+               }
+            },
+            {
+              "url": "https://www.vscp.org",
+              "description": {
+                "en": "VSCP project site"
+              }
+            },
+            {
+              "url": "https://docs.vscp.org",
+              "description": {
+                "en": "Documentation site"
+              }
+           }
+         ]
+    },
+    "boot" : {
+      "algorithm": 80,
+      "blocksize" : 4096,
+      "blockcount" : 1024
+    },
+
+    "files" : {
+      "picture" : [
+        {
+          "format": "jpg",
+          "url": "https://github.com/grodansparadis/vscp-espnow/blob/main/images/frankfurt-can4vscp-wifi.jpg",
+          "description": {
+            "en": "Frankfurt CAN4VSCP WiFi module.",
+            "se": "Frankfurt CAN4VSCP WiFi modul."
+          }          
+        },
+        {
+          "format": "jpg",
+          "url": "https://github.com/grodansparadis/vscp-espnow/blob/main/images/nodemcu.jpg",
+          "description": {
+            "en": "NodeMCU units with vscp-espnow.",
+            "se": "ModeMcu enheter med vscp-espnow."
+          }          
+        }
+      ],
+
+      "firmware" : [
+        {
+          "target": "ESP32",
+          "targetcode": 1,
+          "url": "https://xxx.yy/1.bin", 
+          "format":"bin",
+          "date":"2023-05-09",
+          "size":"8192",
+          "version_major": 0,
+          "version_minor": 0, 
+          "version_patch": 1,
+          "md5sum":"0x595f44fec1e92a71d3e9e77456ba80d1",
+          "description" : {
+            "en": "Alpha test module, ESP32 generic, 4M.",
+            "se": "Alpha test modul, ESP32 standard, 4M."
+          }
+        },
+        {
+          "target": "ESP32-C3",
+          "targetcode": 2,
+          "url": "https://xxx.yy/2.bin", 
+          "format":"bin",
+          "date":"2023-05-09",
+          "size":"8192",
+          "version_major":"0x00",
+          "version_minor":"0x00", 
+          "version_patch":"0x01",
+          "md5sum":"71f920fa275127a7b60fa4d4d41432a3",
+          "description" : {
+            "en": "Alpha test module, ESP32 C3, 4M.",
+            "se": "Alpha test modul, ESP32 C3, 4M."
+          }
+        },
+        {
+          "target": "ESP32-S3",
+          "targetcode": 3,
+          "url": "https://xxx.yy/3.bin", 
+          "format":"bin",
+          "date":"2020-05-15",
+          "size":"8192",
+          "version_major":"1",
+          "version_minor":"1", 
+          "version_patch":"6",
+          "md5sum":"71f920fa275127a7b60fa4d4d41432a3",
+          "description" : {
+            "en": "Alpha test module, ESP32 S3, 4M."
+          }
+        }
+      ],
+
+      "manual" : [
+        {
+          "url": "https://github.com/grodansparadis/vscp-espnow",
+          "format": "html",
+          "lang": "en",
+          "description": {
+            "en" : "Description of vscp-espnow alpha/beta/gamma nodes.",
+            "se" : "Beskrivning av vscp-espnow alpha/beta/gamma noder."
+          }
+        },
+        {
+          "url": "https://docs.vscp.org",
+          "format": "html",
+          "lang": "en",
+          "description": {
+            "en" : "Various VSCP documentation.",
+            "se" : "Diverse VSCP dokumentation."
+          }
+        }
+      ]
+    },
+
+    "register" : [
+      {
+        "page": 0,
+        "offset": "0x00000000",
+        "min" : 0,
+        "max" : 255,
+        "access" : "rw",
+        "default": 0,
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",        
+        "name" : "Zone for device",
+        "description" : {
+          "en" : "Just a byte register with color settings",
+          "se" : "Ett vanligt register med färginställningar"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        }
+      },
+      {
+        "page": 0,
+        "offset": "0x00000001",
+        "min" : 0,
+        "max" : 255,
+        "access" : "rw",
+        "default": 0,
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",        
+        "name" : "Subzone for device",
+        "description" : {
+          "en" : "Just a byte register with color settings",
+          "se" : "Ett vanligt register med färginställningar"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        }
+      },
+      {
+        "offset": "0x00000002",
+        "type": "block",
+        "span": 32,
+        "access" : "rw",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",        
+        "name" : "device_name",
+        "comment" : "32 bytes for device name, access as remote variable string", 
+        "description" : {
+          "en" : "Name of device",
+          "se" : "Namn på enhet"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        }
+      },
+      {
+        "offset": "0x00000022",
+        "type": "block",
+        "span": 32,
+        "access" : "rw",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",        
+        "name" : "key",
+        "comment" : "32 bytes for device name, access as remote variable string", 
+        "description" : {
+          "en" : "Secret key for devices in cluster",
+          "se" : "Enheternas gemensamma hemlig nyckel"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        },        
+      },
+      {
+        "offset": "0x00000042",
+        "type": "std",
+        "min" : 0,
+        "max" : 15,
+        "access" : "rw",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",        
+        "name" : "startup_delay",
+        "comment" : "Startup delay in seconds before wifi is activated allow capacitor charging", 
+        "description" : {
+          "en" : "Startup delay for capacitor charging before wifi start",
+          "se" : "Pause innan wifi start för att ladda kondensator"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        }
+      },
+      {
+        "offset": "0x00000043",
+        "type": "std",
+        "max": 2,
+        "access" : "r",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",        
+        "name" : "node_type",
+        "remotevar" : true, 
+        "comment" : "Node type alpha=0, betas=1, gamma=2", 
+        "description" : {
+          "en" : "Node type (alpha=0, beta=1, gamma=2)",
+          "se" : "Nod typ (alpha=0, beta=1, gamma=2)"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        }
+      },      
+      {
+        "offset": "0x00000044",
+        "type": "std",
+        "access" : "rw",
+        "default" : 30,
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",               
+        "name" : "heartbeat_freq",
+        "remotevar" : true, 
+        "comment" : "", 
+        "description" : {
+          "en" : "Heartbeat event frequency in seconds",
+          "se" : "Frekvens för hjärtslags event i sekunder"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        }
+      },
+      {
+        "offset": "0x00000045",
+        "type": "block",
+        "span": 2,
+        "access" : "rw",
+        "default" : "0xffff",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",               
+        "name" : "nickname_id",
+        "description" : {
+          "en" : "Node nickname id, present in GUID as the two LSB's.",
+          "se" : "Nickname för node. Används som de två minst signifikanta byten i nodens GUID."
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        }
+      },
+      {
+        "offset": "0x00000047",
+        "type": "block",
+        "span": 4,
+        "access" : "r",
+        "default" : "0xffff",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",               
+        "name" : "bootcnt",
+        "description" : {
+          "en" : "Number of cold boots",
+          "se" : "Antal återstarter."
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        }
+      },
+      {
+        "offset": "0x0000004b",
+        "type": "std",
+        "span": 1,
+        "access" : "r",
+        "default" : "0xffff",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",               
+        "name" : "boot_reason",
+        "description" : {
+          "en" : "Reason for last boot",
+          "se" : "Anledning till senaste återstart"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        }
+      },
+      {
+        "offset": "0x0000004c",
+        "type": "std",
+        "span": 1,
+        "access" : "r",
+        "default" : "0xffff",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",               
+        "name" : "boot_reason",
+        "description" : {
+          "en" : "Reason for last boot",
+          "se" : "Anledning till senaste återstart"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        }
+      },
+      {
+        "offset": "0x0000004d",
+        "type": "std",
+        "span": 1,
+        "access" : "r",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",               
+        "name" : "chip_model",
+        "comment" : "/usr/local/src/esp/esp-idf-v5.0.1/components/esp_hw_support/include/esp_chip_info.h",
+        "description" : {
+          "en" : "Chip model, see esp_chip_info_t",
+          "se" : "Model of chip"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        }
+      },
+      {
+        "offset": "0x0000004e",
+        "type": "block",
+        "span": 4,
+        "access" : "r",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",               
+        "name" : "chip_features",
+        "comment" : "/usr/local/src/esp/esp-idf-v5.0.1/components/esp_hw_support/include/esp_chip_info.h",
+        "description" : {
+          "en" : "Chip features, see esp_chip_info_t",
+          "se" : "Egenskaper hos chip"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        }
+      },  
+      {
+        "offset": "0x00000052",
+        "type": "block",
+        "span": 1,
+        "access" : "r",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",               
+        "name" : "chip_reversion",
+        "comment" : "/usr/local/src/esp/esp-idf-v5.0.1/components/esp_hw_support/include/esp_chip_info.h",
+        "description" : {
+          "en" : "Chip reversion, see esp_chip_info_t",
+          "se" : "Revision av chip"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        }
+      },  
+      {
+        "offset": "0x00000053",
+        "type": "block",
+        "span": 1,
+        "access" : "r",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",               
+        "name" : "chip_cores",
+        "comment" : "/usr/local/src/esp/esp-idf-v5.0.1/components/esp_hw_support/include/esp_chip_info.h",
+        "description" : {
+          "en" : "Number of cores in chip, see esp_chip_info_t",
+          "se" : "Antal kärnor i chip"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        }
+      }, 
+      {
+        "offset": "0x00000053",
+        "type": "block",
+        "span": 1,
+        "access" : "r",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",               
+        "name" : "wifi_country",
+        "comment" : "",
+        "description" : {
+          "en" : "Country code for wifi",
+          "se" : "Code för wifi land"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        }
+      },
+
+
+
+      {
+        "offset": "0x00011000",
+        "type": "block",
+        "span": 4,
+        "access" : "r",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",        
+        "name" : "Stat_Sent_Events",
+        "comment" : "4 bytes for send count, access as remote variable uint32", 
+        "description" : {
+          "en" : "Count sent events",
+          "se" : "Antal sända event"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        }
+      },
+      {
+        "offset": "0x00011000",
+        "type": "block",
+        "span": 4,
+        "access" : "r",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",        
+        "name" : "Stat_Send_Fail", 
+        "description" : {
+          "en" : "Count of send failures",
+          "se" : "Antal send fel"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        }
+      },
+      {
+        "offset": "0x00011000",
+        "type": "block",
+        "span": 4,
+        "access" : "r",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",        
+        "name" : "Stat_Send_Lock_Fail", 
+        "description" : {
+          "en" : "Count of send lock failures",
+          "se" : "Antal send låsnings fel"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        }
+      },
+      {
+        "offset": "0x00010004",
+        "type": "block",
+        "span": 4,
+        "access" : "r",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",        
+        "name" : "Stat_Receive_Events",
+        "comment" : "4 bytes for send count, access as remote variable uint32", 
+        "description" : {
+          "en" : "Name of device",
+          "se" : "Namn på enhet"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        }
+      },
+      {
+        "offset": "0x00010004",
+        "type": "block",
+        "span": 4,
+        "access" : "r",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",        
+        "name" : "Stat_Receive_Event_Overruns",
+        "comment" : "4 bytes for send count, access as remote variable uint32", 
+        "description" : {
+          "en" : "Count for receive event overruns",
+          "se" : "Räknare för receive event overruns"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        }
+      },
+      {
+        "offset": "0x00010004",
+        "type": "block",
+        "span": 4,
+        "access" : "r",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",        
+        "name" : "Stat_time_diff",
+        "description" : {
+          "en" : "Count for time diff to high",
+          "se" : "Räknare för events med för höh tidsdiff"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        }
+      },
+    ],
+
+    "remotevar" : [
+      {
+        "name" : "DeviceName",
+        "type": "string", 
+        "access": "rw",
+        "page" :"0",
+        "offset" : "0x00000002",
+        "bgcolor" :"0xCCFFFF",
+        "fgcolor" :"0x123456",
+        
+        "description" : {
+          "en": "Name of device",
+          "se": "Namn för enhet",
+        },
+        "infourl" : {
+          "gb": "English help remotevar 1",
+          "se": "Svensk hjälp remotevar 1",
+        }
+      },
+      {
+        "name" : "StatSentEvents",
+        "type": "uint32", 
+        "default": 0,
+        "access": "r",
+        "page" : "0x11",
+        "offset" :"12",
+        "bgcolor" :"0x777777",
+        "fgcolor" :"0x888888",        
+        "description" : {
+          "en": "English description remotevar 2",
+          "se": "Svensk beskrivning remotevar 2",
+          "lt": "Lietuvos padeda remotevar 2"
+        },
+        "infourl" : {
+          "en": "English help remotevar 2",
+          "se": "Svensk hjälp remotevar 2",
+          "lt": "Lietuvos padeda remotevar 2"
+        },
+        "valuelist" : [
+          {
+            "value" : "0x00",
+            "name" : "Low",
+            "description" : {
+              "en" : "Low speed",
+              "se" : "Låg hastighet",
+              "lt" : "??????????"
+            },
+            "infourl" : {
+              "gb": "English help 1 vl2",
+              "se": "Svensk hjälp 1 vl2",
+              "lt": "Lietuvos padeda 1 vl2"
+            }
+          },
+          {
+            "value" : "0x01",
+            "name" : "Medium",
+            "description" : {
+              "en" : "Medium speed",
+              "se" : "Medium hastighet"
+            },
+            "infourl" : {
+              "gb": "English help 2 vl2",
+              "se": "Svensk hjälp 2 vl2",
+              "lt": "Lietuvos padeda 2 vl2"
+            }
+          },
+          {
+            "value" : "0x03",
+            "name" : "High",
+            "description" : {
+              "en" : "High speed",
+              "se" : "Hög hastighet"
+            },
+            "infourl" : {
+              "gb": "English help 3 vl2",
+              "se": "Svensk hjälp 3 vl2",
+              "lt": "Lietuvos padeda 3 vl2"
+            }
+          }
+        ] 
+      },
+      {
+        "name" : "Remote variable 3",
+        "type": "uint32", 
+        "default":"0",
+        "access": "rw",
+        "page" :"9",
+        "offset" :98,
+        "rowpos": "0x44",
+        "bgcolor" :"0x999999",
+        "fgcolor" :"0xAAAAAA",
+        
+        "description" : {
+          "en": "English description 3",
+          "se": "Svensk beskrivning 3",
+          "lt": "Lietuvos padeda 3"
+        },
+        "infourl" : {
+          "gb": "English help 3",
+          "se": "Svensk hjälp 3",
+          "lt": "Lietuvos padeda 3"
+        },
+        "bit": [
+          {
+            "pos": 0,
+            "width": 3,
+            "default": 4,
+            "min": 0,
+            "max": 7,
+            "access" : "rw",
+            "name" : "Bitfield name 0",
+            "description" : {
+              "gb": "English description bitfield 0",
+              "se": "Svensk beskrivning bitfield 0",
+              "lt": "Lietuvos aprašymas bitfield 0"
+            },
+            "infourl" : {
+              "gb": "English help bitfield 0",
+              "se": "Svensk hjälp bitfield 0",
+              "lt": "Lietuvos padeda bitfield 0"
+            }
+          },
+          {
+            "pos": 3,
+            "width": 2,
+            "default": false,
+            "access": "r",
+            "name" : "Bitfield name 1",
+            "description" : {
+              "gb": "English description bitfield 1",
+              "se": "Svensk beskrivning bitfield 1",
+              "lt": "Lietuvos aprašymas bitfield 1"
+            },
+            "infourl" : {
+              "gb": "English help bitfield 1",
+              "se": "Svensk hjälp bitfield 1",
+              "lt": "Lietuvos padeda bitfield 1"
+            },
+            "valuelist" : [
+              {
+                "value" : "0x00",
+                "name" : "Low",
+                "description" : {
+                  "en" : "Low speed",
+                  "se" : "Låg hastighet"
+                },
+                "infourl" : {
+                  "gb": "English help 1 vl2",
+                  "se": "Svensk hjälp 1 vl2",
+                  "lt": "Lietuvos padeda 1 vl2"
+                }
+              },
+              {
+                "value" : "0x01",
+                "name" : "Medium",
+                "description" : {
+                  "en" : "Medium speed",
+                  "se" : "Medium hastighet"
+                },
+                "infourl" : {
+                  "gb": "English help 2 vl2",
+                  "se": "Svensk hjälp 2 vl2",
+                  "lt": "Lietuvos padeda 2 vl2"
+                }
+              },
+              {
+                "value" : "0x03",
+                "name" : "High",
+                "description" : {
+                  "en" : "High speed",
+                  "se" : "Hög hastighet"
+                },
+                "infourl" : {
+                  "gb": "English help 3 vl2",
+                  "se": "Svensk hjälp 3 vl2",
+                  "lt": "Lietuvos padeda 3 vl2"
+                }
+              }
+            ] 
+          }
+        ]
+      }    
+    ]
+  } 
+}

@@ -201,13 +201,9 @@ typedef struct {
   uint32_t nSend;            // # sent frames
   uint32_t nSendFailures;    // Number of send failures
   uint32_t nSendLock;        // Number of send lock give ups
-  uint32_t nSendAck;         // # of failed send confirms
   uint32_t nRecv;            // # received frames
+  uint32_t nRecvFrameFault;  // Receive frame faults
   uint32_t nRecvOverruns;    // Number of receive overruns
-  uint32_t nRecvFrameFault;  // Frame to big or to small
-  uint32_t nRecvAdjChFilter; // Adjacent channel filter
-  uint32_t nRecvŔssiFilter;  // RSSI filter stats
-  uint32_t nForw;            // # Number of forwarded frames
   uint32_t nTimeDiffLarge;   // Frames skipped with time diff to large
 } vscp_espnow_stats_t;
 
@@ -280,7 +276,7 @@ vscp_espnow_read_std_reg(uint32_t reg, uint16_t cnt);
  * @return int Return VSCP_ERROR_SUCCESS if OK, error code if not
  */
 int
-vscp_espnow_write_reg(uint32_t reg, uint16_t cnt, uint16_t *pdata);
+vscp_espnow_write_reg(uint32_t reg, uint16_t cnt, uint8_t *pdata);
 
 /**
  * @brief Write VSCP standard register(s)

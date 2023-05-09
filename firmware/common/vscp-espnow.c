@@ -195,6 +195,8 @@ static uint8_t s_vscp_espnow_seq = 0; // Sequency counter for sent events
 
 static vscp_espnow_stats_t s_vscpEspNowStats;
 
+static uint32_t s_vscp_node_reset_timer = 0;
+
 // Forward declarations
 
 // ----------------------------------------------------------------------------
@@ -220,14 +222,14 @@ vscp_espnow_read_reg(uint32_t address, uint16_t cnt)
 // Read as 0xffffff80 - 0xffffffff
 
 int
-vscp_espnow_read_standard_reg(uint32_t address, uint16_t cnt)
+vscp_espnow_read_standard_reg(uint32_t reg, uint16_t cnt)
 {
-  uint32_t raddr = address & 0xff;
+  uint32_t raddr = reg & 0xff;
   uint16_t rcnt  = 0;
 
   // Check that we are reading a valid register
-  if (address < 0xffffff80) {
-    ESP_LOGE(TAG, "[%s, %d]: Invalid standard register address addr=%lX", __func__, __LINE__, address);
+  if (reg < 0xffffff80) {
+    ESP_LOGE(TAG, "[%s, %d]: Invalid standard register address addr=%X", __func__, __LINE__, (unsigned int)reg);
     return VSCP_ERROR_MEMORY;
   }
 
@@ -237,95 +239,102 @@ vscp_espnow_read_standard_reg(uint32_t address, uint16_t cnt)
     return VSCP_ERROR_MEMORY;
   }
 
-  pev->pdata = VSCP_CALLOC(cnt);
+  pev->pdata = ESP_CALLOC(1, cnt);
   if (NULL == pev->pdata) {
     ESP_LOGE(TAG, "[%s, %d]: Could not allocate memory for event data", __func__, __LINE__);
     vscp_fwhlp_deleteEvent(&pev);
     return VSCP_ERROR_MEMORY;
   }
 
-  pev->sizeData = cnt;
+  pev->vscp_class = VSCP_CLASS2_PROTOCOL;
+  pev->vscp_type = VSCP2_TYPE_PROTOCOL_READ_WRITE_RESPONSE;
+  pev->pdata[0] = (reg >> 24) & 0xff;
+  pev->pdata[0] = (reg >> 16) & 0xff;
+  pev->pdata[0] = (reg >> 8) & 0xff;
+  pev->pdata[0] = reg & 0xff;
+  pev->sizeData = cnt + 4;
 
-  // Work thrue all requested registers
+
+  // Work thru all requested registers
   while (rcnt < cnt) {
 
     //  Return alarm status
     if (VSCP_STD_REGISTER_ALARM_STATUS == raddr) {
-      pev->pdata[rcnt] = vscp2_get_stdreg_alarm_cb;
+      pev->pdata[rcnt+4] = vscp2_get_stdreg_alarm_cb();
     }
 
     else if (VSCP_STD_REGISTER_MAJOR_VERSION == raddr) {
-      pev->pdata[rcnt] = VSCP_STD_VERSION_MAJOR;
+      pev->pdata[rcnt+4] = VSCP_STD_VERSION_MAJOR;
     }
 
     else if (VSCP_STD_REGISTER_MINOR_VERSION == raddr) {
-      pev->pdata[rcnt] = VSCP_STD_VERSION_MINOR;
+      pev->pdata[rcnt+4] = VSCP_STD_VERSION_MINOR;
     }
 
     else if (VSCP_STD_REGISTER_SUB_VERSION == raddr) {
-      pev->pdata[rcnt] = VSCP_STD_VERSION_SUB_MINOR;
+      pev->pdata[rcnt+4] = VSCP_STD_VERSION_SUB_MINOR;
     }
 
     //  User id
     else if ((VSCP_STD_REGISTER_USER_ID >= raddr) && ((VSCP_STD_REGISTER_USER_ID + 4) <= raddr)) {
-      pev->pdata[rcnt] = s_vscp_persistent.userid[raddr - VSCP_STD_REGISTER_USER_ID];
+      pev->pdata[rcnt+4] = s_vscp_persistent.userid[raddr - VSCP_STD_REGISTER_USER_ID];
     }
 
     /*
-      Manufacturer id space
+      Manufacturer id
     */
     else if ((VSCP_STD_REGISTER_USER_MANDEV_ID >= raddr) && ((VSCP_STD_REGISTER_USER_MANDEV_ID + 3) <= raddr)) {
 
       switch (raddr - VSCP_STD_REGISTER_USER_MANDEV_ID) {
         case 0:
-          pev->pdata[rcnt] = THIS_FIRMWARE_MANUFACTURER_ID0;
+          pev->pdata[rcnt+4] = THIS_FIRMWARE_MANUFACTURER_ID0;
           break;
 
         case 1:
-          pev->pdata[rcnt] = THIS_FIRMWARE_MANUFACTURER_ID1;
+          pev->pdata[rcnt+4] = THIS_FIRMWARE_MANUFACTURER_ID1;
           break;
 
         case 2:
-          pev->pdata[rcnt] = THIS_FIRMWARE_MANUFACTURER_ID2;
+          pev->pdata[rcnt+4] = THIS_FIRMWARE_MANUFACTURER_ID2;
           break;
 
         case 3:
-          pev->pdata[rcnt] = THIS_FIRMWARE_MANUFACTURER_ID3;
+          pev->pdata[rcnt+4] = THIS_FIRMWARE_MANUFACTURER_ID3;
           break;
       }
     }
 
     /*
-      Manufacturer id space
+      Manufacturer id
     */
     else if ((VSCP_STD_REGISTER_USER_MANSUBDEV_ID >= raddr) && ((VSCP_STD_REGISTER_USER_MANSUBDEV_ID + 3) <= raddr)) {
       switch (raddr - VSCP_STD_REGISTER_USER_MANSUBDEV_ID) {
         case 0:
-          pev->pdata[rcnt] = THIS_FIRMWARE_MANUFACTURER_SUBID0;
+          pev->pdata[rcnt+4] = THIS_FIRMWARE_MANUFACTURER_SUBID0;
           break;
 
         case 1:
-          pev->pdata[rcnt] = THIS_FIRMWARE_MANUFACTURER_SUBID1;
+          pev->pdata[rcnt+4] = THIS_FIRMWARE_MANUFACTURER_SUBID1;
           break;
 
         case 2:
-          pev->pdata[rcnt] = THIS_FIRMWARE_MANUFACTURER_SUBID2;
+          pev->pdata[rcnt+4] = THIS_FIRMWARE_MANUFACTURER_SUBID2;
           break;
 
         case 3:
-          pev->pdata[rcnt] = THIS_FIRMWARE_MANUFACTURER_SUBID3;
+          pev->pdata[rcnt+4] = THIS_FIRMWARE_MANUFACTURER_SUBID3;
           break;
       }
     }
 
     // Nickname LSB
     else if (VSCP_STD_REGISTER_NICKNAME_ID_LSB == raddr) {
-      pev->pdata = s_vscp_persistent.nickname & 0xff;
+      pev->pdata[rcnt+4] = s_vscp_persistent.nickname & 0xff;
     }
 
     // Nickname MSB
     else if (VSCP_STD_REGISTER_PAGE_SELECT_MSB == raddr) {
-      pev->pdata = (s_vscp_persistent.nickname >> 8) & 0xff;
+      pev->pdata[rcnt+4] = (s_vscp_persistent.nickname >> 8) & 0xff;
     }
 
     // Firmware version
@@ -336,15 +345,15 @@ vscp_espnow_read_standard_reg(uint32_t address, uint16_t cnt)
         switch (raddr) {
 
           case VSCP_STD_REGISTER_FIRMWARE_MAJOR:
-            pev->pdata[rcnt] = major;
+            pev->pdata[rcnt+4] = major;
             break;
 
           case VSCP_STD_REGISTER_FIRMWARE_MINOR:
-            pev->pdata[rcnt] = minor;
+            pev->pdata[rcnt+4] = minor;
             break;
 
           case VSCP_STD_REGISTER_FIRMWARE_SUBMINOR:
-            pev->pdata[rcnt] = patch;
+            pev->pdata[rcnt+4] = patch;
             break;
         }
       }
@@ -357,7 +366,7 @@ vscp_espnow_read_standard_reg(uint32_t address, uint16_t cnt)
 
     else if (VSCP_STD_REGISTER_BOOT_LOADER == raddr) {
       // Espressif ESP32 standard algorithm
-      pev->pdata[rcnt] = VSCP_BOOTLOADER_ESP;
+      pev->pdata[rcnt+4] = VSCP_BOOTLOADER_ESP;
     }
 
     else if (VSCP_STD_REGISTER_BUFFER_SIZE == raddr) {
@@ -412,7 +421,7 @@ vscp_espnow_read_standard_reg(uint32_t address, uint16_t cnt)
     }
 
     else {
-      pev->pdata[rcnt] = 0;
+      pev->pdata[rcnt+4] = 0;
     }
 
     rcnt++;
@@ -428,7 +437,7 @@ vscp_espnow_read_standard_reg(uint32_t address, uint16_t cnt)
 
   } // while
 
-  VSCP_FREE(pev);
+  ESP_FREE(pev);
   return VSCP_ERROR_SUCCESS;
 }
 
@@ -437,20 +446,101 @@ vscp_espnow_read_standard_reg(uint32_t address, uint16_t cnt)
 //
 
 int
-vscp_espnow_write_reg(uint32_t reg, uint16_t cnt, uint16_t *pdata)
+vscp_espnow_write_reg(uint32_t reg, uint16_t cnt, uint8_t *pdata)
 {
+  uint32_t waddr = reg & 0xff;
+  uint16_t wcnt  = 0;
+
+  // Check pointer
+  if (NULL == pdata) {
+    ESP_LOGE(TAG, "[%s, %d]: Pointer is invalid", __func__, __LINE__);
+    return VSCP_ERROR_INVALID_POINTER;
+  }
+
+  // Check that we are reading a valid register
+  if (reg < 0xffffff80) {
+    ESP_LOGE(TAG, "[%s, %d]: Invalid standard register address reg=%X", __func__, __LINE__, (unsigned int)reg);
+    return VSCP_ERROR_MEMORY;
+  }
+
   vscpEvent *pev = vscp_fwhlp_newEvent();
   if (NULL == pev) {
     return VSCP_ERROR_MEMORY;
   }
 
-  // Reset device
-  // else if (VSCP_STD_REGISTER_NODE_RESET == raddr) {
-  //   if (
-  //   if (vscp_nore_rest_time
-  // }
+  pev->pdata = ESP_CALLOC(1, cnt);
+  if (NULL == pev->pdata) {
+    ESP_LOGE(TAG, "[%s, %d]: Could not allocate memory for event data", __func__, __LINE__);
+    vscp_fwhlp_deleteEvent(&pev);
+    return VSCP_ERROR_MEMORY;
+  }
 
-  VSCP_FREE(pev);
+  pev->vscp_class = VSCP_CLASS2_PROTOCOL;
+  pev->vscp_type = VSCP2_TYPE_PROTOCOL_READ_WRITE_RESPONSE;
+  pev->pdata[0] = (reg >> 24) & 0xff;
+  pev->pdata[0] = (reg >> 16) & 0xff;
+  pev->pdata[0] = (reg >> 8) & 0xff;
+  pev->pdata[0] = reg & 0xff;
+  pev->sizeData = cnt + 4;
+
+  // Work thru all requested registers
+  while (wcnt < cnt) {
+
+    //  Write alarm status
+    if (VSCP_STD_REGISTER_ALARM_STATUS == waddr) {
+      // Set to zero whatever is written
+      vscp2_get_stdreg_alarm_cb();
+      pev->pdata[wcnt+4] = 0;
+    }
+
+    //  User id
+    else if ((VSCP_STD_REGISTER_USER_ID >= waddr) && ((VSCP_STD_REGISTER_USER_ID + 4) <= waddr)) {
+      s_vscp_persistent.userid[waddr - VSCP_STD_REGISTER_USER_ID] = pdata[wcnt+4];
+    }
+
+    // Nickname LSB
+    else if (VSCP_STD_REGISTER_NICKNAME_ID_LSB == waddr) {
+      s_vscp_persistent.nickname = (s_vscp_persistent.nickname & 0xff00) + pdata[wcnt+4];
+      pev->pdata[wcnt+4] = s_vscp_persistent.nickname & 0xff;
+    }
+
+    // Nickname MSB
+    else if (VSCP_STD_REGISTER_PAGE_SELECT_MSB == waddr) {
+      s_vscp_persistent.nickname = ((uint16_t) pdata[wcnt+4] << 8) + (s_vscp_persistent.nickname & 0xff);
+      pev->pdata[wcnt+4] = (s_vscp_persistent.nickname >> 8) & 0xff;
+    }
+
+    /*
+      Reset device
+      Write 0x55 followed by 0xaa within one second
+      to reset the device.
+    */
+    else if (VSCP_STD_REGISTER_NODE_RESET == waddr) {
+      if (0x55 == pdata[wcnt+4] && s_vscp_node_reset_timer) {
+        s_vscp_node_reset_timer = vscp2_get_ms_cb();
+      }
+      else if ((0xAA == pdata[wcnt+4]) && s_vscp_node_reset_timer && (s_vscp_node_reset_timer < 1000)) {
+        espnow_reboot(1000);
+      }
+      else {
+        s_vscp_node_reset_timer = 0;
+      }
+    }
+
+    wcnt++;
+    waddr++;
+
+    // If read count is to large - break
+    // allocate new data
+    if (!waddr) {
+      pev->pdata    = realloc(pev->pdata, wcnt);
+      pev->sizeData = wcnt;
+      break;
+    }
+
+  } // while
+
+  ESP_FREE(pev);
   return VSCP_ERROR_SUCCESS;
 }
 
@@ -466,7 +556,7 @@ vscp_espnow_write_std_reg(uint32_t reg, uint16_t cnt, uint16_t *pdata)
     return VSCP_ERROR_MEMORY;
   }
 
-  VSCP_FREE(pev);
+  ESP_FREE(pev);
   return VSCP_ERROR_SUCCESS;
 }
 
@@ -1061,14 +1151,14 @@ vscp_espnow_frameToEv(vscpEvent *pev, const uint8_t *buf, uint8_t len, uint32_t 
 
   // Free any allocated event data
   if (NULL != pev->pdata) {
-    VSCP_FREE(pev->pdata);
+    ESP_FREE(pev->pdata);
     pev->pdata = NULL;
   }
 
   // Set VSCP size
   pev->sizeData = MIN(buf[VSCP_ESPNOW_POS_SIZE], len - VSCP_ESPNOW_MIN_FRAME);
   if (pev->sizeData) {
-    pev->pdata = VSCP_MALLOC(pev->sizeData);
+    pev->pdata = ESP_MALLOC(pev->sizeData);
     if (NULL == pev->pdata) {
       return VSCP_ERROR_MEMORY;
     }
@@ -1182,7 +1272,7 @@ vscp_espnow_sendEvent(const uint8_t *destAddr, const vscpEvent *pev, bool bSec, 
     return VSCP_ERROR_INVALID_POINTER;
   }
 
-  pbuf = VSCP_CALLOC(len);
+  pbuf = ESP_CALLOC(1, len);
   if (NULL == pbuf) {
     ESP_LOGE(TAG, "Failed to allocate memory for send buffer-");
     return VSCP_ERROR_MEMORY;
@@ -1197,7 +1287,7 @@ vscp_espnow_sendEvent(const uint8_t *destAddr, const vscpEvent *pev, bool bSec, 
   }
 
   if (VSCP_ERROR_SUCCESS != (rv = vscp_espnow_evToFrame(pbuf, len, pev))) {
-    VSCP_FREE(pbuf);
+    ESP_FREE(pbuf);
     ESP_LOGE(TAG, "Failed to convert event to frame. rv=%d", rv);
     return rv;
   }
@@ -1247,7 +1337,7 @@ vscp_espnow_sendEvent(const uint8_t *destAddr, const vscpEvent *pev, bool bSec, 
   rv = VSCP_ERROR_SUCCESS;
 
 ERROR:
-  VSCP_FREE(pbuf);
+  ESP_FREE(pbuf);
   return rv;
 }
 
@@ -1276,13 +1366,13 @@ vscp_espnow_sendEventEx(const uint8_t *destAddr, const vscpEventEx *pex, bool bS
     return VSCP_ERROR_INVALID_POINTER;
   }
 
-  pbuf = VSCP_MALLOC(len);
+  pbuf = ESP_MALLOC(len);
   if (NULL == pbuf) {
     return ESP_ERR_NO_MEM;
   }
 
   if (VSCP_ERROR_SUCCESS != (rv = vscp_espnow_exToFrame(pbuf, len, pex))) {
-    VSCP_FREE(pbuf);
+    ESP_FREE(pbuf);
     ESP_LOGE(TAG, "Failed to convert event to frame. rv=%d", rv);
     return ESP_ERR_INVALID_ARG;
   }
@@ -1344,7 +1434,7 @@ vscp_espnow_sendEventEx(const uint8_t *destAddr, const vscpEventEx *pex, bool bS
   rv = VSCP_ERROR_SUCCESS;
 
 ERROR:
-  VSCP_FREE(pbuf);
+  ESP_FREE(pbuf);
   return rv;
 }
 
@@ -1390,9 +1480,9 @@ vscp_espnow_send_probe_event(const uint8_t *dest_addr, uint8_t channel, TickType
   }
 
   // GUID is data
-  pev->pdata = VSCP_CALLOC(16);
+  pev->pdata = ESP_CALLOC(1, 16);
   if (NULL == pev->pdata) {
-    VSCP_FREE(pev);
+    ESP_FREE(pev);
     ESP_LOGE(TAG, "Failed to allocate memory for event data");
     return VSCP_ERROR_MEMORY;
   }
@@ -1407,7 +1497,7 @@ vscp_espnow_send_probe_event(const uint8_t *dest_addr, uint8_t channel, TickType
   memcpy(pev->pdata, s_VSCP_ESPNOW_GUID_UNINIT, VSCP_SIZE_GUID);
 
   size_t len   = vscp_espnow_getMinBufSizeEv(pev);
-  uint8_t *buf = VSCP_MALLOC(len);
+  uint8_t *buf = ESP_MALLOC(len);
   if (NULL == buf) {
     ESP_LOGE(TAG, "Failed to allocate memory for event buffer");
     vscp_fwhlp_deleteEvent(&pev);
@@ -1476,7 +1566,7 @@ vscp_espnow_send_probe_event(const uint8_t *dest_addr, uint8_t channel, TickType
 
 EXIT:
   vscp_fwhlp_deleteEvent(&pev);
-  VSCP_FREE(buf);
+  ESP_FREE(buf);
   return rv;
 }
 
@@ -1841,11 +1931,11 @@ vscp_espnow_heartbeat_task(void *pvParameter)
   }
 
 #if (s_my_node_type == VSCP_DROPLET_ALPHA)
-  pev->pdata = VSCP_CALLOC(5);
+  pev->pdata = ESP_CALLOC(1, 5);
 #elif (s_my_node_type == VSCP_DROPLET_BETA)
-  pev->pdata        = VSCP_CALLOC(3);
+  pev->pdata        = ESP_CALLOC(1, 3);
 #else
-  pev->pdata = VSCP_CALLOC(3);
+  pev->pdata = ESP_CALLOC(1, 3);
 #endif
 
   if (NULL == pev->pdata) {

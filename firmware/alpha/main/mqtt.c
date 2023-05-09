@@ -145,7 +145,7 @@ mqtt_topic_subst(char *newTopic, size_t len, const char *pTopic, const vscpEvent
   //printf("newtopic=%s\n", newTopic);
   //fflush(stdout);
 
-  char *saveTopic = (char *)VSCP_CALLOC(len);
+  char *saveTopic = (char *)ESP_CALLOC(1,len);
   if (NULL == saveTopic) {
     return VSCP_ERROR_MEMORY;
   }
@@ -200,7 +200,7 @@ mqtt_topic_subst(char *newTopic, size_t len, const char *pTopic, const vscpEvent
     // strcpy(saveTopic, newTopic);
   }
 
-  VSCP_FREE(saveTopic);
+  ESP_FREE(saveTopic);
 
   return VSCP_ERROR_SUCCESS;
 }
@@ -234,14 +234,14 @@ mqtt_send_vscp_event(const char *topic, const vscpEvent *pev)
   }
 
   // We publish VSCP event on JSON form
-  char *pbuf = VSCP_MALLOC(MQTT_SUBST_BUF_LEN);
+  char *pbuf = ESP_MALLOC(MQTT_SUBST_BUF_LEN);
   if (NULL == pbuf) {
     ESP_LOGE(TAG, "Unable to allocate JSON buffer for conversion");
     return VSCP_ERROR_MEMORY;
   }
 
   if (VSCP_ERROR_SUCCESS != (rv = vscp_fwhlp_create_json(pbuf, 2048, pev))) {
-    VSCP_FREE(pbuf);
+    ESP_FREE(pbuf);
     ESP_LOGE(TAG, "Failed to convert event to JSON rv = %d", rv);
     return rv;
   }
@@ -324,10 +324,10 @@ mqtt_send_vscp_event(const char *topic, const vscpEvent *pev)
   // vscp_fwhlp_strsubst(newTopic, sizeof(newTopic), saveTopic, "{{sindex}}", workbuf);
   // strcpy(saveTopic, newTopic);
 
-  char *newTopic = VSCP_CALLOC(MQTT_SUBST_BUF_LEN);
+  char *newTopic = ESP_CALLOC(1,MQTT_SUBST_BUF_LEN);
   if (NULL == newTopic) {
     ESP_LOGE(TAG, "Unable to allocate memory.");
-    VSCP_FREE(pbuf);
+    ESP_FREE(pbuf);
     return VSCP_ERROR_MEMORY;
   }
 
@@ -360,8 +360,8 @@ mqtt_send_vscp_event(const char *topic, const vscpEvent *pev)
              esp_mqtt_client_get_outbox_size(g_mqtt_client));
   }
 
-  VSCP_FREE(newTopic);
-  VSCP_FREE(pbuf);
+  ESP_FREE(newTopic);
+  ESP_FREE(pbuf);
 
   return VSCP_ERROR_SUCCESS;
 }
@@ -383,10 +383,10 @@ mqtt_log(const char *msg)
 
   if (strlen(g_persistent.mqttPubLog)) {
 
-    char *newTopic = VSCP_CALLOC(MQTT_SUBST_BUF_LEN);
+    char *newTopic = ESP_CALLOC(1,MQTT_SUBST_BUF_LEN);
     if (NULL == newTopic) {
       ESP_LOGE(TAG, "Unable to allocate memory.");
-      VSCP_FREE(pbuf);
+      ESP_FREE(pbuf);
       return VSCP_ERROR_MEMORY;
     }
 
@@ -406,7 +406,7 @@ mqtt_log(const char *msg)
                esp_mqtt_client_get_outbox_size(g_mqtt_client));
     }
 
-    VSCP_FREE(newTopic);
+    ESP_FREE(newTopic);
   }
 
   

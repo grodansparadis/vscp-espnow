@@ -82,7 +82,7 @@ extern const uint8_t DROPLET_ADDR_BROADCAST[6];
 int
 vscp_link_callback_welcome(const void *pdata)
 {
-  char *pbuf = VSCP_MALLOC(strlen(TCPSRV_WELCOME_MSG) + strlen(g_persistent.nodeName) + 1);
+  char *pbuf = ESP_MALLOC(strlen(TCPSRV_WELCOME_MSG) + strlen(g_persistent.nodeName) + 1);
   if (NULL == pbuf) {
     return VSCP_ERROR_INVALID_POINTER;
   }
@@ -96,7 +96,7 @@ vscp_link_callback_welcome(const void *pdata)
   sprintf(pbuf, TCPSRV_WELCOME_MSG, g_persistent.nodeName);
   send(pctx->sock, pbuf, strlen(pbuf), 0);
 
-  VSCP_FREE(pbuf);
+  ESP_FREE(pbuf);
   return VSCP_ERROR_SUCCESS;
 }
 

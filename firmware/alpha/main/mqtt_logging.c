@@ -153,7 +153,7 @@ mqtt_pub(void *pvParameters)
           const char *buf    = NULL;
           size_t size_buffer = 50 + size;
 
-          buf = VSCP_CALLOC(size_buffer);
+          buf = ESP_CALLOC(1,size_buffer);
           if (NULL == buf) {
             ESP_LOGE(TAG, "Unable to allocate buffer for log message.");
             return; // ESP_ERR_NO_MEM
@@ -169,7 +169,7 @@ mqtt_pub(void *pvParameters)
           snprintf(buf, size_buffer, "[" MACSTR "][%d][%d]: %.*s", MAC2STR(src_addr), size, primary, 0, buffer);
 
           mqtt_log(buf);
-          VSCP_FREE(buf);
+          ESP_FREE(buf);
         }
         // esp_mqtt_client_publish(g_mqtt_client, param.topic, buffer, received, 1, 0);
         // printf("sent publish successful\n");

@@ -346,7 +346,7 @@ app_espnow_debug_recv_process(uint8_t *src_addr, void *data, size_t size, wifi_p
 
   if (g_persistent.mqttEnable) {
 
-    buf = VSCP_CALLOC(size_buffer);
+    buf = ESP_CALLOC(1,size_buffer);
     if (NULL == buf) {
       ESP_LOGE(TAG, "Unable to allocate buffer for log message.");
       return ESP_ERR_NO_MEM;
@@ -362,7 +362,7 @@ app_espnow_debug_recv_process(uint8_t *src_addr, void *data, size_t size, wifi_p
              recv_data);
 
     mqtt_log(buf);
-    VSCP_FREE(buf);
+    ESP_FREE(buf);
   }
 
   // printf("[" MACSTR "][%d][%d]: %.*s", MAC2STR(src_addr), rx_ctrl->channel, rx_ctrl->rssi, size, recv_data);
@@ -1930,7 +1930,7 @@ app_main()
         continue;
       }
 
-      pev->pdata = VSCP_CALLOC(8);
+      pev->pdata = ESP_CALLOC(1,8);
       if (NULL == pev->pdata) {
         ESP_LOGE(TAG, "Unable to allocate event data");
         continue;

@@ -129,7 +129,7 @@ http_auth_basic(const char *username, const char *password)
                              (const unsigned char *) user_info,
                              strlen(user_info));
   }
-  VSCP_FREE(user_info);
+  ESP_FREE(user_info);
   return digest;
 }
 
@@ -146,12 +146,12 @@ info_get_handler(httpd_req_t *req)
   char *buf;
   char *temp;
 
-  buf = (char *) VSCP_CALLOC(CHUNK_BUFSIZE);
+  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
 
-  temp = (char *) VSCP_CALLOC(80);
+  temp = (char *) ESP_CALLOC(1,80);
   if (NULL == temp) {
     return ESP_ERR_NO_MEM;
   }
@@ -342,14 +342,14 @@ info_get_handler(httpd_req_t *req)
 
   uint8_t GUID[16];
   vscp_espnow_get_node_guid(GUID);
-  char *pre = VSCP_MALLOC(32);
+  char *pre = ESP_MALLOC(32);
   if (NULL != pre) {
     vscp_fwhlp_writeGuidToString(temp, GUID);
     memset(pre, 0, 32);
     strncpy(pre, temp, 24);
     sprintf(buf, "<tr><td class=\"name\">GUID:</td><td class=\"prop\">%s<br>%s</td></tr>", pre, temp + 24);
     httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-    VSCP_FREE(pre);
+    ESP_FREE(pre);
   }
 
   // -------------------------------------------------------------------------
@@ -588,8 +588,8 @@ info_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  VSCP_FREE(buf);
-  VSCP_FREE(temp);
+  ESP_FREE(buf);
+  ESP_FREE(temp);
 
   return ESP_OK;
 }
@@ -637,12 +637,12 @@ upgrade_get_handler(httpd_req_t *req)
   char *buf;
   char *temp;
 
-  buf = (char *) VSCP_CALLOC(CHUNK_BUFSIZE);
+  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
 
-  temp = (char *) VSCP_CALLOC(80);
+  temp = (char *) ESP_CALLOC(1,80);
   if (NULL == temp) {
     return ESP_ERR_NO_MEM;
   }
@@ -729,8 +729,8 @@ upgrade_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  VSCP_FREE(buf);
-  VSCP_FREE(temp);
+  ESP_FREE(buf);
+  ESP_FREE(temp);
 
   return ESP_OK;
 }
@@ -749,7 +749,7 @@ upgrdsrv_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
-  buf = (char *) VSCP_CALLOC(CHUNK_BUFSIZE);
+  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -758,14 +758,14 @@ upgrdsrv_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_url_query_len(req) + 1;
   if (req_buf_len > 1) {
-    req_buf = VSCP_MALLOC(req_buf_len);
+    req_buf = ESP_MALLOC(req_buf_len);
     if (httpd_req_get_url_query_str(req, req_buf, req_buf_len) == ESP_OK) {
 
       ESP_LOGD(TAG, "Found URL query => %s", req_buf);
-      char *param = VSCP_MALLOC(WEBPAGE_PARAM_SIZE);
+      char *param = ESP_MALLOC(WEBPAGE_PARAM_SIZE);
       if (NULL == param) {
-        VSCP_FREE(req_buf);
-        VSCP_FREE(buf);
+        ESP_FREE(req_buf);
+        ESP_FREE(buf);
         return ESP_ERR_ESPNOW_NO_MEM;
       }
 
@@ -777,13 +777,13 @@ upgrdsrv_get_handler(httpd_req_t *req)
         ESP_LOGE(TAG, "Error getting url => rv=%d", ret);
       }
 
-      VSCP_FREE(param);
+      ESP_FREE(param);
     }
 
-    VSCP_FREE(req_buf);
+    ESP_FREE(req_buf);
   }
 
-  VSCP_FREE(buf);
+  ESP_FREE(buf);
 
   const char *resp_str = "<html><head><meta charset='utf-8'><meta http-equiv=\"refresh\" content=\"10;url=index.html\" "
                          "/></head><body><h1>Firmware upgrade in progress...</h1></body></html>";
@@ -882,7 +882,7 @@ upgrdsibling_get_handler(httpd_req_t *req)
   size_t req_buf_len;
   char url[CONFIG_APP_OTA_URL_MAX_SIZE];
 
-  buf = (char *) VSCP_CALLOC(CHUNK_BUFSIZE);
+  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -891,14 +891,14 @@ upgrdsibling_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_url_query_len(req) + 1;
   if (req_buf_len > 1) {
-    req_buf = VSCP_MALLOC(req_buf_len);
+    req_buf = ESP_MALLOC(req_buf_len);
     if (httpd_req_get_url_query_str(req, req_buf, req_buf_len) == ESP_OK) {
 
       ESP_LOGD(TAG, "Found URL query => %s", req_buf);
-      char *param = VSCP_MALLOC(WEBPAGE_PARAM_SIZE);
+      char *param = ESP_MALLOC(WEBPAGE_PARAM_SIZE);
       if (NULL == param) {
-        VSCP_FREE(req_buf);
-        VSCP_FREE(buf);
+        ESP_FREE(req_buf);
+        ESP_FREE(buf);
         return ESP_ERR_ESPNOW_NO_MEM;
       }
 
@@ -907,9 +907,9 @@ upgrdsibling_get_handler(httpd_req_t *req)
 
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          VSCP_FREE(param);
-          VSCP_FREE(req_buf);
-          VSCP_FREE(buf);
+          ESP_FREE(param);
+          ESP_FREE(req_buf);
+          ESP_FREE(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
 
@@ -918,19 +918,19 @@ upgrdsibling_get_handler(httpd_req_t *req)
 
         ESP_LOGD(TAG, "Found query parameter => url=%s", url);
 
-        VSCP_FREE(pdecoded);
+        ESP_FREE(pdecoded);
       }
       else {
         ESP_LOGE(TAG, "Error getting url => rv=%d", ret);
       }
 
-      VSCP_FREE(param);
+      ESP_FREE(param);
     }
 
-    VSCP_FREE(req_buf);
+    ESP_FREE(req_buf);
   }
 
-  VSCP_FREE(buf);
+  ESP_FREE(buf);
 
   const char *resp_str = "<html><head><meta charset='utf-8'><meta http-equiv=\"refresh\" content=\"10;url=index.html\" "
                          "/></head><body><h1>Firmware upgrade of sibling in progress...</h1></body></html>";
@@ -1044,7 +1044,7 @@ provisioning_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
-  buf = (char *) VSCP_CALLOC(CHUNK_BUFSIZE);
+  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -1056,12 +1056,12 @@ provisioning_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
   if (req_buf_len > 1) {
-    req_buf = VSCP_MALLOC(req_buf_len);
+    req_buf = ESP_MALLOC(req_buf_len);
     // Copy null terminated value string into buffer
     if (httpd_req_get_hdr_value_str(req, "Host", req_buf, req_buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Host: %s", req_buf);
     }
-    VSCP_FREE(req_buf);
+    ESP_FREE(req_buf);
   }
 
   sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "Node pairing");
@@ -1102,7 +1102,7 @@ provisioning_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  VSCP_FREE(buf);
+  ESP_FREE(buf);
 
   return ESP_OK;
 }
@@ -1121,21 +1121,21 @@ doprov_get_handler(httpd_req_t *req)
   uint8_t *pmac = NULL;
   uint8_t *pkey = NULL;
 
-  buf = (char *) VSCP_CALLOC(CHUNK_BUFSIZE);
+  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
 
-  pmac = (uint8_t *) VSCP_CALLOC(6);
+  pmac = (uint8_t *) ESP_CALLOC(1,6);
   if (NULL == pmac) {
-    VSCP_FREE(buf);
+    ESP_FREE(buf);
     return ESP_ERR_NO_MEM;
   }
 
-  pkey = (uint8_t *) VSCP_CALLOC(32);
+  pkey = (uint8_t *) ESP_CALLOC(1,32);
   if (NULL == pkey) {
-    VSCP_FREE(buf);
-    VSCP_FREE(pmac);
+    ESP_FREE(buf);
+    ESP_FREE(pmac);
     return ESP_ERR_NO_MEM;
   }
 
@@ -1143,16 +1143,16 @@ doprov_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_url_query_len(req) + 1;
   if (req_buf_len > 1) {
-    req_buf = VSCP_MALLOC(req_buf_len);
+    req_buf = ESP_MALLOC(req_buf_len);
     if (httpd_req_get_url_query_str(req, req_buf, req_buf_len) == ESP_OK) {
 
       ESP_LOGD(TAG, "Found URL query => %s", req_buf);
-      char *param = VSCP_MALLOC(WEBPAGE_PARAM_SIZE);
+      char *param = ESP_MALLOC(WEBPAGE_PARAM_SIZE);
       if (NULL == param) {
-        VSCP_FREE(req_buf);
-        VSCP_FREE(buf);
-        VSCP_FREE(pmac);
-        VSCP_FREE(pkey);
+        ESP_FREE(req_buf);
+        ESP_FREE(buf);
+        ESP_FREE(pmac);
+        ESP_FREE(pkey);
         return ESP_ERR_ESPNOW_NO_MEM;
       }
 
@@ -1169,9 +1169,9 @@ doprov_get_handler(httpd_req_t *req)
       if (ESP_OK == (ret = httpd_query_key_value(req_buf, "mac", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          VSCP_FREE(param);
-          VSCP_FREE(buf);
-          VSCP_FREE(pmac);
+          ESP_FREE(param);
+          ESP_FREE(buf);
+          ESP_FREE(pmac);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => mac=%s", pdecoded);
@@ -1180,7 +1180,7 @@ doprov_get_handler(httpd_req_t *req)
           ESP_LOGE(TAG, "Failed to parse MAC address. ev = %d", rv);
         }
         ESP_LOG_BUFFER_HEXDUMP(TAG, pmac, 6, ESP_LOG_INFO);
-        VSCP_FREE(pdecoded);
+        ESP_FREE(pdecoded);
       }
       else {
         ESP_LOGE(TAG, "Error getting MAC => rv=%d", ret);
@@ -1195,18 +1195,18 @@ doprov_get_handler(httpd_req_t *req)
       else {
         ESP_LOGE(TAG, "Error getting node_name => rv=%d", ret);
       }
-      VSCP_FREE(param);
+      ESP_FREE(param);
     }
 
-    VSCP_FREE(req_buf);
+    ESP_FREE(req_buf);
   }
 
   // Start the provisioning of the client node
   // espnow_startServerProvisioning(pmac, pkey);
 
   // Parameters not needed anymore
-  VSCP_FREE(pmac);
-  VSCP_FREE(pkey);
+  ESP_FREE(pmac);
+  ESP_FREE(pkey);
 
   // Get application info data
   const esp_app_desc_t *appDescr = esp_app_get_description();
@@ -1232,7 +1232,7 @@ doprov_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  VSCP_FREE(buf);
+  ESP_FREE(buf);
 
   return ESP_OK;
 }
@@ -1288,37 +1288,37 @@ hello_get_handler(httpd_req_t *req)
   // extra byte for null termination
   buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
   if (buf_len > 1) {
-    buf = VSCP_MALLOC(buf_len);
+    buf = ESP_MALLOC(buf_len);
     // Copy null terminated value string into buffer
     if (httpd_req_get_hdr_value_str(req, "Host", buf, buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Host: %s", buf);
     }
-    VSCP_FREE(buf);
+    ESP_FREE(buf);
   }
 
   buf_len = httpd_req_get_hdr_value_len(req, "Test-Header-2") + 1;
   if (buf_len > 1) {
-    buf = VSCP_MALLOC(buf_len);
+    buf = ESP_MALLOC(buf_len);
     if (httpd_req_get_hdr_value_str(req, "Test-Header-2", buf, buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Test-Header-2: %s", buf);
     }
-    VSCP_FREE(buf);
+    ESP_FREE(buf);
   }
 
   buf_len = httpd_req_get_hdr_value_len(req, "Test-Header-1") + 1;
   if (buf_len > 1) {
-    buf = VSCP_MALLOC(buf_len);
+    buf = ESP_MALLOC(buf_len);
     if (httpd_req_get_hdr_value_str(req, "Test-Header-1", buf, buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Test-Header-1: %s", buf);
     }
-    VSCP_FREE(buf);
+    ESP_FREE(buf);
   }
 
   // Read URL query string length and allocate memory for length + 1,
   // extra byte for null termination
   buf_len = httpd_req_get_url_query_len(req) + 1;
   if (buf_len > 1) {
-    buf = VSCP_MALLOC(buf_len);
+    buf = ESP_MALLOC(buf_len);
     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found URL query => %s", buf);
       char param[32];
@@ -1333,7 +1333,7 @@ hello_get_handler(httpd_req_t *req)
         ESP_LOGD(TAG, "Found URL query parameter => query2=%s", param);
       }
     }
-    VSCP_FREE(buf);
+    ESP_FREE(buf);
   }
 
   // Set some custom headers
@@ -1375,7 +1375,7 @@ mainpg_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
-  buf = (char *) VSCP_CALLOC(CHUNK_BUFSIZE);
+  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -1387,12 +1387,12 @@ mainpg_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
   if (req_buf_len > 1) {
-    req_buf = VSCP_MALLOC(req_buf_len);
+    req_buf = ESP_MALLOC(req_buf_len);
     // Copy null terminated value string into buffer
     if (httpd_req_get_hdr_value_str(req, "Host", req_buf, req_buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Host: %s", req_buf);
     }
-    VSCP_FREE(req_buf);
+    ESP_FREE(req_buf);
   }
 
   sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "Main Page");
@@ -1425,7 +1425,7 @@ mainpg_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  VSCP_FREE(buf);
+  ESP_FREE(buf);
 
   return ESP_OK;
 }
@@ -1449,7 +1449,7 @@ config_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
-  buf = (char *) VSCP_CALLOC(CHUNK_BUFSIZE);
+  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -1461,12 +1461,12 @@ config_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
   if (req_buf_len > 1) {
-    req_buf = VSCP_MALLOC(req_buf_len);
+    req_buf = ESP_MALLOC(req_buf_len);
     // Copy null terminated value string into buffer
     if (httpd_req_get_hdr_value_str(req, "Host", req_buf, req_buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Host: %s", req_buf);
     }
-    VSCP_FREE(req_buf);
+    ESP_FREE(req_buf);
   }
 
   sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "Configuration");
@@ -1508,7 +1508,7 @@ config_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  VSCP_FREE(buf);
+  ESP_FREE(buf);
 
   return ESP_OK;
 }
@@ -1532,7 +1532,7 @@ config_module_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
-  buf = (char *) VSCP_CALLOC(CHUNK_BUFSIZE);
+  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -1544,12 +1544,12 @@ config_module_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
   if (req_buf_len > 1) {
-    req_buf = VSCP_MALLOC(req_buf_len);
+    req_buf = ESP_MALLOC(req_buf_len);
     // Copy null terminated value string into buffer
     if (httpd_req_get_hdr_value_str(req, "Host", req_buf, req_buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Host: %s", req_buf);
     }
-    VSCP_FREE(req_buf);
+    ESP_FREE(req_buf);
   }
 
   sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "Module Configuration");
@@ -1563,7 +1563,7 @@ config_module_get_handler(httpd_req_t *req)
           g_persistent.nodeName);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  char *pmkstr = VSCP_MALLOC(65);
+  char *pmkstr = ESP_MALLOC(65);
   for (int i = 0; i < sizeof(g_persistent.pmk); i++) {
     sprintf(pmkstr + 2 * i, "%02X", g_persistent.pmk[i]);
   }
@@ -1571,7 +1571,7 @@ config_module_get_handler(httpd_req_t *req)
           "Primay key (32 bytes hex):<input type=\"password\" name=\"key\" maxlength=\"64\" size=\"20\" value=\"%s\" >",
           pmkstr);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  VSCP_FREE(pmkstr);
+  ESP_FREE(pmkstr);
 
   sprintf(buf,
           "Startup delay:<input type=\"text\" name=\"strtdly\" value=\"%d\" maxlength=\"2\" size=\"4\">",
@@ -1586,7 +1586,7 @@ config_module_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  VSCP_FREE(buf);
+  ESP_FREE(buf);
 
   return ESP_OK;
 }
@@ -1611,13 +1611,13 @@ do_config_module_get_handler(httpd_req_t *req)
   // extra byte for null termination
   buf_len = httpd_req_get_url_query_len(req) + 1;
   if (buf_len > 1) {
-    buf = VSCP_MALLOC(buf_len);
+    buf = ESP_MALLOC(buf_len);
     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
 
       ESP_LOGD(TAG, "Found URL query => %s", buf);
-      char *param = VSCP_MALLOC(WEBPAGE_PARAM_SIZE);
+      char *param = ESP_MALLOC(WEBPAGE_PARAM_SIZE);
       if (NULL == param) {
-        VSCP_FREE(buf);
+        ESP_FREE(buf);
         return ESP_ERR_ESPNOW_NO_MEM;
       }
 
@@ -1625,13 +1625,13 @@ do_config_module_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "node_name", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          VSCP_FREE(param);
-          VSCP_FREE(buf);
+          ESP_FREE(param);
+          ESP_FREE(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => name=%s", pdecoded);
         strncpy(g_persistent.nodeName, pdecoded, 31);
-        VSCP_FREE(pdecoded);
+        ESP_FREE(pdecoded);
 
         // setAccessPointParameters();
 
@@ -1684,10 +1684,10 @@ do_config_module_get_handler(httpd_req_t *req)
         ESP_LOGE(TAG, "Failed to commit updates to nvs\n");
       }
 
-      VSCP_FREE(param);
+      ESP_FREE(param);
     }
 
-    VSCP_FREE(buf);
+    ESP_FREE(buf);
   }
   const char *resp_str =
     "<html><head><meta charset='utf-8'><meta http-equiv=\"refresh\" content=\"1;url=cfgmodule\" "
@@ -1811,7 +1811,7 @@ config_wifi_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
-  buf = (char *) VSCP_CALLOC(CHUNK_BUFSIZE);
+  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -1823,12 +1823,12 @@ config_wifi_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
   if (req_buf_len > 1) {
-    req_buf = VSCP_MALLOC(req_buf_len);
+    req_buf = ESP_MALLOC(req_buf_len);
     // Copy null terminated value string into buffer
     if (httpd_req_get_hdr_value_str(req, "Host", req_buf, req_buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Host: %s", req_buf);
     }
-    VSCP_FREE(req_buf);
+    ESP_FREE(req_buf);
   }
 
   sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "Wifi Configuration");
@@ -1867,7 +1867,7 @@ config_wifi_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  VSCP_FREE(buf);
+  ESP_FREE(buf);
 
   return ESP_OK;
 }
@@ -1887,13 +1887,13 @@ do_config_wifi_get_handler(httpd_req_t *req)
   // extra byte for null termination
   buf_len = httpd_req_get_url_query_len(req) + 1;
   if (buf_len > 1) {
-    buf = VSCP_MALLOC(buf_len);
+    buf = ESP_MALLOC(buf_len);
     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
 
       ESP_LOGD(TAG, "Found URL query => %s", buf);
-      char *param = VSCP_MALLOC(WEBPAGE_PARAM_SIZE);
+      char *param = ESP_MALLOC(WEBPAGE_PARAM_SIZE);
       if (NULL == param) {
-        VSCP_FREE(buf);
+        ESP_FREE(buf);
         return ESP_ERR_ESPNOW_NO_MEM;
       }
 
@@ -1901,13 +1901,13 @@ do_config_wifi_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "node_name", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          VSCP_FREE(param);
-          VSCP_FREE(buf);
+          ESP_FREE(param);
+          ESP_FREE(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => name=%s", pdecoded);
         strncpy(g_persistent.nodeName, pdecoded, 31);
-        VSCP_FREE(pdecoded);
+        ESP_FREE(pdecoded);
         // Write changed value to persistent storage
         rv = nvs_set_str(g_nvsHandle, "node_name", g_persistent.nodeName);
         if (rv != ESP_OK) {
@@ -1937,10 +1937,10 @@ do_config_wifi_get_handler(httpd_req_t *req)
         ESP_LOGE(TAG, "Failed to commit updates to nvs\n");
       }
 
-      VSCP_FREE(param);
+      ESP_FREE(param);
     }
 
-    VSCP_FREE(buf);
+    ESP_FREE(buf);
   }
   const char *resp_str =
     "<html><head><meta charset='utf-8'><meta http-equiv=\"refresh\" content=\"1;url=cfgwifi\" "
@@ -1966,7 +1966,7 @@ config_espnow_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
-  buf = (char *) VSCP_CALLOC(CHUNK_BUFSIZE);
+  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -1978,12 +1978,12 @@ config_espnow_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
   if (req_buf_len > 1) {
-    req_buf = VSCP_MALLOC(req_buf_len);
+    req_buf = ESP_MALLOC(req_buf_len);
     // Copy null terminated value string into buffer
     if (httpd_req_get_hdr_value_str(req, "Host", req_buf, req_buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Host: %s", req_buf);
     }
-    VSCP_FREE(req_buf);
+    ESP_FREE(req_buf);
   }
 
   sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "ESPNOW Configuration");
@@ -2074,7 +2074,7 @@ config_espnow_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  VSCP_FREE(buf);
+  ESP_FREE(buf);
 
   return ESP_OK;
 }
@@ -2094,14 +2094,14 @@ do_config_espnow_get_handler(httpd_req_t *req)
   // extra byte for null termination
   buf_len = httpd_req_get_url_query_len(req) + 1;
   if (buf_len > 1) {
-    buf = VSCP_MALLOC(buf_len);
+    buf = ESP_MALLOC(buf_len);
     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
 
       ESP_LOGD(TAG, "Found URL query => %s", buf);
-      char *param = VSCP_MALLOC(WEBPAGE_PARAM_SIZE);
+      char *param = ESP_MALLOC(WEBPAGE_PARAM_SIZE);
       if (NULL == param) {
         return ESP_ERR_ESPNOW_NO_MEM;
-        VSCP_FREE(param);
+        ESP_FREE(param);
       }
 
       // Enable
@@ -2277,10 +2277,10 @@ do_config_espnow_get_handler(httpd_req_t *req)
         ESP_LOGE(TAG, "Failed to commit updates to nvs\n");
       }
 
-      VSCP_FREE(param);
+      ESP_FREE(param);
     }
 
-    VSCP_FREE(buf);
+    ESP_FREE(buf);
   }
   const char *resp_str =
     "<html><head><meta charset='utf-8'><meta http-equiv=\"refresh\" content=\"1;url=cfgespnow\" "
@@ -2306,7 +2306,7 @@ config_vscplink_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
-  buf = (char *) VSCP_CALLOC(CHUNK_BUFSIZE);
+  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -2318,12 +2318,12 @@ config_vscplink_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_hdr_value_len(req, "Name") + 1;
   if (req_buf_len > 1) {
-    req_buf = VSCP_MALLOC(req_buf_len);
+    req_buf = ESP_MALLOC(req_buf_len);
     // Copy null terminated value string into buffer
     if (httpd_req_get_hdr_value_str(req, "Host", req_buf, req_buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Host: %s", req_buf);
     }
-    VSCP_FREE(req_buf);
+    ESP_FREE(req_buf);
   }
 
   sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "VSCP Link Configuration");
@@ -2350,13 +2350,13 @@ config_vscplink_get_handler(httpd_req_t *req)
   sprintf(buf, "Password:<input type=\"password\" name=\"password\" value=\"%s\" >", g_persistent.vscplinkPassword);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  char *pmkstr = VSCP_MALLOC(65);
+  char *pmkstr = ESP_MALLOC(65);
   for (int i = 0; i < 32; i++) {
     sprintf(pmkstr + 2 * i, "%02X", g_persistent.vscpLinkKey[i]);
   }
   sprintf(buf, "Security key (32 bytes hex):<input type=\"password\" name=\"key\" maxlength=\"64\" value=\"%s\" >", pmkstr);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  VSCP_FREE(pmkstr);
+  ESP_FREE(pmkstr);
 
   sprintf(buf, "<button class=\"bgrn bgrn:hover\">Save</button></fieldset></form></div>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
@@ -2366,7 +2366,7 @@ config_vscplink_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  VSCP_FREE(buf);
+  ESP_FREE(buf);
 
   return ESP_OK;
 }
@@ -2386,14 +2386,14 @@ do_config_vscplink_get_handler(httpd_req_t *req)
   // extra byte for null termination
   buf_len = httpd_req_get_url_query_len(req) + 1;
   if (buf_len > 1) {
-    buf = VSCP_MALLOC(buf_len);
+    buf = ESP_MALLOC(buf_len);
     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
 
       ESP_LOGD(TAG, "Found URL query => %s", buf);
-      char *param = VSCP_MALLOC(WEBPAGE_PARAM_SIZE);
+      char *param = ESP_MALLOC(WEBPAGE_PARAM_SIZE);
       if (NULL == param) {
         return ESP_ERR_ESPNOW_NO_MEM;
-        VSCP_FREE(param);
+        ESP_FREE(param);
       }
 
       // Enable
@@ -2445,8 +2445,8 @@ do_config_vscplink_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "user", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          VSCP_FREE(param);
-          VSCP_FREE(buf);
+          ESP_FREE(param);
+          ESP_FREE(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => user=%s", pdecoded);
@@ -2465,8 +2465,8 @@ do_config_vscplink_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "password", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          VSCP_FREE(param);
-          VSCP_FREE(buf);
+          ESP_FREE(param);
+          ESP_FREE(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => password=%s", pdecoded);
@@ -2502,10 +2502,10 @@ do_config_vscplink_get_handler(httpd_req_t *req)
         ESP_LOGE(TAG, "Failed to commit updates to nvs\n");
       }
 
-      VSCP_FREE(param);
+      ESP_FREE(param);
     }
 
-    VSCP_FREE(buf);
+    ESP_FREE(buf);
   }
   const char *resp_str =
     "<html><head><meta charset='utf-8'><meta http-equiv=\"refresh\" content=\"1;url=cfgvscplink\" "
@@ -2531,7 +2531,7 @@ config_mqtt_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
-  buf = (char *) VSCP_CALLOC(CHUNK_BUFSIZE);
+  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -2543,12 +2543,12 @@ config_mqtt_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
   if (req_buf_len > 1) {
-    req_buf = VSCP_MALLOC(req_buf_len);
+    req_buf = ESP_MALLOC(req_buf_len);
     // Copy null terminated value string into buffer
     if (httpd_req_get_hdr_value_str(req, "Host", req_buf, req_buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Host: %s", req_buf);
     }
-    VSCP_FREE(req_buf);
+    ESP_FREE(req_buf);
   }
 
   sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "MQTT Configuration");
@@ -2592,7 +2592,7 @@ config_mqtt_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  VSCP_FREE(buf);
+  ESP_FREE(buf);
 
   return ESP_OK;
 }
@@ -2612,14 +2612,14 @@ do_config_mqtt_get_handler(httpd_req_t *req)
   // extra byte for null termination
   buf_len = httpd_req_get_url_query_len(req) + 1;
   if (buf_len > 1) {
-    buf = VSCP_MALLOC(buf_len);
+    buf = ESP_MALLOC(buf_len);
     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
 
       ESP_LOGD(TAG, "Found URL query => %s", buf);
-      char *param = VSCP_MALLOC(WEBPAGE_PARAM_SIZE);
+      char *param = ESP_MALLOC(WEBPAGE_PARAM_SIZE);
       if (NULL == param) {
         return ESP_ERR_ESPNOW_NO_MEM;
-        VSCP_FREE(param);
+        ESP_FREE(param);
       }
 
       // Enable
@@ -2643,13 +2643,13 @@ do_config_mqtt_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "url", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          VSCP_FREE(param);
-          VSCP_FREE(buf);
+          ESP_FREE(param);
+          ESP_FREE(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => url=%s", pdecoded);
         strncpy(g_persistent.mqttUrl, pdecoded, sizeof(g_persistent.mqttUrl) - 1);
-        VSCP_FREE(pdecoded);
+        ESP_FREE(pdecoded);
         // Write changed value to persistent storage
         rv = nvs_set_str(g_nvsHandle, "mqtt_url", g_persistent.mqttUrl);
         if (rv != ESP_OK) {
@@ -2678,8 +2678,8 @@ do_config_mqtt_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "client", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          VSCP_FREE(param);
-          VSCP_FREE(buf);
+          ESP_FREE(param);
+          ESP_FREE(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => clientid=%s", pdecoded);
@@ -2698,8 +2698,8 @@ do_config_mqtt_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "user", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          VSCP_FREE(param);
-          VSCP_FREE(buf);
+          ESP_FREE(param);
+          ESP_FREE(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => user=%s", pdecoded);
@@ -2718,8 +2718,8 @@ do_config_mqtt_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "password", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          VSCP_FREE(param);
-          VSCP_FREE(buf);
+          ESP_FREE(param);
+          ESP_FREE(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => password=%s", pdecoded);
@@ -2738,13 +2738,13 @@ do_config_mqtt_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "sub", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          VSCP_FREE(param);
-          VSCP_FREE(buf);
+          ESP_FREE(param);
+          ESP_FREE(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => sub=%s", pdecoded);
         strncpy(g_persistent.mqttSub, pdecoded, sizeof(g_persistent.mqttSub) - 1);
-        VSCP_FREE(pdecoded);
+        ESP_FREE(pdecoded);
         // Write changed value to persistent storage
         rv = nvs_set_str(g_nvsHandle, "mqtt_sub", g_persistent.mqttSub);
         if (rv != ESP_OK) {
@@ -2759,13 +2759,13 @@ do_config_mqtt_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "pub", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          VSCP_FREE(param);
-          VSCP_FREE(buf);
+          ESP_FREE(param);
+          ESP_FREE(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => pub=%s", pdecoded);
         strncpy(g_persistent.mqttPub, pdecoded, sizeof(g_persistent.mqttPub) - 1);
-        VSCP_FREE(pdecoded);
+        ESP_FREE(pdecoded);
         // Write changed value to persistent storage
         rv = nvs_set_str(g_nvsHandle, "mqtt_pub", g_persistent.mqttPub);
         if (rv != ESP_OK) {
@@ -2781,10 +2781,10 @@ do_config_mqtt_get_handler(httpd_req_t *req)
         ESP_LOGE(TAG, "Failed to commit updates to nvs\n");
       }
 
-      VSCP_FREE(param);
+      ESP_FREE(param);
     }
 
-    VSCP_FREE(buf);
+    ESP_FREE(buf);
   }
   const char *resp_str =
     "<html><head><meta charset='utf-8'><meta http-equiv=\"refresh\" content=\"1;url=cfgmqtt\" "
@@ -2818,7 +2818,7 @@ config_web_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
-  buf = (char *) VSCP_CALLOC(CHUNK_BUFSIZE);
+  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -2830,12 +2830,12 @@ config_web_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
   if (req_buf_len > 1) {
-    req_buf = VSCP_MALLOC(req_buf_len);
+    req_buf = ESP_MALLOC(req_buf_len);
     // Copy null terminated value string into buffer
     if (httpd_req_get_hdr_value_str(req, "Host", req_buf, req_buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Host: %s", req_buf);
     }
-    VSCP_FREE(req_buf);
+    ESP_FREE(req_buf);
   }
 
   sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "Web server Configuration");
@@ -2867,7 +2867,7 @@ config_web_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  VSCP_FREE(buf);
+  ESP_FREE(buf);
 
   return ESP_OK;
 }
@@ -2887,14 +2887,14 @@ do_config_web_get_handler(httpd_req_t *req)
   // extra byte for null termination
   buf_len = httpd_req_get_url_query_len(req) + 1;
   if (buf_len > 1) {
-    buf = VSCP_MALLOC(buf_len);
+    buf = ESP_MALLOC(buf_len);
     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
 
       ESP_LOGD(TAG, "Found URL query => %s", buf);
-      char *param = VSCP_MALLOC(WEBPAGE_PARAM_SIZE);
+      char *param = ESP_MALLOC(WEBPAGE_PARAM_SIZE);
       if (NULL == param) {
         return ESP_ERR_ESPNOW_NO_MEM;
-        VSCP_FREE(param);
+        ESP_FREE(param);
       }
 
       // Enable
@@ -2932,8 +2932,8 @@ do_config_web_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "user", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          VSCP_FREE(param);
-          VSCP_FREE(buf);
+          ESP_FREE(param);
+          ESP_FREE(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => user=%s", pdecoded);
@@ -2952,8 +2952,8 @@ do_config_web_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "password", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          VSCP_FREE(param);
-          VSCP_FREE(buf);
+          ESP_FREE(param);
+          ESP_FREE(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => password=%s", pdecoded);
@@ -2973,10 +2973,10 @@ do_config_web_get_handler(httpd_req_t *req)
         ESP_LOGE(TAG, "Failed to commit updates to nvs\n");
       }
 
-      VSCP_FREE(param);
+      ESP_FREE(param);
     }
 
-    VSCP_FREE(buf);
+    ESP_FREE(buf);
   }
   const char *resp_str =
     "<html><head><meta charset='utf-8'><meta http-equiv=\"refresh\" content=\"1;url=cfgweb\" "
@@ -3002,7 +3002,7 @@ config_log_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
-  buf = (char *) VSCP_CALLOC(CHUNK_BUFSIZE);
+  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -3014,12 +3014,12 @@ config_log_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
   if (req_buf_len > 1) {
-    req_buf = VSCP_MALLOC(req_buf_len);
+    req_buf = ESP_MALLOC(req_buf_len);
     // Copy null terminated value string into buffer
     if (httpd_req_get_hdr_value_str(req, "Host", req_buf, req_buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Host: %s", req_buf);
     }
-    VSCP_FREE(req_buf);
+    ESP_FREE(req_buf);
   }
 
   sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "Logging Configuration");
@@ -3087,7 +3087,7 @@ config_log_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  VSCP_FREE(buf);
+  ESP_FREE(buf);
 
   return ESP_OK;
 }
@@ -3107,14 +3107,14 @@ do_config_log_get_handler(httpd_req_t *req)
   // extra byte for null termination
   buf_len = httpd_req_get_url_query_len(req) + 1;
   if (buf_len > 1) {
-    buf = VSCP_MALLOC(buf_len);
+    buf = ESP_MALLOC(buf_len);
     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
 
       ESP_LOGD(TAG, "Found URL query => %s", buf);
-      char *param = VSCP_MALLOC(WEBPAGE_PARAM_SIZE);
+      char *param = ESP_MALLOC(WEBPAGE_PARAM_SIZE);
       if (NULL == param) {
         return ESP_ERR_ESPNOW_NO_MEM;
-        VSCP_FREE(param);
+        ESP_FREE(param);
       }
 
       // stdout
@@ -3212,13 +3212,13 @@ do_config_log_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "topic", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          VSCP_FREE(param);
-          VSCP_FREE(buf);
+          ESP_FREE(param);
+          ESP_FREE(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => topic=%s", pdecoded);
         strncpy(g_persistent.logMqttTopic, pdecoded, sizeof(g_persistent.logMqttTopic));
-        VSCP_FREE(pdecoded);
+        ESP_FREE(pdecoded);
 
         rv = nvs_set_str(g_nvsHandle, "log_mqtt_topic", g_persistent.logMqttTopic);
         if (rv != ESP_OK) {
@@ -3229,10 +3229,10 @@ do_config_log_get_handler(httpd_req_t *req)
         ESP_LOGE(TAG, "Error getting log topic => rv=%d", rv);
       }
 
-      VSCP_FREE(param);
+      ESP_FREE(param);
     }
 
-    VSCP_FREE(buf);
+    ESP_FREE(buf);
   }
   const char *resp_str =
     "<html><head><meta charset='utf-8'><meta http-equiv=\"refresh\" content=\"1;url=cfglog\" "
@@ -3258,12 +3258,12 @@ do_config_log_get_handler(httpd_req_t *req)
 //   // extra byte for null termination
 //   buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
 //   if (buf_len > 1) {
-//     buf = VSCP_MALLOC(buf_len);
+//     buf = ESP_MALLOC(buf_len);
 //     // Copy null terminated value string into buffer
 //     if (httpd_req_get_hdr_value_str(req, "Host", buf, buf_len) == ESP_OK) {
 //       ESP_LOGD(TAG, "Found header => Host: %s", buf);
 //     }
-//     VSCP_FREE(buf)
+//     ESP_FREE(buf)
 //   }
 
 //   // Read URL query string length and allocate memory for length + 1,
@@ -3271,7 +3271,7 @@ do_config_log_get_handler(httpd_req_t *req)
 
 //   buf_len = httpd_req_get_url_query_len(req) + 1;
 //   if (buf_len > 1) {
-//     buf = VSCP_MALLOC(buf_len);
+//     buf = ESP_MALLOC(buf_len);
 //     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
 //       ESP_LOGD(TAG, "Found URL query => %s", buf);
 //       char param[33];
@@ -3297,7 +3297,7 @@ do_config_log_get_handler(httpd_req_t *req)
 //         // Key 'blr' is not found
 //       }
 //     }
-//     VSCP_FREE(buf)
+//     ESP_FREE(buf)
 //   }
 
 //   // httpd_resp_set_hdr(req, "Custom-Header-1", "Custom-Value-1");
@@ -3501,7 +3501,7 @@ default_get_handler(httpd_req_t *req)
     char *auth_credentials = http_auth_basic(CONFIG_APP_DEFAULT_USER, CONFIG_APP_DEFAULT_PASSWORD);
     if (!auth_credentials) {
       ESP_LOGE(TAG, "No enough memory for basic authorization credentials");
-      VSCP_FREE(buf);
+      ESP_FREE(buf);
       return ESP_ERR_NO_MEM;
     }
 
@@ -3522,15 +3522,15 @@ default_get_handler(httpd_req_t *req)
       asprintf(&basic_auth_resp, "{\"authenticated\": true,\"user\": \"%s\"}", basic_auth_info->username);
       if (!basic_auth_resp) {
         ESP_LOGE(TAG, "No enough memory for basic authorization response");
-        VSCP_FREE(auth_credentials);
-        VSCP_FREE(buf)
+        ESP_FREE(auth_credentials);
+        ESP_FREE(buf)
         return ESP_ERR_NO_MEM;
       }
       httpd_resp_send(req, basic_auth_resp, strlen(basic_auth_resp));
-      VSCP_FREE(basic_auth_resp); */
+      ESP_FREE(basic_auth_resp); */
     }
-    VSCP_FREE(auth_credentials);
-    VSCP_FREE(buf);
+    ESP_FREE(auth_credentials);
+    ESP_FREE(buf);
   }
   else {
     ESP_LOGE(TAG, "No auth header received.");
