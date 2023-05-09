@@ -35,6 +35,9 @@
 #include <esp_log.h>
 #include "esp_now.h"
 
+#include <espnow_ota.h>
+#include <esp_chip_info.h>
+
 #include <vscp.h>
 #include <vscp-espnow.h>
 

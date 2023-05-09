@@ -44,7 +44,7 @@
 #include "vscp-projdefs.h"
 
 #include <vscp-firmware-helper.h>
-#include <vscp-link-protocol.h>
+//#include <vscp-link-protocol.h>
 #include <vscp-firmware-level2.h>
 
 #include "alpha.h"

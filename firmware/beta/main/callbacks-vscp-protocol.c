@@ -44,78 +44,132 @@
 #include "vscp-projdefs.h"
 
 #include <vscp-firmware-helper.h>
-#include <vscp-link-protocol.h>
+//#include <vscp-link-protocol.h>
 #include <vscp-firmware-level2.h>
 
 #include "beta.h"
-
-
 
 // ****************************************************************************
 //                        VSCP protocol callbacks
 // ****************************************************************************
 
 /*!
-  @fn vscp2_protocol_callback_get_ms
-  @brief Get the time in milliseconds.
-  @param pdata Pointer to user data.
-  @param ptime Pointer to unsigned integer that will get the time in milliseconds.
-  @return True if handled.
-*/
-int
-vscp2_protocol_callback_get_ms(const void *pdata, uint32_t *ptime)
-{
-  if ((NULL == pdata) || (NULL == ptime)) {
-    return VSCP_ERROR_INVALID_POINTER;
-  }
+  @fn vscp2_get_ms_cb
+  @brief Return system time in milliseconds.
 
-  *ptime = getMilliSeconds();
-  return VSCP_ERROR_SUCCESS;
+  @return Time in milliseconds.
+*/
+
+uint32_t
+vscp2_get_ms_cb(void)
+{
+  return (esp_timer_get_time() / 1000);
 }
 
 /**
+ * @fn vscp2_get_stdreg_alarm_cb
+ * @brief Get standard register alarm status.
+ *
+ * @return Alarm register content.
+ *
+ * Eight bits are available to flag alarm status. Set bit
+ * to indicate alarm. If you want more bits for alarm use user registers
+ * and only use the bits here to indicate bits are set in user alarm
+ * registers.
+ *
+ * Alarms should be cleared when read.
+ *
+ * If your device does not have alarm functionality
+ * just return zero here.
+ */
+
+uint8_t
+vscp2_get_stdreg_alarm_cb(void)
+{
+  return 0;
+}
+
+// Normally vscp-espnow form GUID from the mac address
+// of the STA interface and prepend this with the ethernet
+// GUID preset FF:FF:FF:FF:FF:FF:FF:FE and set the 16-bit
+// nickname in the low two bytes.
+
+/**
+ * @fn  vscp2_get_stdreg_guid_cb
  * @brief Get a pointer to the 16-bit device GUID.
  *
  * @param pdata Pointer to user data.
  * @return 0 on success.
  */
 
-const uint8_t *
-vscp2_protocol_callback_get_guid(const void *pdata)
+void
+vscp2_get_stdreg_guid_cb(const void *pdata)
 {
-  return NULL; //g_persistent.nodeGuid;
+  vscp_espnow_get_node_guid(pdata);
 }
+
+/*
+  When a device is manufactured it may be a need to
+  write a GUID and a manufacturer id to it. Typically
+  this is done by writing som reegister(s) to enable
+  this functionality and then write the data.
+*/
 
 #ifdef THIS_FIRMWARE_ENABLE_WRITE_2PROTECTED_LOCATIONS
 
+// If you need  be able to write manufacturer id during manufacturing
+// you do that here.
+
 int
-vscp2_protocol_callback_write_manufacturer_id(const void *pdata, uint8_t pos, uint8_t val)
+vscp2_write_manufacturer_id_cb(const void *pdata, uint8_t pos, uint8_t val)
 {
-  if (pos < 4) {
-    // eeprom_write(&eeprom, VSCP2_STD_REG_MANUFACTURER_ID0 + pos, val);
-  }
-  else if (pos < 8) {
-    // eeprom_write(&eeprom, VSCP2_STD_REG_MANUFACTURER_SUBID0 + pos - 4, val);
-  }
-
-  // Commit changes to 'eeprom'
-  // eeprom_commit(&eeprom);
-
+  // Write GUID to persistent memory
   return VSCP_ERROR_SUCCESS;
 }
 
+// For vscp-espnow the GUID is normally not changeable
+// except for the two lowest bytes which holds the nickname id.
+// so we just return success.
+
 int
-vscp2_protocol_callback_write_guid(const void *pdata, uint8_t pos, uint8_t val)
+vscp2_write_guid_cb(const void *pdata, uint8_t pos, uint8_t val)
 {
-  // eeprom_write(&eeprom, VSCP2_STD_REG_GUID0 + pos, val);
-
-  // Commit changes to 'eeprom'
-  // eeprom_commit(&eeprom);
-
   return VSCP_ERROR_SUCCESS;
 }
 
 #endif
+
+// Get Nickname
+
+// Write nickname
+
+/**
+  @fn vscp2_get_fw_ver_cb
+  @brief Get firmware version
+
+  @param major Pointer to integer that will get major version.
+  @param minor Pointer to integer that will get minor version.
+  @param patch Pointer to integer that will get patch version.
+
+  you find the version in esp_app_desc_t which you can get
+  a pointer to by calling esp_app_get_description() The .version
+  string in this stucture holds the version set in the top cmake
+  file.
+
+  Here we use a the form  major.minor.patch  If you use another form
+  you ned to adopt the parsing to your storage format
+*/
+
+int
+vscp2_get_fw_ver_cb(int *major, int *minor, int *patch)
+{
+  const esp_app_desc_t *appDescr = esp_app_get_description();
+  if (3 != sscanf(appDescr->version,"%d.%d.%d", major, minor, patch)) {
+    return VSCP_ERROR_PARSING;
+  }
+
+  return VSCP_ERROR_SUCCESS;
+}
 
 /**
  * @fn vscp2_protocol_callback_read_user_reg
@@ -128,7 +182,7 @@ vscp2_protocol_callback_write_guid(const void *pdata, uint8_t pos, uint8_t val)
  */
 
 int
-vscp2_protocol_callback_read_user_reg(const void *pdata, uint32_t reg, uint8_t *pval)
+vscp2_read_user_reg_cb(const void *pdata, uint32_t reg, uint8_t *pval)
 {
   // Check pointers (pdata allowed to be NULL)
   if (NULL == pval) {
@@ -237,7 +291,7 @@ vscp2_protocol_callback_read_user_reg(const void *pdata, uint32_t reg, uint8_t *
  */
 
 int
-vscp2_protocol_callback_write_user_reg(const void *pdata, uint32_t reg, uint8_t val)
+vscp2_write_user_reg_cb(const void *pdata, uint32_t reg, uint8_t val)
 {
   // if ( REG_DEVICE_ZONE == reg) {
   //   eeprom_write(&eeprom, REG_DEVICE_ZONE, val);
@@ -307,7 +361,7 @@ vscp2_protocol_callback_write_user_reg(const void *pdata, uint32_t reg, uint8_t 
  */
 
 int
-vscp2_protocol_callback_enter_bootloader(const void *pdata)
+vscp2_enter_bootloader_cb(const void *pdata)
 {
   return VSCP_ERROR_SUCCESS;
 }
@@ -319,7 +373,7 @@ vscp2_protocol_callback_enter_bootloader(const void *pdata)
  */
 
 int
-vscp2_protocol_callback_report_dmatrix(const void *pdata)
+vscp2_report_dmatrix_cb(const void *pdata)
 {
   return VSCP_ERROR_SUCCESS;
 }
@@ -331,7 +385,7 @@ vscp2_protocol_callback_report_dmatrix(const void *pdata)
  */
 
 int
-vscp2_protocol_callback_report_mdf(const void *pdata)
+vscp2_report_mdf_cb(const void *pdata)
 {
   return VSCP_ERROR_SUCCESS;
 }
@@ -343,7 +397,7 @@ vscp2_protocol_callback_report_mdf(const void *pdata)
  */
 
 int
-vscp2_protocol_callback_report_events_of_interest(const void *pdata)
+vscp2_report_events_of_interest_cb(const void *pdata)
 {
   return VSCP_ERROR_SUCCESS;
 }
@@ -355,7 +409,7 @@ vscp2_protocol_callback_report_events_of_interest(const void *pdata)
  */
 
 uint32_t
-vscp2_protocol_callback_get_timestamp(const void *pdata)
+vscp2_get_timestamp_cb(const void *pdata)
 {
   return 0; // time_us_32();
 }
@@ -368,7 +422,7 @@ vscp2_protocol_callback_get_timestamp(const void *pdata)
  */
 
 int
-vscp2_protocol_callback_get_time(const void *pdata, const vscpEvent *pev)
+vscp2_get_time_cb(const void *pdata, const vscpEvent *pev)
 {
   return VSCP_ERROR_SUCCESS;
 }
@@ -381,7 +435,7 @@ vscp2_protocol_callback_get_time(const void *pdata, const vscpEvent *pev)
  */
 
 int
-vscp2_protocol_callback_send_event(const void *pdata, vscpEvent *pev)
+vscp2_send_event_cb(const void *pdata, vscpEvent *pev)
 {
   // vscpctx_t *pctx = (vscpctx_t *) pdata;
   // if (NULL == pctx) {
@@ -389,12 +443,12 @@ vscp2_protocol_callback_send_event(const void *pdata, vscpEvent *pev)
   // }
 
   // Only if user is validated
-  //if (pctx->bValidated) {
-    // pev->obid = pctx->sock;
-    // if (pdTRUE != xQueueSend(g_queueDroplet, (void *) &pev, 0)) {
-    //   vscp_fwhlp_deleteEvent(&pev);
-    //   pctx->statistics.cntOverruns++;
-    // }
+  // if (pctx->bValidated) {
+  // pev->obid = pctx->sock;
+  // if (pdTRUE != xQueueSend(g_queueDroplet, (void *) &pev, 0)) {
+  //   vscp_fwhlp_deleteEvent(&pev);
+  //   pctx->statistics.cntOverruns++;
+  // }
   //}
 
   return VSCP_ERROR_SUCCESS;
@@ -408,7 +462,7 @@ vscp2_protocol_callback_send_event(const void *pdata, vscpEvent *pev)
  */
 
 int
-vscp2_protocol_callback_restore_defaults(const void *pdata)
+vscp2_restore_defaults_cb(const void *pdata)
 {
   return VSCP_ERROR_SUCCESS;
 }
@@ -423,7 +477,7 @@ vscp2_protocol_callback_restore_defaults(const void *pdata)
  */
 
 int
-vscp2_protocol_callback_write_user_id(const void *pdata, uint8_t pos, uint8_t val)
+vscp2_write_user_id_cb(const void *pdata, uint8_t pos, uint8_t val)
 {
   // eeprom_write(&eeprom, VSCP2_STD_REG_USER_ID0 + pos, val);
 
@@ -449,7 +503,7 @@ vscp2_protocol_callback_write_user_id(const void *pdata, uint8_t pos, uint8_t va
  */
 
 int
-vscp2_protocol_callback_get_ip_addr(const void *pUserData, uint8_t *pipaddr)
+vscp2_get_ip_addr_cb(const void *pUserData, uint8_t *pipaddr)
 {
   if (NULL == pipaddr) {
     return VSCP_ERROR_PARAMETER;
@@ -474,7 +528,7 @@ vscp2_protocol_callback_get_ip_addr(const void *pUserData, uint8_t *pipaddr)
 
 #ifdef THIS_FIRMWARE_VSCP_DISCOVER_SERVER
 int
-vscp2_protocol_callback_high_end_server_response(const void *pUserData)
+vscp2_high_end_server_response_cb(const void *pUserData)
 {
   return VSCP_ERROR_SUCCESS;
 }
