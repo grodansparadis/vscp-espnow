@@ -9,6 +9,8 @@
     "description": "This is template for an Alpga vscp.espnow node",
     "infourl": "https://github.com/grodansparadis/vscp-espnow",
     "buffersize": 200,
+
+    "sep1" : "------------------------------------------------------------------------------------------------",
   
     "manufacturer": {
         "name" : "Grodans Paradis AB",
@@ -84,11 +86,16 @@
            }
          ]
     },
+
+    "sep2" : "------------------------------------------------------------------------------------------------",
+
     "boot" : {
       "algorithm": 80,
       "blocksize" : 4096,
       "blockcount" : 1024
     },
+
+    "sep3" : "------------------------------------------------------------------------------------------------",
 
     "files" : {
       "picture" : [
@@ -182,6 +189,8 @@
       ]
     },
 
+    "sep4" : "------------------------------------------------------------------------------------------------",
+
     "register" : [
       {
         "page": 0,
@@ -200,6 +209,9 @@
         "infourl" : {
           "en" : "https://one.com",
           "se" : "https://two.com"
+        },
+        "remotevar" : {
+          "comment" : "This register is also a remote variable. name/key values set from register name/key pairs."
         }
       },
       {
@@ -219,6 +231,9 @@
         "infourl" : {
           "en" : "https://one.com",
           "se" : "https://two.com"
+        },
+        "remotevar" : {
+          "comment" : "This register is also a remote variable. name/key values set from register name/key pairs."
         }
       },
       {
@@ -237,6 +252,9 @@
         "infourl" : {
           "en" : "https://one.com",
           "se" : "https://two.com"
+        },
+        "remotevar" : {
+          "type" : "string"
         }
       },
       {
@@ -255,7 +273,10 @@
         "infourl" : {
           "en" : "https://one.com",
           "se" : "https://two.com"
-        },        
+        },
+        "remotevar" : {
+          "comment" : "This register is also a remote variable. name/key values set from register name/key pairs."
+        }
       },
       {
         "offset": "0x00000042",
@@ -274,6 +295,9 @@
         "infourl" : {
           "en" : "https://one.com",
           "se" : "https://two.com"
+        },
+        "remotevar" : {
+          "comment" : "This register is also a remote variable. name/key values set from register name/key pairs."
         }
       },
       {
@@ -284,7 +308,6 @@
         "bgcolor" : "0xfff3d4",
         "fgcolor" : "0x001200",        
         "name" : "node_type",
-        "remotevar" : true, 
         "comment" : "Node type alpha=0, betas=1, gamma=2", 
         "description" : {
           "en" : "Node type (alpha=0, beta=1, gamma=2)",
@@ -293,6 +316,9 @@
         "infourl" : {
           "en" : "https://one.com",
           "se" : "https://two.com"
+        },
+        "remotevar" : {
+          "comment" : "This register is also a remote variable. name/key values set from register name/key pairs."
         }
       },      
       {
@@ -303,7 +329,6 @@
         "bgcolor" : "0xfff3d4",
         "fgcolor" : "0x001200",               
         "name" : "heartbeat_freq",
-        "remotevar" : true, 
         "comment" : "", 
         "description" : {
           "en" : "Heartbeat event frequency in seconds",
@@ -312,6 +337,9 @@
         "infourl" : {
           "en" : "https://one.com",
           "se" : "https://two.com"
+        },
+        "remotevar" : {
+          "comment" : "This register is also a remote variable. name/key values set from register name/key pairs."
         }
       },
       {
@@ -330,6 +358,9 @@
         "infourl" : {
           "en" : "https://one.com",
           "se" : "https://two.com"
+        },
+        "remotevar" : {
+          "type" : "uint16"
         }
       },
       {
@@ -348,12 +379,16 @@
         "infourl" : {
           "en" : "https://one.com",
           "se" : "https://two.com"
+        },
+        "remotevar" : {
+          "type" : "uint32"
         }
       },
       {
         "offset": "0x0000004b",
         "type": "std",
         "span": 1,
+        "max": 10,
         "access" : "r",
         "default" : "0xffff",
         "bgcolor" : "0xfff3d4",
@@ -366,30 +401,95 @@
         "infourl" : {
           "en" : "https://one.com",
           "se" : "https://two.com"
-        }
-      },
-      {
-        "offset": "0x0000004c",
-        "type": "std",
-        "span": 1,
-        "access" : "r",
-        "default" : "0xffff",
-        "bgcolor" : "0xfff3d4",
-        "fgcolor" : "0x001200",               
-        "name" : "boot_reason",
-        "description" : {
-          "en" : "Reason for last boot",
-          "se" : "Anledning till senaste återstart"
         },
-        "infourl" : {
-          "en" : "https://one.com",
-          "se" : "https://two.com"
-        }
+        "remotevar" : {
+          "comment" : "This register is also a remote variable. name/key values set from register name/key pairs."
+        },
+        "valuelist" : [
+          {
+            "value" : 0,
+            "name" : "ESP_RST_UNKNOWN",
+            "description" : {
+              "en" : "Reset reason can not be determined"
+            }
+          },
+          {
+            "value" : 1,
+            "name" : "ESP_RST_POWERON",
+            "description" : {
+              "en" : "Reset due to power-on event"
+            }
+          },
+          {
+            "value" : 2,
+            "name" : "ESP_RST_EXT",
+            "description" : {
+              "en" : "Reset by external pin (not applicable for ESP32)"
+            }
+          },
+          {
+            "value" : 3,
+            "name" : "ESP_RST_SW",
+            "description" : {
+              "en" : "Software reset via esp_restart"
+            }
+          },
+          {
+            "value" : 4,
+            "name" : "ESP_RST_PANIC",
+            "description" : {
+              "en" : "Software reset due to exception/panic"
+            }
+          },
+          {
+            "value" : 5,
+            "name" : "ESP_RST_INT_WDT",
+            "description" : {
+              "en" : "Reset (software or hardware) due to interrupt watchdog"
+            }
+          },
+          {
+            "value" : 6,
+            "name" : "ESP_RST_TASK_WDT",
+            "description" : {
+              "en" : "Reset due to task watchdog"
+            }
+          },
+          {
+            "value" : 7,
+            "name" : "ESP_RST_WDT",
+            "description" : {
+              "en" : "Reset due to other watchdogs"
+            }
+          },
+          {
+            "value" : 8,
+            "name" : "ESP_RST_DEEPSLEEP",
+            "description" : {
+              "en" : "Reset after exiting deep sleep mode"
+            }
+          },
+          {
+            "value" : 9,
+            "name" : "ESP_RST_BROWNOUT",
+            "description" : {
+              "en" : "Brownout reset (software or hardware)"
+            }
+          },
+          {
+            "value" : 10,
+            "name" : "ESP_RST_SDIO",
+            "description" : {
+              "en" : "Reset over SDIO"
+            }
+          }   
+        ]
       },
       {
         "offset": "0x0000004d",
         "type": "std",
         "span": 1,
+        "max": 6,
         "access" : "r",
         "bgcolor" : "0xfff3d4",
         "fgcolor" : "0x001200",               
@@ -402,7 +502,85 @@
         "infourl" : {
           "en" : "https://one.com",
           "se" : "https://two.com"
-        }
+        },
+        "remotevar" : {
+          "comment" : "This register is also a remote variable. name/key values set from register name/key pairs."
+        },
+
+        case :
+      // printf("ESP32\n");
+      sprintf(buf, "<td class=\"prop\">ESP32</td></tr>");
+      break;
+
+    case :
+      // printf("ESP32-S2\n");
+      sprintf(buf, "<td class=\"prop\">ESP32-S2</td></tr>");
+      break;
+
+    case :
+      // printf("ESP32-S3\n");
+      sprintf(buf, "<td class=\"prop\">ESP32-S3</td></tr>");
+      break;
+
+    case :
+      // printf("ESP32-C3\n");
+      sprintf(buf, "<td class=\"prop\">ESP32-C3</td></tr>");
+      break;
+
+    case :
+      // printf("ESP32-H2\n");
+      sprintf(buf, "<td class=\"prop\">ESP32-H2</td></tr>");
+      break;
+
+    case :
+      // printf("ESP32-C2\n");
+      sprintf(buf, "<td class=\"prop\">ESP32-C2</td></tr>");
+      break;
+
+        "valuelist" : [
+          {
+            "value" : 0,
+            "name" : "CHIP_ESP32",
+            "description" : {
+              "en" : "ESP-32"
+            }
+          },
+          {
+            "value" : 1,
+            "name" : "CHIP_ESP32S2",
+            "description" : {
+              "en" : "ESP-32 S2"
+            }
+          },
+          {
+            "value" : 2,
+            "name" : "CHIP_ESP32S3",
+            "description" : {
+              "en" : "ESP-32 S3"
+            }
+          },
+          {
+            "value" : 3,
+            "name" : "CHIP_ESP32C3",
+            "description" : {
+              "en" : "ESP-32 C3"
+            }
+          },
+          {
+            "value" : 4,
+            "name" : "CHIP_ESP32H2",
+            "description" : {
+              "en" : "ESP-32 H2"
+            }
+          },
+          {
+            "value" : 5,
+            "name" : "CHIP_ESP32C2",
+            "description" : {
+              "en" : "ESP-32 C2"
+            }
+          }
+        ]
       },
       {
         "offset": "0x0000004e",
@@ -420,11 +598,14 @@
         "infourl" : {
           "en" : "https://one.com",
           "se" : "https://two.com"
+        },
+        "remotevar" : {
+          "type" : "uint32"
         }
       },  
       {
         "offset": "0x00000052",
-        "type": "block",
+        "type": "std",
         "span": 1,
         "access" : "r",
         "bgcolor" : "0xfff3d4",
@@ -438,11 +619,14 @@
         "infourl" : {
           "en" : "https://one.com",
           "se" : "https://two.com"
+        },
+        "remotevar" : {
+          "comment" : "This register is also a remote variable. name/key values set from register name/key pairs."
         }
       },  
       {
         "offset": "0x00000053",
-        "type": "block",
+        "type": "std",
         "span": 1,
         "access" : "r",
         "bgcolor" : "0xfff3d4",
@@ -456,28 +640,393 @@
         "infourl" : {
           "en" : "https://one.com",
           "se" : "https://two.com"
-        }
+        },
+        "remotevar" : {
+          "comment" : "This register is also a remote variable. name/key values set from register name/key pairs."
+        }        
       }, 
       {
         "offset": "0x00000053",
         "type": "block",
-        "span": 1,
+        "span": 3,
         "access" : "r",
         "bgcolor" : "0xfff3d4",
         "fgcolor" : "0x001200",               
         "name" : "wifi_country",
         "comment" : "",
         "description" : {
-          "en" : "Country code for wifi",
-          "se" : "Code för wifi land"
+          "en" : "Country code for wifi, ascii in three bytes",
+          "se" : "Code för wifi land, ascii i tre bytes"
         },
         "infourl" : {
           "en" : "https://one.com",
           "se" : "https://two.com"
+        },
+        "remotevar" : {
+          "comment" : "This register is also a remote variable. name/key values set from register name/key pairs."
+        }
+      },
+      {
+        "offset": "0x00000054",
+        "type": "std",
+        "access" : "r",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",               
+        "name" : "flash_size",
+        "comment" : "esp_flash_get_size",
+        "description" : {
+          "en" : "Size of embedded flash i MB",
+          "se" : "Storlek för inbäddat flash i MB"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        },
+        "remotevar" : {
+          "comment" : "This register is also a remote variable. name/key values set from register name/key pairs."
         }
       },
 
+      {
+        "offset": "0x00000056",
+        "type": "block",
+        "span" : 8,
+        "access" : "r",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",               
+        "name" : "flash_id",
+        "comment" : "esp_flash_read_unique_chip_id",
+        "description" : {
+          "en" : "Unique flash id",
+          "se" : "Unikt flash id"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        },
+        "remotevar" : {
+          "comment" : "This register is also a remote variable. name/key values set from register name/key pairs."
+        }
+      },
 
+      {
+        "offset": "0x0000005e",
+        "type": "block",
+        "span" : 4,
+        "access" : "r",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",               
+        "name" : "flash_chip_id",
+        "comment" : "esp_flash_chip_id",
+        "description" : {
+          "en" : "Flash chip id",
+          "se" : "Flash chip id"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        },
+        "remotevar" : {
+          "type" : "uint32"
+        }
+      },
+
+      {
+        "offset": "0x00000062",
+        "type": "block",
+        "span" : 32,
+        "access" : "r",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",               
+        "name" : "esp_idf_version",
+        "comment" : "esp_get_idf_version",
+        "description" : {
+          "en" : "Version of esp-idf used to compile firmware",
+          "se" : "Version av esp-idf använd för att kompilera firmware"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        },
+        "remotevar" : {
+          "type" : "string"
+        }
+      },
+
+      {
+        "offset": "0x00000094",
+        "type": "block",
+        "span" : 4,
+        "access" : "r",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",               
+        "name" : "free_heap",
+        "comment" : "esp_get_free_heap_size",
+        "description" : {
+          "en" : "Free heap size",
+          "se" : "Fri heap storlek"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        },
+        "remotevar" : {
+          "type" : "uint32"
+        }
+      },
+
+      {
+        "offset": "0x00000098",
+        "type": "block",
+        "span" : 4,
+        "access" : "r",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",               
+        "name" : "min_free_heap",
+        "comment" : "esp_get_free_heap_size",
+        "description" : {
+          "en" : "Minimum free heap size",
+          "se" : "Minimum fri heap storlek"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        },
+        "remotevar" : {
+          "type" : "uint32"
+        }
+      },
+
+      {
+        "offset": "0x0000009c",
+        "type": "block",
+        "span" : 16,        
+        "access" : "r",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",               
+        "name" : "app_compile_time",
+        "comment" : " esp_app_desc_t",
+        "description" : {
+          "en" : "Uptime for system",
+          "se" : "Tid sedan senaste återstart"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        },
+        "remotevar" : {
+          "type": "string" 
+        },
+      },
+
+      {
+        "offset": "0x00000054",
+        "type": "std",
+        "access" : "r",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",               
+        "name" : "wifi_mode",
+        "comment" : "esp_wifi_get_mode",
+        "description" : {
+          "en" : "Wifi mode for node",
+          "se" : "Wifi funktionalitet för node"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        },
+        "remotevar" : {
+          "comment" : "This register is also a remote variable. name/key values set from register name/key pairs."
+        }
+        "valuelist" : [
+          {
+            "value" : 0,
+            "name" : "WIFI_MODE_STA",
+            "description" : {
+              "en" : "Station mode"
+            }
+          },
+          {
+            "value" : 0,
+            "name" : "WIFI_MODE_AP",
+            "description" : {
+              "en" : "Access point"
+            }
+          },
+          {
+            "value" : 0,
+            "name" : "WIFI_MODE_APSTA",
+            "description" : {
+              "en" : "Access point and station"
+            }
+          }
+        ]
+      },
+
+      {
+        "offset": "0x00000054",
+        "type": "std",
+        "access" : "r",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",               
+        "name" : "esp_wifi_stations",
+        "comment" : "esp_wifi_ap_get_sta_list",
+        "description" : {
+          "en" : "# of connected stations",
+          "se" : "Antal anslutna stationer"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        },
+        "remotevar" : {
+          "comment" : "This register is also a remote variable. name/key values set from register name/key pairs."
+        }
+      }
+
+      Auth mode
+      case :
+      sprintf(temp, "\n");
+      break;
+
+    case :
+      sprintf(temp, "\n");
+      break;
+
+    case :
+      sprintf(temp, "\n");
+      break;
+
+    case :
+      sprintf(temp, "\n");
+      break;
+
+    case :
+      sprintf(temp, "\n");
+      break;
+
+    case :
+      sprintf(temp, "\n");
+      break;
+
+    case :
+      sprintf(temp, "\n");
+      break;
+
+    case :
+      sprintf(temp, "\n");
+      break;
+
+    case :
+      sprintf(temp, "\n");
+      break;
+
+    case :
+    sprintf(temp, "\n");
+      break;
+
+      {
+        "offset": "0x00000054",
+        "type": "std",
+        "access" : "r",
+        "bgcolor" : "0xfff3d4",
+        "fgcolor" : "0x001200",               
+        "name" : "esp_wifi_auth_mode_ap",
+        "comment" : "esp_wifi_sta_get_ap_info",
+        "description" : {
+          "en" : "Conected access point auth mode",
+          "se" : "Autentisering för kopplad accesspunkt"
+        },
+        "infourl" : {
+          "en" : "https://one.com",
+          "se" : "https://two.com"
+        },
+        "remotevar" : {
+          "comment" : "This register is also a remote variable. name/key values set from register name/key pairs."
+        },
+        "valuelist" : [
+          {
+            "value" : 0,
+            "name" : "WIFI_AUTH_OPEN",
+            "description" : {
+              "en" : "Open"
+            }
+          },
+          {
+            "value" : 1,
+            "name" : "WIFI_AUTH_WEP",
+            "description" : {
+              "en" : "wep"
+            }
+          },
+          {
+            "value" : 2,
+            "name" : "WIFI_AUTH_WPA_PSK",
+            "description" : {
+              "en" : "wpa-psk"
+            }
+          },
+          {
+            "value" : 3,
+            "name" : "WIFI_AUTH_WPA2_PSK",
+            "description" : {
+              "en" : "wpa2-psk"
+            }
+          },
+          {
+            "value" : 4,
+            "name" : "WIFI_AUTH_WPA_WPA2_PSK",
+            "description" : {
+              "en" : "wpa-wpa2-psk"
+            }
+          },
+          {
+            "value" : 5,
+            "name" : "WIFI_AUTH_WPA2_ENTERPRISE",
+            "description" : {
+              "en" : "wpa2-enterprise"
+            }
+          },
+          {
+            "value" : 6,
+            "name" : "WIFI_AUTH_WPA3_PSK",
+            "description" : {
+              "en" : "wpa3-psk"
+            }
+          },
+          {
+            "value" : 7,
+            "name" : "WIFI_AUTH_WPA2_WPA3_PSK",
+            "description" : {
+              "en" : "wpa2-wpa3-psk"
+            }
+          },
+          {
+            "value" : 8,
+            "name" : "WIFI_AUTH_WAPI_PSK",
+            "description" : {
+              "en" : "wpa2-wapi-psk"
+            }
+          },
+          {
+            "value" : 9,
+            "name" : "WIFI_AUTH_OWE",
+            "description" : {
+              "en" : "wpa2-wapi-psk"
+            }
+          }
+        ]
+      }
+
+      bssid  (6)
+      ssid   (32)
+      channel 
+      Signal strength
+      ip-address
+      subnet-mask
+      gateway
+      dns1
+      dns2
 
       {
         "offset": "0x00011000",
@@ -495,7 +1044,10 @@
         "infourl" : {
           "en" : "https://one.com",
           "se" : "https://two.com"
-        }
+        },
+        "remotevar" : {
+          "type": "uint32" 
+        },
       },
       {
         "offset": "0x00011000",
@@ -512,7 +1064,10 @@
         "infourl" : {
           "en" : "https://one.com",
           "se" : "https://two.com"
-        }
+        },
+        "remotevar" : {
+          "type": "uint32" 
+        },
       },
       {
         "offset": "0x00011000",
@@ -529,7 +1084,10 @@
         "infourl" : {
           "en" : "https://one.com",
           "se" : "https://two.com"
-        }
+        },
+        "remotevar" : {
+          "type": "uint32" 
+        },
       },
       {
         "offset": "0x00010004",
@@ -547,7 +1105,10 @@
         "infourl" : {
           "en" : "https://one.com",
           "se" : "https://two.com"
-        }
+        },
+        "remotevar" : {
+          "type": "uint32" 
+        },
       },
       {
         "offset": "0x00010004",
@@ -565,7 +1126,10 @@
         "infourl" : {
           "en" : "https://one.com",
           "se" : "https://two.com"
-        }
+        },
+        "remotevar" : {
+          "type": "uint32" 
+        },
       },
       {
         "offset": "0x00010004",
@@ -576,22 +1140,27 @@
         "fgcolor" : "0x001200",        
         "name" : "Stat_time_diff",
         "description" : {
-          "en" : "Count for time diff to high",
-          "se" : "Räknare för events med för höh tidsdiff"
+          "en" : "Count for events for wich time diff. is to high",
+          "se" : "Räknare för events med för hög tidsdifferance"
         },
         "infourl" : {
           "en" : "https://one.com",
           "se" : "https://two.com"
-        }
+        },
+        "remotevar" : {
+          "type": "uint32" 
+        },
       },
     ],
+
+    "sep5" : "------------------------------------------------------------------------------------------------",
 
     "remotevar" : [
       {
         "name" : "DeviceName",
         "type": "string", 
         "access": "rw",
-        "page" :"0",
+        "length": 32,
         "offset" : "0x00000002",
         "bgcolor" :"0xCCFFFF",
         "fgcolor" :"0x123456",
@@ -610,8 +1179,7 @@
         "type": "uint32", 
         "default": 0,
         "access": "r",
-        "page" : "0x11",
-        "offset" :"12",
+        "offset" : 12,
         "bgcolor" :"0x777777",
         "fgcolor" :"0x888888",        
         "description" : {
@@ -769,5 +1337,9 @@
         ]
       }    
     ]
+
+    "sep6" : "------------------------------------------------------------------------------------------------",
+
+
   } 
 }
