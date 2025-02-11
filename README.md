@@ -219,7 +219,7 @@ Other options you have are
 
 Will be added.  
 
-VSCP Works is available [here](https://github.com/grodansparadis/vscp-works-qt) and old version is [here](https://github.com/grodansparadis/vscpworks).
+VSCP Works is available [here](https://github.com/grodansparadis/vscp-works-qt).
 
 ## Using the VSCP daemon with vscp-espnow
 Will be added.
