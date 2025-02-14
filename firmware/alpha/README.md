@@ -1,4 +1,4 @@
-# Solution Example
+# VSCP ESP-Now Alpha node example
 
 This example provides the solution to use `ESP-NOW` multiple features in one project.
 
@@ -7,6 +7,20 @@ This example provides the solution to use `ESP-NOW` multiple features in one pro
 - Debug the responder devices through commands and get log from responder devices.
 - Upgrade responder devices through ESP-NOW.
 - Security handshake and communication between initiator device and responder devices.
+
+## Tools
+
+The alpa node by default broadcast debug data on UDP channel 6789. If you want to view this data on a linuxc system you can use
+
+```shell  
+nc -ulk 6789
+```
+
+or use `tcpdump` to view the data
+
+```shell
+sudo tcpdump  -n udp port 6789 -X
+```
 
 ## Hardware Required
 
@@ -17,6 +31,8 @@ A button needs to be connected to a GPIO pin to configure WiFi network.
 A `RGB LED` is needed if the development board doesn't have the RGB LED component. The light is used to indicate WiFi status and control status.
 
 The GPIO pins that drive the button or the light can be configured and modified in [app_main.c](main/app_main.c).
+
+
 
 ## Configuration
 
@@ -315,3 +331,5 @@ I (355451) app: unbind, uuid: 7c:df:a1:76:42:38, initiator_type: 513
 #endif
 
 ```
+
+

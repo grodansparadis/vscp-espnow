@@ -342,14 +342,13 @@ info_get_handler(httpd_req_t *req)
 
   uint8_t GUID[16];
   vscp_espnow_get_node_guid(GUID);
-  char *pre = ESP_MALLOC(32);
-  if (NULL != pre) {
-    vscp_fwhlp_writeGuidToString(temp, GUID);
-    memset(pre, 0, 32);
-    strncpy(pre, temp, 24);
-    sprintf(buf, "<tr><td class=\"name\">GUID:</td><td class=\"prop\">%s<br>%s</td></tr>", pre, temp + 24);
+  char *bufguid = ESP_MALLOC(50);
+  if (NULL != bufguid) {
+    memset(bufguid, 0, sizeof(bufguid));
+    vscp_fwhlp_writeGuidToString(bufguid, GUID);
+    sprintf(buf, "<tr><td class=\"name\">GUID:</td><td class=\"prop\">%s<br>%s</td></tr>", bufguid, /*temp + 24*/"1");
     httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-    ESP_FREE(pre);
+    ESP_FREE(bufguid);
   }
 
   // -------------------------------------------------------------------------

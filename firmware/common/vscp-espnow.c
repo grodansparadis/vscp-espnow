@@ -913,6 +913,8 @@ vscp_espnow_get_node_guid(uint8_t *pguid)
     return VSCP_ERROR_INVALID_POINTER;
   }
 
+  memset(pguid, 0, 16);
+  memcpy(pguid, prebytes, 8);
   ret = esp_read_mac(pguid + 8, ESP_MAC_WIFI_STA);
   if (ret != ESP_OK) {
     ESP_LOGE(TAG, "esp_efuse_mac_get_default failed to get GUID. rv=%d", ret);
@@ -1984,7 +1986,7 @@ vscp_espnow_heartbeat_task(void *pvParameter)
       pev->pdata[1]   = 0xff; // zone
       pev->pdata[2]   = 0xff; // subzone
 #else // Gamma nodes
-      // Beta nodes send information heartbeat
+      // Gamma nodes send information heartbeat
       pev->vscp_class = VSCP_CLASS1_INFORMATION;
       pev->vscp_type  = VSCP_TYPE_INFORMATION_NODE_HEARTBEAT;
       pev->sizeData   = 3;

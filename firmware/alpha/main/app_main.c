@@ -264,20 +264,29 @@ app_get_device_guid(uint8_t *pguid)
     return false;
   }
 
-  rv = nvs_get_blob(g_nvsHandle, "guid", pguid, &length);
-  switch (rv) {
+  uint8_t eth_guid[8] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe };
+  memset(pguid, 0, 16);
+  memcpy(pguid, eth_guid, 8);
+  esp_wifi_get_mac(ESP_IF_WIFI_STA, pguid + 8);
 
-    case ESP_OK:
-      break;
+  // rv = nvs_get_blob(g_nvsHandle, "guid", pguid, &length);
+  // switch (rv) {
 
-    case ESP_ERR_NVS_NOT_FOUND:
-      printf("GUID not found in nvs\n");
-      return false;
+  //   case ESP_OK:
+  //     break;
 
-    default:
-      printf("Error (%s) reading GUID from nvs!\n", esp_err_to_name(rv));
-      return false;
-  }
+  //   case ESP_ERR_NVS_NOT_FOUND:
+  //     LOGE("GUID not found in nvs, setting default\n");
+  //     uint8_t eth_guid[8] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe };
+  //     memset(pguid, 0, 16);
+  //     memcpy(pguid, eth_guid, 8);
+  //     esp_wifi_get_mac(ESP_IF_WIFI_STA, pguid + 8);
+  //     return false;
+
+  //   default:
+  //     printf("Error (%s) reading GUID from nvs!\n", esp_err_to_name(rv));
+  //     return false;
+  // }
 
   return true;
 }
