@@ -8,8 +8,21 @@
               "${workspaceFolder}/../common/",
               "${IDF_PATH}/**",
               "managed_components/**",
-              "${VSCP_COMMON}/**"
+              "${VSCP_COMMON}/**",
+              "${IDF_PATH}/../common"
             ],
+            "browse": {
+            "path": [
+              "${IDF_PATH}/components",
+              "${IDF_PATH}/managed_components",
+              "${IDF_PATH}/../common",
+              "${config:idf.espIdfPathWin}/components",
+              "${config:idf.espAdfPath}/components/**",
+              "${config:idf.espAdfPathWin}/components/**",
+              "${workspaceFolder}"
+],
+"limitSymbolsToIncludedHeaders": false
+},
             "defines": [],
             "compilerPath": "/usr/bin/clang",
             "cStandard": "c17",

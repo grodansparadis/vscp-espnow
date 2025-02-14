@@ -1,4 +1,16 @@
 {
+  "C_Cpp.intelliSenseEngine": "Default"
+
+  // Controls if quick suggestions should show up while typing
+  "editor.quickSuggestions": {
+    "other": true,
+    "comments": false,
+    "strings": false
+  },
+
+  "C_Cpp.codeAnalysis.runAutomatically": true,
+  "C_Cpp.codeAnalysis.clangTidy.enabled": true,
+
   "idf.adapterTargetName": "esp32",
   "idf.flashType": "UART",
   "idf.port": "/dev/ttyUSB1",

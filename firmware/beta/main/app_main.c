@@ -102,8 +102,8 @@ node_persistent_config_t g_persistent = {
 
   // General
   .nodeName   = "Beta Node",
-  .pmk        = { 0 },  // Currently not used
-  .lmk        = { 0 },  // Currently not used
+  .pmk        = { 0 }, // Currently not used
+  .lmk        = { 0 }, // Currently not used
   .keyOrigin  = { 0 },
   .startDelay = 2,
   .bootCnt    = 0,
@@ -133,7 +133,6 @@ typedef enum { APP_ESPNOW_CTRL_INIT, APP_ESPNOW_CTRL_BOUND, APP_ESPNOW_CTRL_MAX 
 static app_espnow_ctrl_status_t s_espnow_ctrl_status = APP_ESPNOW_CTRL_INIT;
 
 #define WIFI_PROV_KEY_GPIO GPIO_NUM_0
-
 
 ///////////////////////////////////////////////////////////
 //        F O R W A R D  D E C L A R A T I O N S
@@ -459,7 +458,6 @@ readPersistentConfigs(void)
     g_persistent.logLevelFlash = val;
   }
 
-  
   return ESP_OK;
 }
 
@@ -772,9 +770,7 @@ app_main()
     espnow_set_key(key_info);
 
     // !!! Use only for key setting debug. NEVER DISCLOSE !!!
-    //ESP_LOGI(TAG, "Security Key: " KEYSTR, KEY2STR(key_info));
-
-    
+    // ESP_LOGI(TAG, "Security Key: " KEYSTR, KEY2STR(key_info));
 
     // Initializing OTA
     // espnow_ota_config_t ota_config = {
@@ -832,23 +828,27 @@ app_main()
   };
 
   button_handle_t s_init_button_handle;
-  ret =  iot_button_new_gpio_device(&btn_cfg, &gpio_cfg, &s_init_button_handle);
+  ret = iot_button_new_gpio_device(&btn_cfg, &gpio_cfg, &s_init_button_handle);
   assert(ret == ESP_OK);
 
   iot_button_register_cb(s_init_button_handle, BUTTON_SINGLE_CLICK, NULL, app_sec_init_press_cb, NULL);
   iot_button_register_cb(s_init_button_handle, BUTTON_DOUBLE_CLICK, NULL, app_ota_start_press_cb, NULL);
-  iot_button_register_cb(s_init_button_handle, BUTTON_LONG_PRESS_START, NULL, app_restore_factory_defaults_press_cb, NULL);
-
+  iot_button_register_cb(s_init_button_handle,
+                         BUTTON_LONG_PRESS_START,
+                         NULL,
+                         app_restore_factory_defaults_press_cb,
+                         NULL);
 
   ESP_ERROR_CHECK(esp_event_handler_register(ESP_EVENT_ESPNOW, ESP_EVENT_ANY_ID, &app_system_event_handler, NULL));
-  // TOD0 ESP_ERROR_CHECK(esp_event_handler_register(ESP_HTTPS_OTA_EVENT, ESP_EVENT_ANY_ID, &app_system_event_handler, NULL));
-  // TODO  ESP_ERROR_CHECK(esp_event_handler_register(ESP_EVENT_ESPNOW_DEBUG_BASE, ESP_EVENT_ANY_ID, &app_system_event_handler, NULL));
+  // TOD0 ESP_ERROR_CHECK(esp_event_handler_register(ESP_HTTPS_OTA_EVENT, ESP_EVENT_ANY_ID, &app_system_event_handler,
+  // NULL));
+  // TODO  ESP_ERROR_CHECK(esp_event_handler_register(ESP_EVENT_ESPNOW_DEBUG_BASE, ESP_EVENT_ANY_ID,
+  // &app_system_event_handler, NULL));
 
   // Setup VSCP esp-now
 
   vscp_espnow_config_t vscp_espnow_conf;
-  //vscp_espnow_conf.nvsHandle = s_nvsHandle;
-  
+  // vscp_espnow_conf.nvsHandle = s_nvsHandle;
 
   // Set default primary key
   // uint8_t pmk[16];
