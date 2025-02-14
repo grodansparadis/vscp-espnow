@@ -271,9 +271,9 @@ vscp_espnow_read_standard_reg(uint32_t reg, uint16_t cnt)
       pev->pdata[rcnt+4] = VSCP_STD_VERSION_MINOR;
     }
 
-    else if (VSCP_STD_REGISTER_SUB_VERSION == raddr) {
-      pev->pdata[rcnt+4] = VSCP_STD_VERSION_SUB_MINOR;
-    }
+    // else if (VSCP_STD_REGISTER_PATCH_VERSION == raddr) {
+    //   pev->pdata[rcnt+4] = VSCP_STD_VERSION_SUB_MINOR;
+    // }
 
     //  User id
     else if ((VSCP_STD_REGISTER_USER_ID >= raddr) && ((VSCP_STD_REGISTER_USER_ID + 4) <= raddr)) {
