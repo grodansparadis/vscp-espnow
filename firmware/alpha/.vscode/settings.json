@@ -114,7 +114,7 @@
     "freertos.h": "c",
     "led_indicator_blink_default.h": "c"
   },
-  "starcoderex.bearertoken": "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",
+
   "idf.espIdfPath": "/home/akhe/esp/v5.4/esp-idf",
   "idf.toolsPath": "/home/akhe/.espressif"
 }

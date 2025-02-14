@@ -1,0 +1,6 @@
+[submodule "third_party/vscp-firmware"]
+	path = third_party/vscp-firmware
+	url = https://github.com/grodansparadis/vscp-firmware.git
+[submodule "third_party/vscp"]
+	path = third_party/vscp
+	url = https://github.com/grodansparadis/vscp.git
