@@ -51,6 +51,7 @@
 #include <espnow_storage.h>
 #include <espnow_utils.h>
 #include <espnow_ctrl.h>
+#include <mqtt_client.h>
 
 #include "espnow_console.h"
 #include "espnow_log.h"
@@ -58,6 +59,7 @@
 #include "espnow_ota.h"
 
 #include <iot_button.h>
+#include "button_gpio.h"
 
 // https://docs.espressif.com/projects/espressif-esp-iot-solution/en/latest/display/led_indicator.html
 #include "led_indicator.h"
@@ -92,14 +94,17 @@ static alpha_node_states_t s_stateNode = ALPHA_STATE_VIRGIN;
 #endif
 
 /**
- * Network time syncronization interval 
+ * Network time syncronization interval
  * in seconds
  */
-#define TIME_SYNC_INTERVAL  10
+#define TIME_SYNC_INTERVAL 10
 
 // Handle for nvs storage
 nvs_handle_t g_nvsHandle = 0;
 extern bool g_vscp_espnow_probe;
+
+// MQTT
+extern esp_mqtt_client_handle_t g_mqtt_client;
 
 // Forward declarations
 static esp_err_t
@@ -220,7 +225,8 @@ node_persistent_config_t g_persistent = {
 #define CONTROL_KEY_GPIO GPIO_NUM_0
 #endif
 
-#define WIFI_PROV_KEY_GPIO GPIO_NUM_0
+#define WIFI_PROV_KEY_GPIO  GPIO_NUM_0
+#define BUTTON_ACTIVE_LEVEL 0
 
 ///////////////////////////////////////////////////////////////////////////////
 // app_read_onboard_temperature
@@ -296,9 +302,9 @@ app_led_init(void)
     .blink_list_num            = VSCP_BLINK_LIST_NUM,
   };
 
-  // s_led_handle_green = led_indicator_create(PRJDEF_INDICATOR_LED_PIN_GREEN, &indicator_config_green);
-  s_led_handle_green = led_indicator_create(&indicator_config_red);
-  if (NULL == s_led_handle_green) {
+  // s_led_handle_red = led_indicator_create(PRJDEF_INDICATOR_LED_PIN_GREEN, &indicator_config_green);
+  s_led_handle_red = led_indicator_create(&indicator_config_red);
+  if (NULL == s_led_handle_red) {
     ESP_LOGE(TAG, "Failed to create status LED indicator green");
   }
 
@@ -346,7 +352,7 @@ app_espnow_debug_recv_process(uint8_t *src_addr, void *data, size_t size, wifi_p
 
   if (g_persistent.mqttEnable) {
 
-    buf = ESP_CALLOC(1,size_buffer);
+    buf = ESP_CALLOC(1, size_buffer);
     if (NULL == buf) {
       ESP_LOGE(TAG, "Unable to allocate buffer for log message.");
       return ESP_ERR_NO_MEM;
@@ -742,11 +748,11 @@ app_wifi_prov_over_espnow_start_press_cb(void *arg, void *usr_data)
 
   ESP_LOGI(TAG, "espnow security exchange");
 
-  s_timerKeyXChange = app_getMilliSeconds;
-  s_stateNode = ALPHA_STATE_KEY_EXCHANGE;
+  s_timerKeyXChange = app_getMilliSeconds();
+  s_stateNode       = ALPHA_STATE_KEY_EXCHANGE;
 
   // app_prov_responder_init();
-  //vscp_espnow_sec_initiator();
+  // vscp_espnow_sec_initiator();
 
   blink_switch_type(s_led_handle_green, BLINK_PROVISIONING);
 
@@ -876,20 +882,28 @@ vscp_espnow_data_cb(uint8_t *src_addr, void *data, size_t size, wifi_pkt_rx_ctrl
 static void
 app_button_init(void)
 {
-  button_config_t button_config = {
-        .type = BUTTON_TYPE_GPIO,
-        .long_press_time = 3000,
-        .gpio_button_config = {
-          .gpio_num = WIFI_PROV_KEY_GPIO,
-          .active_level = 0,
-        },
-    };
 
-  s_init_button_handle = iot_button_create(&button_config);
+  button_config_t btn_cfg = {
+    .short_press_time = 1000,
+    .long_press_time  = 3000,
+  };
 
-  iot_button_register_cb(s_init_button_handle, BUTTON_SINGLE_CLICK, app_wifi_prov_over_espnow_start_press_cb, NULL);
-  iot_button_register_cb(s_init_button_handle, BUTTON_DOUBLE_CLICK, app_wifi_prov_start_press_cb, NULL);
-  iot_button_register_cb(s_init_button_handle, BUTTON_LONG_PRESS_START, app_factory_reset_press_cb, NULL);
+  button_gpio_config_t gpio_cfg = {
+    .gpio_num     = WIFI_PROV_KEY_GPIO,
+    .active_level = BUTTON_ACTIVE_LEVEL,
+  };
+
+  button_handle_t s_init_button_handle;
+  esp_err_t ret = iot_button_new_gpio_device(&btn_cfg, &gpio_cfg, &s_init_button_handle);
+  assert(ret == ESP_OK);
+
+  iot_button_register_cb(s_init_button_handle,
+                         BUTTON_SINGLE_CLICK,
+                         NULL,
+                         app_wifi_prov_over_espnow_start_press_cb,
+                         NULL);
+  iot_button_register_cb(s_init_button_handle, BUTTON_DOUBLE_CLICK, NULL, app_wifi_prov_start_press_cb, NULL);
+  iot_button_register_cb(s_init_button_handle, BUTTON_LONG_PRESS_START, NULL, app_factory_reset_press_cb, NULL);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1930,7 +1944,7 @@ app_main()
         continue;
       }
 
-      pev->pdata = ESP_CALLOC(1,8);
+      pev->pdata = ESP_CALLOC(1, 8);
       if (NULL == pev->pdata) {
         ESP_LOGE(TAG, "Unable to allocate event data");
         continue;
@@ -1956,6 +1970,7 @@ app_main()
         int64_t time_us = (int64_t) tv_now.tv_sec * 1000000L + (int64_t) tv_now.tv_usec;
 
         ESP_LOGI(TAG, ">>> The current date/time GMT is: %lld %s", tv_now.tv_sec, strftime_buf);
+        esp_mqtt_client_publish(g_mqtt_client, "esp-now/time", strftime_buf, 0, 0, 0);
 
         pev->vscp_class = VSCP_CLASS1_INFORMATION;
         pev->vscp_type  = VSCP_TYPE_INFORMATION_TIME;

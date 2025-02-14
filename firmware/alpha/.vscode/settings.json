@@ -1,6 +1,6 @@
 {
   "idf.adapterTargetName": "esp32",
-  "idf.flashType": "JTAG",
+  "idf.flashType": "UART",
   "idf.port": "/dev/ttyUSB0",
   "esp32.port": "-p ${config:idf.port}",
   // Use board or interface as needed for openocd functionality
@@ -12,55 +12,55 @@
   "esp32.debugger":"riscv32-esp-elf-gdb",
   "esp32.firmware":"build/vscp-dropplet-alpha.bin",
   // Extension by Seun LanLege
-  "actionButtons": {
+  // "actionButtons": {
 
-    "defaultColor": "#ff0034", // Can also use string color names.
-    "loadNpmCommands":false, // Disables automatic generation of actions for npm commands.
-    "reloadButton":"♻️", // Custom reload button text or icon (default ↻). null value enables automatic reload on configuration change
+  //   "defaultColor": "#ff0034", // Can also use string color names.
+  //   "loadNpmCommands":false, // Disables automatic generation of actions for npm commands.
+  //   "reloadButton":"♻️", // Custom reload button text or icon (default ↻). null value enables automatic reload on configuration change
         
     // Icons here: https://code.visualstudio.com/api/references/icons-in-labels
     // "-p /dev/ttyUSB0" may need to be changed below to your port. Sadly the idf.port
     // configuration setting can't be read here.
-    "commands": [
-      {
-        "name": "$(circle-filled)Build",
-        "color": "yellow",
-        "singleInstance": true,
-        "tooltip": "Build project",
-        "command": "idf.py build"
-      },
-      {
-        "name": "$(circle-filled)Clean",
-        "color": "yellow",
-        "singleInstance": true,        
-        "command": "idf.py clean"
-      },
-      {
-        "name": "$(circle-filled)FullClean",
-        "color": "yellow",
-        "singleInstance": true,
-        "command": "idf.py fullclean"
-      },
-      {
-        "name": "$(circle-filled)Flash",
-        "color": "yellow",
-        "singleInstance": true,
-        "command": "idf.py -p /dev/ttyUSB0 flash"
-      },
-      {
-        "name": "$(circle-filled)Monitor",
-        "color": "yellow",
-        "singleInstance": true,
-        "command": "idf.py -p /dev/ttyUSB0 monitor"
-      },
-      {
-        "name": "$(circle-filled)Menu",
-        "color": "yellow",
-        "singleInstance": true,
-        "command": "idf.py menuconfig"
-      }
-    ] 
-  },
+  //   "commands": [
+  //     {
+  //       "name": "$(circle-filled)Build",
+  //       "color": "yellow",
+  //       "singleInstance": true,
+  //       "tooltip": "Build project",
+  //       "command": "idf.py build"
+  //     },
+  //     {
+  //       "name": "$(circle-filled)Clean",
+  //       "color": "yellow",
+  //       "singleInstance": true,        
+  //       "command": "idf.py clean"
+  //     },
+  //     {
+  //       "name": "$(circle-filled)FullClean",
+  //       "color": "yellow",
+  //       "singleInstance": true,
+  //       "command": "idf.py fullclean"
+  //     },
+  //     {
+  //       "name": "$(circle-filled)Flash",
+  //       "color": "yellow",
+  //       "singleInstance": true,
+  //       "command": "idf.py -p /dev/ttyUSB0 flash"
+  //     },
+  //     {
+  //       "name": "$(circle-filled)Monitor",
+  //       "color": "yellow",
+  //       "singleInstance": true,
+  //       "command": "idf.py -p /dev/ttyUSB0 monitor"
+  //     },
+  //     {
+  //       "name": "$(circle-filled)Menu",
+  //       "color": "yellow",
+  //       "singleInstance": true,
+  //       "command": "idf.py menuconfig"
+  //     }
+  //   ] 
+  //},
   "files.associations": {
     "espnow_ctrl.h": "c",
     "espnow.h": "c",
@@ -114,5 +114,7 @@
     "freertos.h": "c",
     "led_indicator_blink_default.h": "c"
   },
-  "starcoderex.bearertoken": "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"
+  "starcoderex.bearertoken": "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",
+  "idf.espIdfPath": "/home/akhe/esp/v5.4/esp-idf",
+  "idf.toolsPath": "/home/akhe/.espressif"
 }

@@ -44,7 +44,7 @@ The vscp-espnow firmware is **NOT** a ready made solutions that you can upload i
 [esp-now](https://www.espressif.com/en/solutions/low-power-solutions/esp-now?ct=t(EMAIL_CAMPAIGN_4_12_2023_2_38)&mc_cid=1dec54c698&mc_eid=1bb5ed46d4) is a protocol developed by [Espressif](https://www.espressif.com/en) for use with the ESP32/ESP8266 it allows for secure communication between wireless devices without a wifi connection. [espnow](https://github.com/espressif/esp-now) is a software component that makes esp-now more friendly for developers to work with.
 
 # Alpha-nodes
-Alpha nodes are devices that are always powered. They are also always connect to a wifi router. Alpha nodes can be connected together user either wifi or esp-now. 
+Alpha nodes are devices that are always powered. They are also always connect to a wifi router. Alpha nodes can be connected together either wifi or esp-now.
 
 Alpha nodes are provisioned (connected to wifi) using BLE.
 
@@ -52,7 +52,7 @@ Alpha nodes can have there firmware OTA updated. It is possible to update firmwa
 
 Alpha nodes have a local web server. This web server allows for configuration of wifi, esp-now, VSCP, webserver, MQTT and logging etc. It can give technical and status information about the device. Initiating of firmware OTA upgrade is possible. Both from a secure web server and locally from a file and it can also initiate OTA for Beta/Gamma nodes if they are setup to receive upgrades.
 
-Alpha nodes can connect with a MQTT HUB to send/receive VSCP events. 
+Alpha nodes can connect with a MQTT broker to send/receive VSCP events.
 
 Alpha nodes optionally have a VSCP tcp/ip link interface that can be used for sending and receiving of VSCP events as an alternative to the MQTT link.
 
@@ -64,7 +64,7 @@ Alpha nodes implement [VSCP registers](https://grodansparadis.github.io/vscp-doc
 
 Alpha nodes can act as a relay node to extend range.
 
-All alpha nodes have an init button. 
+All alpha nodes have an init button.
 
 - A short press enable the node to securely pair with other nodes, transferring encryption key and a common communication channel to work on.
 - A long press (more than 3 seconds) reset the node to factory defaults. This forget wifi provision data and a new provisioning is needed.  
@@ -74,7 +74,7 @@ Alpha nodes have a status led that should be green and give status information a
 
 - Blinking. Node is connecting to wifi access point or needs provisioning.
 - Steady on. Node is connected.
-- tbd
+- Other tbd
 
 # Beta-nodes
 Beta nodes are nodes that are always powered. They communicate using VSCP over esp-now and connect to alpha nodes, other beta nodes and gamma-nodes.
@@ -87,7 +87,7 @@ Beta nodes implement [VSCP registers](https://grodansparadis.github.io/vscp-doc-
 
 Beta nodes can act as a relay node to extend range.
 
-All alpha nodes have an init button. 
+All alpha nodes have an init button.
 
 - A short press enable the node to securely pair with an Alpha node that is set in pairing mode, transferring encryption key and a common communication channel to work on.
 - A long press (more than 3 seconds) reset the node to factory defaults.  
@@ -95,13 +95,13 @@ All alpha nodes have an init button.
 
 # Gamma-Nodes
 
-Gamma nodes are nodes that are battery powered and sleep most of the time. They communicate using VSCP over esp-now and connect to alpha nodes, beta nodes and other gamma-nodes. They can be very low power by just wake up for short time ehen needed and  when that hgappens tell the system they are awake, send events (measuremenst, alarms, key-clicks etc) they have to send and receive and act on data that is waiting to it. A MQTT broker can be used as a postbox to hold events that the gamma node is the received of. An Alpha node takes care of this transfer when the Gamma node awakes.
+Gamma nodes are nodes that are battery powered and sleep most of the time. They communicate using VSCP over esp-now and connect to alpha nodes, beta nodes and other gamma-nodes. They can be very low power by just wake up for short time when needed and  when that happens tell the system they are awake, send events (measurements, alarms, key-clicks etc) they have to send and receive and act on data that is waiting to it. A MQTT broker can be used as a postbox to hold events that the gamma node is the received of. An Alpha node takes care of this transfer when the Gamma node awakes.
 
 Gamma nodes implement [VSCP registers](https://grodansparadis.github.io/vscp-doc-spec/#/./vscp_register_abstraction_model) and have an optional [decision matrix](https://grodansparadis.github.io/vscp-doc-spec/#/./vscp_decision_matrix) and can be configured and controlled using VSCP events. A VSCP [MDF file](https://grodansparadis.github.io/vscp-doc-spec/#/./vscp_module_description_file) describe the node for higher level software.
 
-All gamma nodes have an init button. 
+All gamma nodes have an init button.
 
-- A short press wake up a gamma node and enable the node to securely pair with an Alpha node that is set in pairing mode, transferring encryption key and channel to work on.
+- A short press wake up a gamma node and enable the node to securely pair with an Alpha/Beta node that is set in pairing mode, transferring encryption key and channel to work on.
 - A long press (more than 3 seconds) wake up a gamma node and reset the node to factory defaults.  
 - A double click wake up a gamma node and enable the node to receive OTA firmware from an initiating (typically Alpha-node) node.
 
@@ -110,11 +110,11 @@ Firmware nodes wake up on even/uneven intervals and is available for control and
 ## Init
 
 ### Set up Alpha node
-First you need to set up the Alpha node to connect to the wifi router. Start the node and it is ready for provisioning. This is done with your phone over BLE. There is an app for Android [here](https://play.google.com/store/apps/details?id=com.espressif.provble) and for iOS [here](https://apps.apple.com/in/app/esp-ble-provisioning/id1473590141). 
+First you need to set up the Alpha node to connect to the wifi router. Start the node and it is ready for provisioning. This is done with your phone over BLE. There is an app for Android [here](https://play.google.com/store/apps/details?id=com.espressif.provble) and for iOS [here](https://apps.apple.com/in/app/esp-ble-provisioning/id1473590141).
 
 A ready made product will have a QR code labeled on it but for development you probably need to use the UART of the device to get this information. The status led on the device blinks as long as the device is not connected to wifi. When the len is steady on you have a connection and is ready to move on. 
 
-Now look up the node by scanning for its ip-address. Open this ip address in a web browser and you will go to the configuration interface. Default user is **vscp** and default password **secret**. For a non product test you should probably change this the first thing you do. This is the first page what you will meet
+Now look up the node by scanning for its ip-address. Open this ip address in a web browser and you will go to the configuration interface. Default user is **vscp** and default password **secret**. For a non product test you should (probably) change this the first thing you do. This is the first page what you will meet
 
 ![](./images/config-main.png)
 
@@ -124,7 +124,7 @@ The Alpha node generate a 32 byte secret key itself when it starts for the first
 
 If you want to use MQTT now configure MQTT to use a MQTT broker you have access to in the configuration interface.
 
-Hold down the init key for more then four seconds to restore factory defaults. It starts to blink again when it is ready. You need to proivision the node again so it get access to wifi. All connected Beta and Gamma nodes needs to be set up agin also if you do this. You can set your own key in the web interface under configure/module/primary key. The key should be a 32 byte key on hex form (_000102030405060708090A0B...._a total of 64 hex characters). The key should not change after you have added Beta and Gamma nodes to the segment the Alpha node is on.
+Hold down the init key for more then four seconds to restore factory defaults. It starts to blink again when it is ready. You need to proivision the node again so it get access to wifi. All connected Beta and Gamma nodes needs to be set up agin also if you do this. You can set your own key in the web interface under configure/module/primary key. The key should be a 32 byte key on hex form (_000102030405060708090A0B0C0D0E0F...._a total of 64 hex characters). The key should not change after you have added Beta and Gamma nodes to the segment the Alpha node is on.
 
 You can use VSCP to configure the alpha node (and nodes connected to it) once the MQTT or the VSCP link interface is configured. You can do control, configuration and remote debugging this way on  a live system.
 
@@ -133,7 +133,7 @@ You can use VSCP to configure the alpha node (and nodes connected to it) once th
 Hold down the init key for more then four seconds to restore factory defaults. When the status led blinks fast the node will set factory defaults and you will need to add wifi credentials to the device using BLE as described above.  It may be good to backup settings in the web interface before you do this.
 
 ### OTA
-You starts a firmware upgrade OTA using the web interface. Yuou can update from a web server or from a file on your computer. You can also upgrade a remote alpha/gamma node using this interface.
+You starts a firmware upgrade OTA using the web interface. You can update from a web server or from a file on your computer. You can also upgrade a remote alpha/gamma node using this interface.
 
 ### Set up beta node(s)
 

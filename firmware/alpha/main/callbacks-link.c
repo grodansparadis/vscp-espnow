@@ -75,7 +75,7 @@ extern const uint8_t DROPLET_ADDR_BROADCAST[6];
 
 #define TCPSRV_WELCOME_MSG                                                                                             \
   "Welcome to the %s node\r\n"                                                                                         \
-  "Copyright (C) 2000-2023 Åke Hedman, Grodans Paradis AB\r\n"                                                        \
+  "Copyright (C) 2000-2025 Åke Hedman, Grodans Paradis AB\r\n"                                                        \
   "https://www.grodansparadis.com\r\n"                                                                                 \
   "+OK\r\n"
 

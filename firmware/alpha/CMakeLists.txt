@@ -4,10 +4,15 @@ cmake_minimum_required(VERSION 3.5)
 add_compile_options(-fdiagnostics-color=always)
 
 if(NOT DEFINED IDF_TARGET)
-  set(IDF_TARGET "esp32")
+    set(IDF_TARGET "esp32")
 endif()
 
 set(PROJECT_VER "0.0.1")
+
+# esp-now version
+set(ENV{ESP_NOW_VER_MAJOR} 2) 
+set(ENV{ESP_NOW_VER_MINOR} 5) 
+set(ENV{ESP_NOW_VER_PATCH} 2)
 
 # include(${ESPNOW_PATH}/component.cmake)
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)

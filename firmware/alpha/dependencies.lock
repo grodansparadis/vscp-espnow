@@ -1,39 +1,73 @@
 dependencies:
   espressif/button:
-    component_hash: 4d3ea5c1b7a4926c9d027e0bde0188207dadb0d1841d1cec2524f0cddd22f779
+    component_hash: a405a99689f636e84cd67da34a85a88d0d3a1aa514a28f60d18bd370c1378e0b
+    dependencies:
+    - name: espressif/cmake_utilities
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.*
+    - name: idf
+      require: private
+      version: '>=4.0'
     source:
-      service_url: https://api.components.espressif.com/
+      registry_url: https://components.espressif.com/
       type: service
-    version: 2.5.0
+    version: 4.0.0
   espressif/cmake_utilities:
     component_hash: 6983933aa165d5c1bd8ff3716f8873b4dd8577020d9176d22d8568b139ff8753
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=4.1'
     source:
-      service_url: https://api.components.espressif.com/
+      registry_url: https://components.espressif.com
       type: service
     version: 0.1.0
   espressif/esp-now:
-    component_hash: da3ad9ba09048702516538938b405b0915938cc9892fb7f81dfd0f0fc769ad55
+    component_hash: 56f902e978ec0b70528ad30a45265b56bf2b91653d13e0badc78159f39f41ece
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=4.4'
+    - name: espressif/cmake_utilities
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.*
     source:
-      service_url: https://api.components.espressif.com/
+      registry_url: https://components.espressif.com/
       type: service
-    version: 2.2.0
+    version: 2.5.2
   espressif/led_indicator:
     component_hash: daa844acf7886b78fa4ea25c9dd6a4fb3a83f793a307187026be1c237fba632a
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=4.0'
+    - name: espressif/cmake_utilities
+      registry_url: https://components.espressif.com
+      require: private
+      version: ~0.1.0
     source:
-      service_url: https://api.components.espressif.com/
+      registry_url: https://components.espressif.com/
       type: service
     version: 0.3.0
   espressif/qrcode:
-    component_hash: e07c05f9129250d79c62957c02e2f67d3485e917e6953cbc6637324b3a47ea7f
+    component_hash: 3b493771bc5d6ad30cbf87c25bf784aada8a08c941504355b55d6b75518ed7bc
+    dependencies: []
     source:
-      service_url: https://api.components.espressif.com/
+      registry_url: https://components.espressif.com/
       type: service
-    version: 0.1.0
+    version: 0.1.0~2
   idf:
-    component_hash: null
     source:
       type: idf
-    version: 5.0.2
-manifest_hash: 2229c80f68a9af5ab2b8c52e978c9208794f4f48d5fb9da2ad6caed04c8b0e0c
+    version: 5.4.0
+direct_dependencies:
+- espressif/button
+- espressif/esp-now
+- espressif/led_indicator
+- espressif/qrcode
+- idf
+manifest_hash: 0935dc490bb39049a08670eba0b464fcc6bfb9cc1052662d4d6f65500e80aa00
 target: esp32
-version: 1.0.0
+version: 2.0.0

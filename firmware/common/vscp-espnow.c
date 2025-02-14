@@ -2040,9 +2040,10 @@ readPersistentConfigs(void)
   }
 
   // User id
-  rv = nvs_get_blob(s_nvsHandle, "usrid", &s_vscp_persistent.userid, 5);
+  size_t size = 5;
+  rv = nvs_get_blob(s_nvsHandle, "usrid", &s_vscp_persistent.userid, &size);
   if (ESP_OK != rv) {
-    rv = nvs_set_blob(s_nvsHandle, "usrid", s_vscp_persistent.userid, 5);
+    rv = nvs_set_blob(s_nvsHandle, "usrid", s_vscp_persistent.userid, size);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to update usrid");
     }
@@ -2083,7 +2084,7 @@ vscp_espnow_init(const vscp_espnow_config_t *pconfig)
   // Create signaling bits
   s_vscp_espnow_event_group = xEventGroupCreate();
 
-  ret = espnow_set_config_for_data_type(ESPNOW_DATA_TYPE_DATA, true, vscp_espnow_data_cb);
+  ret = espnow_set_config_for_data_type(ESPNOW_DATA_TYPE_DATA, true, (handler_for_data_t)vscp_espnow_data_cb);
   if (ESP_OK != ret) {
     ESP_LOGE(TAG, "Failed to set VSCP event callback");
   }

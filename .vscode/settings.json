@@ -1,0 +1,7 @@
+{
+  "idf.espIdfPath": "/home/akhe/development/esp/esp-idf-v5.4/v5.4/esp-idf",
+  "idf.toolsPath": "/home/akhe/.espressif",
+  "idf.openOcdConfigs": [
+    "board/esp32c3-builtin.cfg"
+  ]
+}
