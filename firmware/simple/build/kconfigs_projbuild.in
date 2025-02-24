@@ -1,0 +1,6 @@
+source "/home/akhe/development/esp/esp-idf-v5.4/components/bootloader/Kconfig.projbuild"
+source "/home/akhe/development/esp/esp-idf-v5.4/components/esp_app_format/Kconfig.projbuild"
+source "/home/akhe/development/esp/esp-idf-v5.4/components/esp_rom/Kconfig.projbuild"
+source "/home/akhe/development/esp/esp-idf-v5.4/components/esptool_py/Kconfig.projbuild"
+source "/home/akhe/development/esp/esp-idf-v5.4/components/partition_table/Kconfig.projbuild"
+source "/home/akhe/development/VSCP/vscp-espnow/firmware/simple/main/Kconfig.projbuild"

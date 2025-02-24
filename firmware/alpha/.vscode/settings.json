@@ -115,6 +115,7 @@
     "led_indicator_blink_default.h": "c"
   },
 
-  "idf.espIdfPath": "/home/akhe/esp/v5.4/esp-idf",
-  "idf.toolsPath": "/home/akhe/.espressif"
+  "idf.espIdfPath": "/home/akhe/development/esp/esp-idf-v5.4",
+  "idf.toolsPath": "/home/akhe/.espressif",
+  "idf.pythonInstallPath": "/home/akhe/.platformio/penv/bin/python"
 }

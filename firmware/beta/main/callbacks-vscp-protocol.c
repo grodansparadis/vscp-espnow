@@ -61,7 +61,7 @@
 */
 
 uint32_t
-vscp2_get_ms_cb(void)
+vscp_frmw2_get_ms_cb(void)
 {
   return (esp_timer_get_time() / 1000);
 }
@@ -83,11 +83,11 @@ vscp2_get_ms_cb(void)
  * just return zero here.
  */
 
-uint8_t
-vscp2_get_stdreg_alarm_cb(void)
-{
-  return 0;
-}
+// uint8_t
+// vscp_frmw2_get_stdreg_alarm_cb(void)
+// {
+//   return 0;
+// }
 
 // Normally vscp-espnow form GUID from the mac address
 // of the STA interface and prepend this with the ethernet
@@ -103,7 +103,7 @@ vscp2_get_stdreg_alarm_cb(void)
  */
 
 void
-vscp2_get_stdreg_guid_cb(const void *pdata)
+vscp_frmw2_get_stdreg_guid_cb(const void *pdata)
 {
   vscp_espnow_get_node_guid(pdata);
 }
@@ -121,7 +121,7 @@ vscp2_get_stdreg_guid_cb(const void *pdata)
 // you do that here.
 
 int
-vscp2_write_manufacturer_id_cb(const void *pdata, uint8_t pos, uint8_t val)
+vscp_frmw2_write_manufacturer_id_cb(const void *pdata, uint8_t pos, uint8_t val)
 {
   // Write GUID to persistent memory
   return VSCP_ERROR_SUCCESS;
@@ -132,7 +132,7 @@ vscp2_write_manufacturer_id_cb(const void *pdata, uint8_t pos, uint8_t val)
 // so we just return success.
 
 int
-vscp2_write_guid_cb(const void *pdata, uint8_t pos, uint8_t val)
+vscp_frmw2_write_guid_cb(const void *pdata, uint8_t pos, uint8_t val)
 {
   return VSCP_ERROR_SUCCESS;
 }
@@ -161,7 +161,7 @@ vscp2_write_guid_cb(const void *pdata, uint8_t pos, uint8_t val)
 */
 
 int
-vscp2_get_fw_ver_cb(int *major, int *minor, int *patch)
+vscp_frmw2_get_fw_ver_cb(int *major, int *minor, int *patch)
 {
   const esp_app_desc_t *appDescr = esp_app_get_description();
   if (3 != sscanf(appDescr->version,"%d.%d.%d", major, minor, patch)) {
@@ -182,7 +182,7 @@ vscp2_get_fw_ver_cb(int *major, int *minor, int *patch)
  */
 
 int
-vscp2_read_user_reg_cb(const void *pdata, uint32_t reg, uint8_t *pval)
+vscp_frmw2_read_user_reg_cb(const void *pdata, uint32_t reg, uint8_t *pval)
 {
   // Check pointers (pdata allowed to be NULL)
   if (NULL == pval) {
@@ -291,7 +291,7 @@ vscp2_read_user_reg_cb(const void *pdata, uint32_t reg, uint8_t *pval)
  */
 
 int
-vscp2_write_user_reg_cb(const void *pdata, uint32_t reg, uint8_t val)
+vscp_frmw2_write_user_reg_cb(const void *pdata, uint32_t reg, uint8_t val)
 {
   // if ( REG_DEVICE_ZONE == reg) {
   //   eeprom_write(&eeprom, REG_DEVICE_ZONE, val);
@@ -361,7 +361,7 @@ vscp2_write_user_reg_cb(const void *pdata, uint32_t reg, uint8_t val)
  */
 
 int
-vscp2_enter_bootloader_cb(const void *pdata)
+vscp_frmw2_enter_bootloader_cb(const void *pdata)
 {
   return VSCP_ERROR_SUCCESS;
 }
@@ -373,7 +373,7 @@ vscp2_enter_bootloader_cb(const void *pdata)
  */
 
 int
-vscp2_report_dmatrix_cb(const void *pdata)
+vscp_frmw2_report_dmatrix_cb(const void *pdata)
 {
   return VSCP_ERROR_SUCCESS;
 }
@@ -385,7 +385,7 @@ vscp2_report_dmatrix_cb(const void *pdata)
  */
 
 int
-vscp2_report_mdf_cb(const void *pdata)
+vscp_frmw2_report_mdf_cb(const void *pdata)
 {
   return VSCP_ERROR_SUCCESS;
 }
@@ -397,7 +397,7 @@ vscp2_report_mdf_cb(const void *pdata)
  */
 
 int
-vscp2_report_events_of_interest_cb(const void *pdata)
+vscp_frmw2_report_events_of_interest_cb(const void *pdata)
 {
   return VSCP_ERROR_SUCCESS;
 }
@@ -409,7 +409,7 @@ vscp2_report_events_of_interest_cb(const void *pdata)
  */
 
 uint32_t
-vscp2_get_timestamp_cb(const void *pdata)
+vscp_frmw2_get_timestamp_cb(const void *pdata)
 {
   return 0; // time_us_32();
 }
@@ -422,7 +422,7 @@ vscp2_get_timestamp_cb(const void *pdata)
  */
 
 int
-vscp2_get_time_cb(const void *pdata, const vscpEvent *pev)
+vscp_frmw2_get_time_cb(const void *pdata, const vscpEvent *pev)
 {
   return VSCP_ERROR_SUCCESS;
 }
@@ -435,7 +435,7 @@ vscp2_get_time_cb(const void *pdata, const vscpEvent *pev)
  */
 
 int
-vscp2_send_event_cb(const void *pdata, vscpEvent *pev)
+vscp_frmw2_send_event_cb(const void *pdata, vscpEvent *pev)
 {
   // vscpctx_t *pctx = (vscpctx_t *) pdata;
   // if (NULL == pctx) {
@@ -462,7 +462,7 @@ vscp2_send_event_cb(const void *pdata, vscpEvent *pev)
  */
 
 int
-vscp2_restore_defaults_cb(const void *pdata)
+vscp_frmw2_restore_defaults_cb(const void *pdata)
 {
   return VSCP_ERROR_SUCCESS;
 }
@@ -477,7 +477,7 @@ vscp2_restore_defaults_cb(const void *pdata)
  */
 
 int
-vscp2_write_user_id_cb(const void *pdata, uint8_t pos, uint8_t val)
+vscp_frmw2_write_user_id_cb(const void *pdata, uint8_t pos, uint8_t val)
 {
   // eeprom_write(&eeprom, VSCP2_STD_REG_USER_ID0 + pos, val);
 
@@ -503,7 +503,7 @@ vscp2_write_user_id_cb(const void *pdata, uint8_t pos, uint8_t val)
  */
 
 int
-vscp2_get_ip_addr_cb(const void *pUserData, uint8_t *pipaddr)
+vscp_frmw2_get_ip_addr_cb(const void *pUserData, uint8_t *pipaddr)
 {
   if (NULL == pipaddr) {
     return VSCP_ERROR_PARAMETER;
@@ -528,7 +528,7 @@ vscp2_get_ip_addr_cb(const void *pUserData, uint8_t *pipaddr)
 
 #ifdef THIS_FIRMWARE_VSCP_DISCOVER_SERVER
 int
-vscp2_high_end_server_response_cb(const void *pUserData)
+vscp_frmw2_high_end_server_response_cb(const void *pUserData)
 {
   return VSCP_ERROR_SUCCESS;
 }

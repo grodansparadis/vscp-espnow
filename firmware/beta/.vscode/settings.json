@@ -1,5 +1,5 @@
 {
-  "C_Cpp.intelliSenseEngine": "Default"
+  "C_Cpp.intelliSenseEngine": "Default",
 
   // Controls if quick suggestions should show up while typing
   "editor.quickSuggestions": {
@@ -13,7 +13,7 @@
 
   "idf.adapterTargetName": "esp32",
   "idf.flashType": "UART",
-  "idf.port": "/dev/ttyUSB1",
+  "idf.port": "/dev/ttyUSB2",
   "esp32.port": "-p ${config:idf.port}",
   // Use board or interface as needed for openocd functionality
   "esp32.openocd.board":"esp32c3-builtin.cfg",

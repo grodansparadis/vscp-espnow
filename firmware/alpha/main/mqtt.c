@@ -466,7 +466,7 @@ mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, 
     case MQTT_EVENT_SUBSCRIBED:
       ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
       msg_id = esp_mqtt_client_publish(client, "esp-now/status", "Successful subscribe", 0, 0, 0);
-      ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
+      ESP_LOGI(TAG, "publish esp-now status, msg_id=%d", msg_id);
       break;
 
     case MQTT_EVENT_UNSUBSCRIBED:
@@ -544,7 +544,7 @@ mqtt_start(void)
   vscp_fwhlp_strsubst(clientid, sizeof(clientid), save, "{{guid}}", workbuf);
 
   char uri[64];
-  sprintf(uri, "mqtt://%s:%d", g_persistent.mqttUrl, g_persistent.mqttPort);
+  sprintf(uri, "%s:%d", g_persistent.mqttUrl, g_persistent.mqttPort);
 
   // clang-format off
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)

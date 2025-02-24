@@ -67,7 +67,7 @@
 
 static espnow_addr_t ESPNOW_ADDR_SELF = { 0 };
 
-static const char *TAG = "app";
+static const char *TAG = "app_alpha";
 static const char *POP = CONFIG_APP_ESPNOW_SESSION_POP;
 
 static beta_node_states_t s_stateNode = BETA_STATE_VIRGIN;
@@ -116,7 +116,7 @@ node_persistent_config_t g_persistent = {
   .espnowSizeQueue             = 32,    // Size fo input queue
   .espnowForwardEnable         = true,  // Forward when packets are received
   .espnowFilterAdjacentChannel = true,  // Don't receive if from other channel
-  .espnowForwardSwitchChannel  = false, // Allow switchin gchannel on forward
+  .espnowForwardSwitchChannel  = false, // Allow switchin channel on forward
   .espnowFilterWeakSignal      = -65,   // Filter onm RSSI (zero is no rssi filtering)
 
   // beta
@@ -130,7 +130,7 @@ node_persistent_config_t g_persistent = {
 
 typedef enum { APP_ESPNOW_CTRL_INIT, APP_ESPNOW_CTRL_BOUND, APP_ESPNOW_CTRL_MAX } app_espnow_ctrl_status_t;
 
-static app_espnow_ctrl_status_t s_espnow_ctrl_status = APP_ESPNOW_CTRL_INIT;
+//static app_espnow_ctrl_status_t s_espnow_ctrl_status = APP_ESPNOW_CTRL_INIT;
 
 #define WIFI_PROV_KEY_GPIO GPIO_NUM_0
 
@@ -184,7 +184,7 @@ app_led_init(void)
 
   // s_led_handle_green = led_indicator_create(PRJDEF_INDICATOR_LED_PIN_GREEN, &indicator_config_green);
   s_led_handle_red = led_indicator_create(&indicator_config_red);
-  if (NULL == s_led_handle_green) {
+  if (NULL == s_led_handle_red) {
     ESP_LOGE(TAG, "Failed to create LED indicator red");
   }
 
@@ -323,7 +323,7 @@ readPersistentConfigs(void)
   length = 6;
   rv     = nvs_get_blob(s_nvsHandle, "keyorg", g_persistent.keyOrigin, &length);
   if (rv != ESP_OK) {
-    const char key[] = { 0 };
+    //const char key[] = { 0 };
     rv               = nvs_set_blob(s_nvsHandle, "keyorg", g_persistent.keyOrigin, length);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to write originating mac to nvs. rv=%d", rv);
@@ -647,7 +647,7 @@ app_restore_factory_defaults_press_cb(void *arg, void *usr_data)
 static void
 app_system_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
-  esp_err_t ret;
+  //esp_err_t ret;
 
   // if (event_base == ESP_EVENT_ESPNOW_OTA_BASE) {
 

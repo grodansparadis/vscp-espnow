@@ -1,0 +1,69 @@
+[1/5] cd /home/akhe/development/VSCP/vscp-espnow/firmware/simple/build/esp-idf/esptool_py && /home/akhe/.espressif/python_env/idf5.4_py3.12_env/bin/python /home/akhe/development/esp/esp-idf-v5.4/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /home/akhe/development/VSCP/vscp-espnow/firmware/simple/build/partition_table/partition-table.bin /home/akhe/development/VSCP/vscp-espnow/firmware/simple/build/espnow_example.bin
+espnow_example.bin binary size 0xb3670 bytes. Smallest app partition is 0x100000 bytes. 0x4c990 bytes (30%) free.
+[2/5] Performing build step for 'bootloader'
+[1/1] cd /home/akhe/development/VSCP/vscp-espnow/firmware/simple/build/bootloader/esp-idf/esptool_py && /home/akhe/.espressif/python_env/idf5.4_py3.12_env/bin/python /home/akhe/development/esp/esp-idf-v5.4/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x1000 /home/akhe/development/VSCP/vscp-espnow/firmware/simple/build/bootloader/bootloader.bin
+Bootloader binary size 0x6560 bytes. 0xaa0 bytes (9%) free.
+[3/5] No install step for 'bootloader'
+[4/5] Completed 'bootloader'
+[4/5] cd /home/akhe/development/esp/esp-idf-v5.4/components/esptool_py && /usr/bin/cmake -D IDF_PATH=/home/akhe/development/esp/esp-idf-v5.4 -D "SERIAL_TOOL=/home/akhe/.espressif/python_env/idf5.4_py3.12_env/bin/python;;/home/akhe/development/esp/esp-idf-v5.4/components/esptool_py/esptool/esptool.py;--chip;esp32" -D "SERIAL_TOOL_ARGS=--before=default_reset;--after=hard_reset;write_flash;@flash_args" -D WORKING_DIRECTORY=/home/akhe/development/VSCP/vscp-espnow/firmware/simple/build -P /home/akhe/development/esp/esp-idf-v5.4/components/esptool_py/run_serial_tool.cmake
+esptool.py --chip esp32 -p /dev/ttyUSB2 -b 460800 --before=default_reset --after=hard_reset write_flash --flash_mode dio --flash_freq 40m --flash_size 4MB 0x1000 bootloader/bootloader.bin 0x10000 espnow_example.bin 0x8000 partition_table/partition-table.bin
+esptool.py v4.8.1
+Serial port /dev/ttyUSB2
+Connecting....
+Chip is ESP32-D0WDQ6 (revision v1.0)
+Features: WiFi, BT, Dual Core, 240MHz, VRef calibration in efuse, Coding Scheme None
+Crystal is 40MHz
+MAC: cc:50:e3:80:23:b8
+Uploading stub...
+Running stub...
+Stub running...
+Changing baud rate to 460800
+Changed.
+Configuring flash size...
+Flash will be erased from 0x00001000 to 0x00007fff...
+Flash will be erased from 0x00010000 to 0x000c3fff...
+Flash will be erased from 0x00008000 to 0x00008fff...
+SHA digest in image updated
+Compressed 25952 bytes to 16362...
+Writing at 0x00001000... (100 %)
+Wrote 25952 bytes (16362 compressed) at 0x00001000 in 0.8 seconds (effective 272.1 kbit/s)...
+Hash of data verified.
+Compressed 734832 bytes to 465159...
+Writing at 0x00010000... (3 %)
+Writing at 0x0001c1ea... (6 %)
+Writing at 0x00024cbd... (10 %)
+Writing at 0x0002ebf2... (13 %)
+Writing at 0x00034576... (17 %)
+Writing at 0x0003a457... (20 %)
+Writing at 0x00040259... (24 %)
+Writing at 0x00046125... (27 %)
+Writing at 0x0004c50a... (31 %)
+Writing at 0x00051f3e... (34 %)
+Writing at 0x00057787... (37 %)
+Writing at 0x0005ca4e... (41 %)
+Writing at 0x00061c7c... (44 %)
+Writing at 0x00066f10... (48 %)
+Writing at 0x0006c586... (51 %)
+Writing at 0x00072120... (55 %)
+Writing at 0x00077a4d... (58 %)
+Writing at 0x0007d677... (62 %)
+Writing at 0x0008335d... (65 %)
+Writing at 0x00088c6e... (68 %)
+Writing at 0x0008e9de... (72 %)
+Writing at 0x000944a8... (75 %)
+Writing at 0x00099d53... (79 %)
+Writing at 0x000a2afb... (82 %)
+Writing at 0x000aa705... (86 %)
+Writing at 0x000b0265... (89 %)
+Writing at 0x000b5cb6... (93 %)
+Writing at 0x000bbf18... (96 %)
+Writing at 0x000c1198... (100 %)
+Wrote 734832 bytes (465159 compressed) at 0x00010000 in 10.5 seconds (effective 562.0 kbit/s)...
+Hash of data verified.
+Compressed 3072 bytes to 103...
+Writing at 0x00008000... (100 %)
+Wrote 3072 bytes (103 compressed) at 0x00008000 in 0.1 seconds (effective 417.9 kbit/s)...
+Hash of data verified.
+
+Leaving...
+Hard resetting via RTS pin...

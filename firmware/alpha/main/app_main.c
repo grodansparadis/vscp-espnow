@@ -1185,6 +1185,7 @@ readPersistentConfigs(void)
       ESP_LOGE(TAG, "Failed to save MQTT host");
     }
   }
+  ESP_LOGI(TAG,"%s", g_persistent.mqttUrl);
 
   // MQTT port
   rv = nvs_get_u16(g_nvsHandle, "mqtt_port", &g_persistent.mqttPort);

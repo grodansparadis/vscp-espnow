@@ -71,8 +71,9 @@
 
 #include <cJSON.h>
 
-#include <vscp-firmware-helper.h>
 #include <vscp.h>
+#include <vscp-firmware-helper.h>
+#include <vscp-firmware-level2.h>
 
 #include "vscp-espnow.h"
 
@@ -260,7 +261,7 @@ vscp_espnow_read_standard_reg(uint32_t reg, uint16_t cnt)
 
     //  Return alarm status
     if (VSCP_STD_REGISTER_ALARM_STATUS == raddr) {
-      pev->pdata[rcnt+4] = vscp2_get_stdreg_alarm_cb();
+      pev->pdata[rcnt+4] = 0; // TODO vscp_frmw2_get_stdreg_alarm_cb();
     }
 
     else if (VSCP_STD_REGISTER_MAJOR_VERSION == raddr) {
@@ -489,7 +490,7 @@ vscp_espnow_write_reg(uint32_t reg, uint16_t cnt, uint8_t *pdata)
     //  Write alarm status
     if (VSCP_STD_REGISTER_ALARM_STATUS == waddr) {
       // Set to zero whatever is written
-      vscp2_get_stdreg_alarm_cb();
+      // TODO vscp_frmw2_get_stdreg_alarm_cb();
       pev->pdata[wcnt+4] = 0;
     }
 
@@ -1334,6 +1335,9 @@ vscp_espnow_sendEvent(const uint8_t *destAddr, const vscpEvent *pev, bool bSec, 
       rv = VSCP_ERROR_ERROR;
       goto ERROR;
     }
+  }
+  else {
+    ESP_LOGD(TAG, "Heartbeat event sent OK");
   }
 
   rv = VSCP_ERROR_SUCCESS;
