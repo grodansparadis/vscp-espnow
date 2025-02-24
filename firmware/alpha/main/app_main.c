@@ -207,12 +207,11 @@ node_persistent_config_t g_persistent = {
 
   // espnow
   .espnowEnable                = true,
-  .espnowLongRange             = false,
   .espnowChannel               = 0,                      // Use wifi channel (zero is same as STA)
-  .espnowTtl                   = 32,
+  .espnowTtl                   = 32,                     // Default TTL, 32 hops
   .espnowSizeQueue             = 32,                     // Size fo input queue
   .espnowForwardEnable         = true,                   // Forward when packets are received
-  .espnowEncryption            = VSCP_ENCRYPTION_AES128, // 0=no encryption, 1=AES-128, 2=AES-192, 3=AES-256
+  //.espnowEncryption            = VSCP_ENCRYPTION_AES128, // 0=no encryption, 1=AES-128, 2=AES-192, 3=AES-256
   .espnowFilterAdjacentChannel = true,                   // Don't receive if from other channel
   .espnowForwardSwitchChannel  = false,                  // Allow switching channel on forward
   .espnowFilterWeakSignal      = -55,                    // Filter on RSSI (zero is no rssi filtering)
@@ -268,25 +267,6 @@ app_get_device_guid(uint8_t *pguid)
   memset(pguid, 0, 16);
   memcpy(pguid, eth_guid, 8);
   esp_wifi_get_mac(ESP_IF_WIFI_STA, pguid + 8);
-
-  // rv = nvs_get_blob(g_nvsHandle, "guid", pguid, &length);
-  // switch (rv) {
-
-  //   case ESP_OK:
-  //     break;
-
-  //   case ESP_ERR_NVS_NOT_FOUND:
-  //     LOGE("GUID not found in nvs, setting default\n");
-  //     uint8_t eth_guid[8] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe };
-  //     memset(pguid, 0, 16);
-  //     memcpy(pguid, eth_guid, 8);
-  //     esp_wifi_get_mac(ESP_IF_WIFI_STA, pguid + 8);
-  //     return false;
-
-  //   default:
-  //     printf("Error (%s) reading GUID from nvs!\n", esp_err_to_name(rv));
-  //     return false;
-  // }
 
   return true;
 }
@@ -526,9 +506,6 @@ get_sha256_of_partitions(void)
   print_sha256(sha_256, "SHA-256 for current firmware: ");
 }
 
-//-----------------------------------------------------------------------------
-//                                 espnow OTA
-//-----------------------------------------------------------------------------
 
 ///////////////////////////////////////////////////////////////////////////////
 // firmware_download
@@ -1325,18 +1302,7 @@ readPersistentConfigs(void)
     g_persistent.espnowEnable = (bool) val;
   }
 
-  // Long Range
-  rv = nvs_get_u8(g_nvsHandle, "drop_lr", &val);
-  if (ESP_OK != rv) {
-    val = (uint8_t) g_persistent.espnowLongRange;
-    rv  = nvs_set_u8(g_nvsHandle, "drop_lr", g_persistent.espnowLongRange);
-    if (rv != ESP_OK) {
-      ESP_LOGE(TAG, "Failed to update espnow long range");
-    }
-  }
-  else {
-    g_persistent.espnowLongRange = (bool) val;
-  }
+
 
   // Channel
   rv = nvs_get_u8(g_nvsHandle, "drop_ch", &g_persistent.espnowChannel);
