@@ -71,9 +71,12 @@ typedef struct {
   // VSCP_ESPNOW_MODE_LIGHT=esp-now only
   char nodeName[32]; // Friendly name for node
   uint8_t key[16];   // Security key (16 bytes)
+  uint8_t encryption; // 0=none, 1=AES128, 2=AES192, 3=AES256
   uint8_t channel;   // Channel to use (zero is current)
   uint8_t ttl;       // Time to live for esp-now frames
+  uint8_t rssi;      // Minimum RSSI for received frames
   uint16_t nickname; // Node nickname
+  uint8_t espnowEncryption; // TODO remove
 
   // uint8_t pmk[16];    // Primary key (This key is static and set to VSCP default. Dont change!)
   // uint8_t lmk[16];    // Local key (This key is static and set to VSCP default)

@@ -211,7 +211,19 @@ WEBPAGE_FAVICON \
   Parameter 1: Page head
   Parameter 2: Section header
 */
-#define WEBPAGE_END_TEMPLATE "<div style='text-align:right;font-size:11px;'><hr /><form id=but14 style=\"display: block;\" "\
+#define WEBPAGE_END_TEMPLATE "<div style='text-align:right;font-size:11px;'><hr /><br/><form id=but14 style=\"display: block;\" "\
+"action='index.html' method='get'><button class=\"byell\">Main Menu</button></form>"\
+"<hr /><div style='text-align:right;font-size:11px;'>%s - <a href='https://vscp.org' target='_blank' "\
+"style='color:#aaa;'>%s -- vscp.org</a></div>"\
+"</div></body></html>"
+
+/*>>
+  Page end HTML
+  Parameter 1: Page head
+  Parameter 2: Section header
+*/
+#define WEBPAGE_END_TEMPLATE_CFG "<div style='text-align:right;font-size:11px;'><hr /><form id=but14 style=\"display: block;\" "\
+"action='/config' method='get'><button class=\"byell\">Configuration</button></form><br /><form id=but14 style=\"display: block;\" "\
 "action='index.html' method='get'><button class=\"byell\">Main Menu</button></form>"\
 "<hr /><div style='text-align:right;font-size:11px;'>%s - <a href='https://vscp.org' target='_blank' "\
 "style='color:#aaa;'>%s -- vscp.org</a></div>"\

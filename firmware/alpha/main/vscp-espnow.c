@@ -189,74 +189,6 @@ static vscp_espnow_attach_network_handler_cb_t s_vscp_espnow_attach_network_hand
 
 // Forward declarations
 
-// ----------------------------------------------------------------------------
-
-///////////////////////////////////////////////////////////////////////////////
-// vscp_espnow_encrypt_cbc_aes128
-//
-// outbut buffer (must be at least 16 bytes longer than input buffer)
-// length of input data
-// input data
-// key - encryption key (128 bits)
-// iv - initialization vector (128 bits)
-//
-// Input data must be a multible of 16 bytes
-//
-// https://gist.github.com/AxelLin/41451f2e82da78df2a394155a5b7aa9d
-//
-
-static void
-vscp_espnow_encrypt_cbc_aes128(uint8_t *output, const uint8_t *input, size_t length, const uint8_t *key, uint8_t *iv)
-{
-  mbedtls_aes_context aes_ctx;
-  memset(&aes_ctx, 0, sizeof(mbedtls_aes_context));
-  mbedtls_aes_init(&aes_ctx);
-
-  // Set the key
-  if (0 != mbedtls_aes_setkey_dec(&aes_ctx, key, 128)) {
-    ESP_LOGE(TAG, "Failed to set decryption key");
-    return;
-  }
-
-  // Encrypt the data in CBC mode
-  if (0 != mbedtls_aes_crypt_cbc(&aes_ctx, MBEDTLS_AES_ENCRYPT, length, iv, input, output)) {
-    ESP_LOGE(TAG, "Failed to encrypt data");
-    return;
-  }
-
-  mbedtls_aes_free(&aes_ctx);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// vscp_espnow_decrypt_cbc_aes128
-//
-// Input data must be multiple of 16 bytes
-//
-
-static void
-vscp_espnow_decrypt_cbc_aes128(uint8_t *output, const uint8_t *input, size_t length, const uint8_t *key, uint8_t *iv)
-{
-  mbedtls_aes_context aes_ctx;
-  memset(&aes_ctx, 0, sizeof(mbedtls_aes_context));
-  mbedtls_aes_init(&aes_ctx);
-
-  // Set the key
-  if (0 != mbedtls_aes_setkey_dec(&aes_ctx, key, 128)) {
-    ESP_LOGE(TAG, "Failed to set decryption key");
-    return;
-  }
-
-  // Decrypt the data in CBC mode
-  if (0 != mbedtls_aes_crypt_cbc(&aes_ctx, MBEDTLS_AES_DECRYPT, length, iv, input, output)) {
-    ESP_LOGE(TAG, "Failed to decrypt data");
-    return;
-  }
-
-  mbedtls_aes_free(&aes_ctx);
-}
-
-// ----------------------------------------------------------------------------
-
 ///////////////////////////////////////////////////////////////////////////////
 // vscp_espnow_send_error
 //
@@ -368,6 +300,11 @@ vscp_espnow_evToFrame(uint8_t *buf, uint8_t len, const vscpEvent *pev)
     return VSCP_ERROR_INVALID_POINTER;
   }
 
+  // Can not have data size and no pointer to data 
+  if (pev->sizeData && (NULL == pev->pdata)) {
+    return VSCP_ERROR_PARAMETER;
+  }
+
   // Must have room for frame
   if (len < (VSCP_ESPNOW_MIN_FRAME + pev->sizeData)) {
     ESP_LOGE(TAG, "Size of buffer is to small to fit event, len:%d", len);
@@ -405,27 +342,91 @@ vscp_espnow_evToFrame(uint8_t *buf, uint8_t len, const vscpEvent *pev)
   buf[VSCP_ESPNOW_POS_VSCP_TYPE]     = (pev->vscp_type >> 8) & 0xff;
   buf[VSCP_ESPNOW_POS_VSCP_TYPE + 1] = pev->vscp_type & 0xff;
 
+  // Size of data
+  if (pev->sizeData > VSCP_ESPNOW_MAX_DATA) {
+    ESP_LOGE(TAG, "Size of data is to large, size: %d  Can be max: %d", pev->sizeData, VSCP_ESPNOW_MAX_DATA);
+    return VSCP_ERROR_PARAMETER;
+  }
+  buf[VSCP_ESPNOW_POS_VSCP_LENGTH] = pev->sizeData;
+
   // data
-  if (pev->sizeData) {
+  if (pev->sizeData && (NULL != pev->pdata)) {
     memcpy((buf + VSCP_ESPNOW_POS_DATA), pev->pdata, pev->sizeData);
+  }
+  else {
+    ESP_LOGI(TAG, "No data in event");
   }
 
   // Calculate crc
-  uint16_t crc                                  = crcFast(buf + 1, pev->sizeData + VSCP_ESPNOW_POS_DATA - 1);
+  uint16_t crc = crcFast(buf, VSCP_ESPNOW_MIN_FRAME - 16 + pev->sizeData - 2); // up to crc
+  ESP_LOGI(TAG, "CRC: %04x", crc);
   buf[VSCP_ESPNOW_POS_DATA + pev->sizeData]     = (crc >> 8) & 0xff;
   buf[VSCP_ESPNOW_POS_DATA + pev->sizeData + 1] = crc & 0xff;
 
+  // Check crc
+  crc = crcFast(buf, VSCP_ESPNOW_MIN_FRAME - 16 + pev->sizeData); // up to crc end
+  ESP_LOGI(TAG, "CRC: %04x", crc);
+
+  // Get IV (we cant copy it in yet because we don't know the position beacuse of padding)
   uint8_t iv[16];
   esp_fill_random(iv, 16);
-  // Copy iv to end of frame
-  memcpy(buf + VSCP_ESPNOW_POS_DATA + pev->sizeData + 2, iv, 16);
 
-  // Encrypt frame
-  vscp_espnow_encrypt_cbc_aes128(buf + VSCP_ESPNOW_POS_SEQ,
-                                 buf + VSCP_ESPNOW_POS_SEQ,
-                                 pev->sizeData,
-                                 g_persistent.key,
-                                 iv);
+  ESP_LOGI(TAG, "IV:");
+  ESP_LOG_BUFFER_HEXDUMP(TAG, iv, 16, ESP_LOG_DEBUG);
+
+  ESP_LOGI(TAG, "Raw frame:");
+  ESP_LOG_BUFFER_HEXDUMP(TAG, buf, VSCP_ESPNOW_MIN_FRAME + pev->sizeData, ESP_LOG_DEBUG);
+
+  /*
+    Encrypt frame of VSCP_ESPNOW_ENCRYPTION_LENGTH + encoded_len + 1 from
+    buf + VSCP_ESPNOW_POS_TYPE_VER. The resulting encrypted data may be padded
+    to a multiple of 16 bytes. The resulting length for the data is returned.
+    The first byte of the data to encrypt is the encryption type byte. This
+    byte is not encrypted.
+
+    The encrypted data is stored in the same buffer as the input data and will get padding
+    and the iv copied in.
+  */
+
+  size_t enclen = vscp_fwhlp_encryptFrame(buf + VSCP_ESPNOW_POS_TYPE_VER,
+                                          buf + VSCP_ESPNOW_POS_TYPE_VER,
+                                          VSCP_ESPNOW_ENCRYPTION_LENGTH + pev->sizeData + 1,
+                                          g_persistent.key,
+                                          iv,
+                                          VSCP_ENCRYPTION_AES128);
+
+  ESP_LOGI(TAG, "Encrypted frame:");
+  ESP_LOG_BUFFER_HEXDUMP(TAG, buf, enclen + 4, ESP_LOG_DEBUG);
+
+  // -------------------------------------------------------------------------------------------
+
+#if 1
+  uint8_t encoded_buf[250];
+  memset(encoded_buf, 0, sizeof(encoded_buf));
+  if (VSCP_ERROR_SUCCESS != vscp_fwhlp_decryptFrame(encoded_buf,
+                                                    buf + VSCP_ESPNOW_POS_TYPE_VER,
+                                                    enclen, // espnow frame -4
+                                                    g_persistent.key,
+                                                    NULL,
+                                                    VSCP_ENCRYPTION_FROM_TYPE_BYTE)) {
+    ESP_LOGE(TAG, "Failed to decrypt frame");
+  }
+
+  ESP_LOGI(TAG, "Raw decrypted frame:");
+  ESP_LOG_BUFFER_HEXDUMP(TAG, encoded_buf, enclen, ESP_LOG_DEBUG);
+
+
+  memcpy(buf + VSCP_ESPNOW_POS_TYPE_VER, encoded_buf, enclen);
+
+  ESP_LOGI(TAG, "Decrypted frame:");
+  ESP_LOG_BUFFER_HEXDUMP(TAG, buf, enclen + 4, ESP_LOG_DEBUG);
+
+  // Check crc
+  crc = crcFast(buf, VSCP_ESPNOW_MIN_FRAME - 16 + pev->sizeData); // up to crc end
+  ESP_LOGI(TAG, "CRC: %04x", crc);
+#endif
+
+  // -------------------------------------------------------------------------------------------
 
   return VSCP_ERROR_SUCCESS;
 }
@@ -490,7 +491,7 @@ vscp_espnow_exToFrame(uint8_t *buf, uint8_t len, const vscpEventEx *pex)
 
   // Size of data
   if (pex->sizeData > VSCP_ESPNOW_MAX_DATA) {
-    ESP_LOGE(TAG, "Size of data is to large, size:%d", pex->sizeData);
+    ESP_LOGE(TAG, "Size of data is to large, size: %d  Can be max: %d", pex->sizeData, VSCP_ESPNOW_MAX_DATA);
     return VSCP_ERROR_PARAMETER;
   }
   buf[VSCP_ESPNOW_POS_VSCP_LENGTH] = pex->sizeData;
@@ -522,15 +523,15 @@ vscp_espnow_exToFrame(uint8_t *buf, uint8_t len, const vscpEventEx *pex)
 
   /*
     Encrypt frame of VSCP_ESPNOW_ENCRYPTION_LENGTH + encoded_len + 1 from
-    buf + VSCP_ESPNOW_POS_TYPE_VER. The resulting encrypted data may be padded 
-    to a multiple of 16 bytes. The resulting length for the data is returned. 
-    The first byte of the data to encrypt is the encryption type byte. This 
+    buf + VSCP_ESPNOW_POS_TYPE_VER. The resulting encrypted data may be padded
+    to a multiple of 16 bytes. The resulting length for the data is returned.
+    The first byte of the data to encrypt is the encryption type byte. This
     byte is not encrypted.
 
-    The encrypted data is stored in the same buffer as the input data and will get padding 
+    The encrypted data is stored in the same buffer as the input data and will get padding
     and the iv copied in.
   */
-  
+
   size_t enclen = vscp_fwhlp_encryptFrame(buf + VSCP_ESPNOW_POS_TYPE_VER,
                                           buf + VSCP_ESPNOW_POS_TYPE_VER,
                                           VSCP_ESPNOW_ENCRYPTION_LENGTH + pex->sizeData + 1,
@@ -606,13 +607,16 @@ vscp_espnow_frameToEv(vscpEvent *pev, const uint8_t *buf, uint8_t len, const uin
   }
 
   // Decrypt the frame
-  uint8_t iv[16];
-  memcpy(iv, buf + len - 16, 16);
-  vscp_espnow_decrypt_cbc_aes128(buf + VSCP_ESPNOW_POS_SEQ,
-                                 buf + VSCP_ESPNOW_POS_SEQ,
-                                 len - 16 - VSCP_ESPNOW_POS_SEQ,
-                                 g_persistent.key,
-                                 iv);
+  uint8_t encoded_buf[250];
+  memset(encoded_buf, 0, sizeof(encoded_buf));
+  if (VSCP_ERROR_SUCCESS != vscp_fwhlp_decryptFrame(encoded_buf,
+                                                    buf + VSCP_ESPNOW_POS_TYPE_VER,
+                                                    len-4,
+                                                    g_persistent.key,
+                                                    NULL,
+                                                    VSCP_ENCRYPTION_FROM_TYPE_BYTE)) {
+    ESP_LOGE(TAG, "Failed to decrypt frame");
+  }
 
   // Check CRC (calculated over crc should give zero)
   uint16_t crc = crcFast(buf + 2, len - 16 - 3); // exclude start + seq
@@ -698,13 +702,16 @@ vscp_espnow_frameToEx(vscpEventEx *pex, const uint8_t *buf, uint8_t len, const u
   }
 
   // Decrypt the frame
-  uint8_t iv[16];
-  memcpy(iv, buf + len - 16, 16);
-  vscp_espnow_decrypt_cbc_aes128(buf + VSCP_ESPNOW_POS_SEQ,
-                                 buf + VSCP_ESPNOW_POS_SEQ,
-                                 len - 16 - VSCP_ESPNOW_POS_SEQ,
-                                 g_persistent.key,
-                                 iv);
+  uint8_t encoded_buf[250];
+  memset(encoded_buf, 0, sizeof(encoded_buf));
+  if (VSCP_ERROR_SUCCESS != vscp_fwhlp_decryptFrame(encoded_buf,
+                                                    buf + VSCP_ESPNOW_POS_TYPE_VER,
+                                                    len-4,
+                                                    g_persistent.key,
+                                                    NULL,
+                                                    VSCP_ENCRYPTION_FROM_TYPE_BYTE)) {
+    ESP_LOGE(TAG, "Failed to decrypt frame");
+  }
 
   // Check CRC (calculated over crc should give zero)
   uint16_t crc = crcFast(buf + 2, len - 16 - 3); // exclude start + seq

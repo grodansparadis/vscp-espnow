@@ -1,10 +1,27 @@
-/* Alpha node
+/* vscp espnow node
 
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
+  This file is part of the VSCP (https://www.vscp.org)
 
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
+  The MIT License (MIT)
+  Copyright © 2022-2025 Ake Hedman, the VSCP project <info@vscp.org>
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 */
 
 #include <stdio.h>
@@ -90,7 +107,7 @@ static uint8_t s_addr_self[ESP_NOW_ETH_ALEN]          = { 0 };
 
 // Handle for nvs storage
 nvs_handle_t g_nvsHandle = 0;
-//extern bool g_vscp_espnow_probe;
+// extern bool g_vscp_espnow_probe;
 
 // MQTT
 extern esp_mqtt_client_handle_t g_mqtt_client;
@@ -147,14 +164,11 @@ node_persistent_config_t g_persistent = {
 
   // General
   .nodeName   = CONFIG_APP_VSCP_NODE_NAME,
-  .key        = { 0 }, // Frame encryption key
-  //.pmk        = { 0 },
-  //.lmk        = { 0 },
-  //.startDelay = 2,
+  .key        = { 0x81,0xa7,0xb8,0xbd,0x93,0x99,0xc4,0xac,
+                  0x60,0x1f,0x9c,0x39,0xb4,0x88,0xf4,0xe0 }, // Frame encryption key
   .bootCnt    = 0,
   .channel    = 0,     // Use wifi channel (zero is same as STA)
-  .ttl        = 10,     // Default ttl
-  //.queueSize  = CONFIG_APP_ESPNOW_QUEUE_SIZE,
+  .ttl        = 10,    // Default ttl
 
   // Web server
   .webEnable   = true,
@@ -1527,11 +1541,11 @@ vscp_espnow_task(void *pParam)
   // }
 
   while (xQueueReceive(s_vscp_espnow_queue, &evt, portMAX_DELAY) == pdTRUE) {
-    
+
     switch (evt.id) {
       case VSCP_ESPNOW_SEND: {
         vscp_espnow_event_send_info_t *send_cb = &evt.info.send;
-        is_broadcast                         = IS_BROADCAST_ADDR(send_cb->dest_addr);
+        is_broadcast                           = IS_BROADCAST_ADDR(send_cb->dest_addr);
 
         ESP_LOGD(TAG, "Send data to " MACSTR ", status1: %d", MAC2STR(send_cb->dest_addr), send_cb->status);
 
@@ -1547,7 +1561,7 @@ vscp_espnow_task(void *pParam)
       default:
         ESP_LOGE(TAG, "Callback type error: %d", evt.id);
         break;
-        
+
     } // switch
   } // while
 }
@@ -1778,23 +1792,23 @@ app_main()
   ESP_LOGI(TAG, "ESP-NOW version: %lu", espnowver);
 
   // Register receive callback
-  //esp_now_register_recv_cb(app_espnow_recv_cb);
+  // esp_now_register_recv_cb(app_espnow_recv_cb);
 
   // Frame and encryption test code
   vscpEventEx ex;
   memset(&ex, 0, sizeof(vscpEventEx));
   ex.vscp_class = 10;
   ex.vscp_type  = 6;
-  ex.head      = VSCP_PRIORITY_NORMAL;
-  ex.timestamp = esp_timer_get_time();
-  ex.sizeData  = 6;
-  ex.data[0]   = 1;
-  ex.data[1]   = 2; 
-  ex.data[2]   = 3;
-  ex.data[3]   = 4;
-  ex.data[4]   = 5;
-  ex.data[5]   = 6;  
-  
+  ex.head       = VSCP_PRIORITY_NORMAL;
+  ex.timestamp  = esp_timer_get_time();
+  ex.sizeData   = 6;
+  ex.data[0]    = 1;
+  ex.data[1]    = 2;
+  ex.data[2]    = 3;
+  ex.data[3]    = 4;
+  ex.data[4]    = 5;
+  ex.data[5]    = 6;
+
   uint8_t buf[250];
   int size = vscp_espnow_getFrameBufSizeEx(&ex);
   ESP_LOGI(TAG, "Frame buffer size: %d", size);
@@ -1804,7 +1818,7 @@ app_main()
   }
   else {
     ESP_LOGI(TAG, "OK");
-    //ESP_LOG_BUFFER_HEXDUMP(TAG, buf, size, ESP_LOG_INFO);
+    // ESP_LOG_BUFFER_HEXDUMP(TAG, buf, size, ESP_LOG_INFO);
   }
 
   // --------------------------------------------------------------------------

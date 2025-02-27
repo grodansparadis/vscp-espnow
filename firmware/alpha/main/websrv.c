@@ -1,5 +1,5 @@
 /*
-  VSCP Alpha espnow node
+  websrv.c
 
   Web Server
 
@@ -581,7 +581,7 @@ info_get_handler(httpd_req_t *req)
   sprintf(buf, "</table>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf, WEBPAGE_END_TEMPLATE, appDescr->version, g_persistent.nodeName);
+  sprintf(buf, WEBPAGE_END_TEMPLATE_CFG, appDescr->version, g_persistent.nodeName);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   httpd_resp_send_chunk(req, NULL, 0);
@@ -1576,7 +1576,7 @@ config_module_get_handler(httpd_req_t *req)
   sprintf(buf, "<button class=\"bgrn bgrn:hover\">Save</button></fieldset></form></div>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf, WEBPAGE_END_TEMPLATE, appDescr->version, g_persistent.nodeName);
+  sprintf(buf, WEBPAGE_END_TEMPLATE_CFG, appDescr->version, g_persistent.nodeName);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   httpd_resp_send_chunk(req, NULL, 0);
@@ -1845,7 +1845,7 @@ config_wifi_get_handler(httpd_req_t *req)
   sprintf(buf, "<button class=\"bred bgrn:hover\">Reprovision</button></fieldset></form></div>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf, WEBPAGE_END_TEMPLATE, appDescr->version, g_persistent.nodeName);
+  sprintf(buf, WEBPAGE_END_TEMPLATE_CFG, appDescr->version, g_persistent.nodeName);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   httpd_resp_send_chunk(req, NULL, 0);
@@ -1949,6 +1949,8 @@ config_espnow_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
+  ESP_LOGD(TAG, "******************* config_espnow_get_handler");
+
   buf = (char *) calloc(1, CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
@@ -1975,7 +1977,7 @@ config_espnow_get_handler(httpd_req_t *req)
   sprintf(buf, "<div><form id=but3 class=\"button\" action='/docfgespnow' method='get'><fieldset>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  /*
+
     // Encryption
     sprintf(buf, "<br />Encryption:<select  name=\"enc\" >");
     httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
@@ -1997,7 +1999,7 @@ config_espnow_get_handler(httpd_req_t *req)
     httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
     sprintf(buf, "</select>");
     httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  */
+  
 
   sprintf(buf,
           "<br>Use channel (0 is current):<input type=\"text\" name=\"channel\" value=\"%d\" >",
@@ -2010,10 +2012,19 @@ config_espnow_get_handler(httpd_req_t *req)
   sprintf(buf, "<br>Filter on RSSI (-67):<input type=\"text\" name=\"rssi\" value=\"%d\" >", g_persistent.ttl);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
+  char *pmkstr = malloc(65);
+  for (int i = 0; i < 16; i++) {
+    sprintf(pmkstr + 2 * i, "%02X", g_persistent.key[i]);
+  }
+  sprintf(buf,
+          "Security key (16 bytes hex):<input type=\"password\" name=\"key\" maxlength=\"32\" value=\"%s\" >",
+          pmkstr);
+  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+
   sprintf(buf, "<button class=\"bgrn bgrn:hover\">Save</button></fieldset></form></div><br>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf, WEBPAGE_END_TEMPLATE, appDescr->version, g_persistent.nodeName);
+  sprintf(buf, WEBPAGE_END_TEMPLATE_CFG, appDescr->version, g_persistent.nodeName);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   httpd_resp_send_chunk(req, NULL, 0);
@@ -2106,6 +2117,22 @@ do_config_espnow_get_handler(httpd_req_t *req)
       }
       else {
         ESP_LOGE(TAG, "Error getting espnow rssi => rv=%d", rv);
+      }
+
+      // key
+      if (ESP_OK == (rv = httpd_query_key_value(buf, "key", param, WEBPAGE_PARAM_SIZE))) {
+        ESP_LOGD(TAG, "Found query parameter => key=%s", param);
+        memset(g_persistent.key, 0, 16);
+        vscp_fwhlp_hex2bin(g_persistent.key, 16, param);
+
+        // Write changed value to persistent storage
+        rv = nvs_set_blob(g_nvsHandle, "key", g_persistent.key, sizeof(g_persistent.key));
+        if (rv != ESP_OK) {
+          ESP_LOGE(TAG, "Failed to write VSCP espnow encryption key to nvs. rv=%d", rv);
+        }
+      }
+      else {
+        ESP_LOGE(TAG, "Error getting espnow key => rv=%d", rv);
       }
 
       /*
@@ -2213,7 +2240,7 @@ config_vscplink_get_handler(httpd_req_t *req)
   sprintf(buf, "<button class=\"bgrn bgrn:hover\">Save</button></fieldset></form></div>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf, WEBPAGE_END_TEMPLATE, appDescr->version, g_persistent.nodeName);
+  sprintf(buf, WEBPAGE_END_TEMPLATE_CFG, appDescr->version, g_persistent.nodeName);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   httpd_resp_send_chunk(req, NULL, 0);
@@ -2439,7 +2466,7 @@ config_mqtt_get_handler(httpd_req_t *req)
   sprintf(buf, "<button class=\"bgrn bgrn:hover\">Save</button></fieldset></form></div>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf, WEBPAGE_END_TEMPLATE, appDescr->version, g_persistent.nodeName);
+  sprintf(buf, WEBPAGE_END_TEMPLATE_CFG, appDescr->version, g_persistent.nodeName);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   httpd_resp_send_chunk(req, NULL, 0);
@@ -2714,7 +2741,7 @@ config_web_get_handler(httpd_req_t *req)
   sprintf(buf, "<button class=\"bgrn bgrn:hover\">Save</button></fieldset></form></div>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf, WEBPAGE_END_TEMPLATE, appDescr->version, g_persistent.nodeName);
+  sprintf(buf, WEBPAGE_END_TEMPLATE_CFG, appDescr->version, g_persistent.nodeName);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   httpd_resp_send_chunk(req, NULL, 0);
@@ -2932,7 +2959,7 @@ config_log_get_handler(httpd_req_t *req)
   sprintf(buf, "<button class=\"bgrn bgrn:hover\">Save</button></fieldset></form></div>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf, WEBPAGE_END_TEMPLATE, appDescr->version, g_persistent.nodeName);
+  sprintf(buf, WEBPAGE_END_TEMPLATE_CFG, appDescr->version, g_persistent.nodeName);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   httpd_resp_send_chunk(req, NULL, 0);
@@ -2949,7 +2976,7 @@ config_log_get_handler(httpd_req_t *req)
 static esp_err_t
 do_config_log_get_handler(httpd_req_t *req)
 {
-  esp_err_t rv;
+  //esp_err_t rv;
   char *buf;
   size_t buf_len;
 
@@ -3446,23 +3473,23 @@ default_get_handler(httpd_req_t *req)
     return do_config_wifi_get_handler(req);
   }
 
-  if (0 == strncmp(req->uri, "/cfgespnow", 11)) {
-    ESP_LOGV(TAG, "--------- cfgespnow ---------\n");
+  if (0 == strncmp(req->uri, "/cfgespnow", 10)) {
+    ESP_LOGD(TAG, "--------- cfgespnow ---------\n");
     return config_espnow_get_handler(req);
   }
 
-  if (0 == strncmp(req->uri, "/docfgespnow", 13)) {
-    ESP_LOGV(TAG, "--------- docfgespnow ---------\n");
+  if (0 == strncmp(req->uri, "/docfgespnow", 11)) {
+    ESP_LOGD(TAG, "--------- docfgespnow ---------\n");
     return do_config_espnow_get_handler(req);
   }
 
   if (0 == strncmp(req->uri, "/cfgvscplink", 11)) {
-    ESP_LOGV(TAG, "--------- cfgvscplink ---------\n");
+    ESP_LOGD(TAG, "--------- cfgvscplink ---------\n");
     return config_vscplink_get_handler(req);
   }
 
   if (0 == strncmp(req->uri, "/docfgvscplink", 13)) {
-    ESP_LOGV(TAG, "--------- docfgvscplink ---------\n");
+    ESP_LOGD(TAG, "--------- docfgvscplink ---------\n");
     return do_config_vscplink_get_handler(req);
   }
 
