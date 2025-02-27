@@ -53,14 +53,12 @@
 #include <esp_http_server.h>
 #include <wifi_provisioning/manager.h>
 
-#include <espnow_ota.h>
-
 #include <vscp.h>
 #include <vscp-firmware-helper.h>
 
 #include "urldecode.h"
 
-#include "alpha.h"
+#include "vscp-espnow.h"
 #include "websrv.h"
 
 #ifdef CONFIG_EXAMPLE_PROV_TRANSPORT_BLE
@@ -77,6 +75,7 @@
 // From app_main
 void
 startOTA(void);
+
 int
 app_initiate_firmware_upload(const char *url);
 
@@ -129,7 +128,7 @@ http_auth_basic(const char *username, const char *password)
                              (const unsigned char *) user_info,
                              strlen(user_info));
   }
-  ESP_FREE(user_info);
+  free(user_info);
   return digest;
 }
 
@@ -146,12 +145,12 @@ info_get_handler(httpd_req_t *req)
   char *buf;
   char *temp;
 
-  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
+  buf = (char *) calloc(1, CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
 
-  temp = (char *) ESP_CALLOC(1,80);
+  temp = (char *) calloc(1, 80);
   if (NULL == temp) {
     return ESP_ERR_NO_MEM;
   }
@@ -342,13 +341,13 @@ info_get_handler(httpd_req_t *req)
 
   uint8_t GUID[16];
   vscp_espnow_get_node_guid(GUID);
-  char *bufguid = ESP_MALLOC(50);
+  char *bufguid = malloc(50);
   if (NULL != bufguid) {
     memset(bufguid, 0, sizeof(bufguid));
     vscp_fwhlp_writeGuidToString(bufguid, GUID);
-    sprintf(buf, "<tr><td class=\"name\">GUID:</td><td class=\"prop\">%s<br>%s</td></tr>", bufguid, /*temp + 24*/"1");
+    sprintf(buf, "<tr><td class=\"name\">GUID:</td><td class=\"prop\">%s<br>%s</td></tr>", bufguid, /*temp + 24*/ "1");
     httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-    ESP_FREE(bufguid);
+    free(bufguid);
   }
 
   // -------------------------------------------------------------------------
@@ -587,8 +586,8 @@ info_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  ESP_FREE(buf);
-  ESP_FREE(temp);
+  free(buf);
+  free(temp);
 
   return ESP_OK;
 }
@@ -636,12 +635,12 @@ upgrade_get_handler(httpd_req_t *req)
   char *buf;
   char *temp;
 
-  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
+  buf = (char *) calloc(1, CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
 
-  temp = (char *) ESP_CALLOC(1,80);
+  temp = (char *) calloc(1, 80);
   if (NULL == temp) {
     return ESP_ERR_NO_MEM;
   }
@@ -694,9 +693,7 @@ upgrade_get_handler(httpd_req_t *req)
   sprintf(buf, "<div><form id=but3 class=\"button\" action='/upgrdSibling' method='get'><fieldset>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf,
-          "OTA URL:<input type=\"text\"  id=\"url\" name=\"url\" value=\"%s\" >",
-          CONFIG_APP_OTA_URL);
+  sprintf(buf, "OTA URL:<input type=\"text\"  id=\"url\" name=\"url\" value=\"%s\" >", CONFIG_APP_OTA_URL);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   sprintf(buf, "<button class=\"bgrn bgrn:hover\" >Start Upgrade</button></fieldset></form></div>");
@@ -728,8 +725,8 @@ upgrade_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  ESP_FREE(buf);
-  ESP_FREE(temp);
+  free(buf);
+  free(temp);
 
   return ESP_OK;
 }
@@ -748,7 +745,7 @@ upgrdsrv_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
-  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
+  buf = (char *) calloc(1, CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -757,14 +754,14 @@ upgrdsrv_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_url_query_len(req) + 1;
   if (req_buf_len > 1) {
-    req_buf = ESP_MALLOC(req_buf_len);
+    req_buf = malloc(req_buf_len);
     if (httpd_req_get_url_query_str(req, req_buf, req_buf_len) == ESP_OK) {
 
       ESP_LOGD(TAG, "Found URL query => %s", req_buf);
-      char *param = ESP_MALLOC(WEBPAGE_PARAM_SIZE);
+      char *param = malloc(WEBPAGE_PARAM_SIZE);
       if (NULL == param) {
-        ESP_FREE(req_buf);
-        ESP_FREE(buf);
+        free(req_buf);
+        free(buf);
         return ESP_ERR_ESPNOW_NO_MEM;
       }
 
@@ -776,13 +773,13 @@ upgrdsrv_get_handler(httpd_req_t *req)
         ESP_LOGE(TAG, "Error getting url => rv=%d", ret);
       }
 
-      ESP_FREE(param);
+      free(param);
     }
 
-    ESP_FREE(req_buf);
+    free(req_buf);
   }
 
-  ESP_FREE(buf);
+  free(buf);
 
   const char *resp_str = "<html><head><meta charset='utf-8'><meta http-equiv=\"refresh\" content=\"10;url=index.html\" "
                          "/></head><body><h1>Firmware upgrade in progress...</h1></body></html>";
@@ -881,7 +878,7 @@ upgrdsibling_get_handler(httpd_req_t *req)
   size_t req_buf_len;
   char url[CONFIG_APP_OTA_URL_MAX_SIZE];
 
-  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
+  buf = (char *) calloc(1, CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -890,14 +887,14 @@ upgrdsibling_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_url_query_len(req) + 1;
   if (req_buf_len > 1) {
-    req_buf = ESP_MALLOC(req_buf_len);
+    req_buf = malloc(req_buf_len);
     if (httpd_req_get_url_query_str(req, req_buf, req_buf_len) == ESP_OK) {
 
       ESP_LOGD(TAG, "Found URL query => %s", req_buf);
-      char *param = ESP_MALLOC(WEBPAGE_PARAM_SIZE);
+      char *param = malloc(WEBPAGE_PARAM_SIZE);
       if (NULL == param) {
-        ESP_FREE(req_buf);
-        ESP_FREE(buf);
+        free(req_buf);
+        free(buf);
         return ESP_ERR_ESPNOW_NO_MEM;
       }
 
@@ -906,9 +903,9 @@ upgrdsibling_get_handler(httpd_req_t *req)
 
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          ESP_FREE(param);
-          ESP_FREE(req_buf);
-          ESP_FREE(buf);
+          free(param);
+          free(req_buf);
+          free(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
 
@@ -917,19 +914,19 @@ upgrdsibling_get_handler(httpd_req_t *req)
 
         ESP_LOGD(TAG, "Found query parameter => url=%s", url);
 
-        ESP_FREE(pdecoded);
+        free(pdecoded);
       }
       else {
         ESP_LOGE(TAG, "Error getting url => rv=%d", ret);
       }
 
-      ESP_FREE(param);
+      free(param);
     }
 
-    ESP_FREE(req_buf);
+    free(req_buf);
   }
 
-  ESP_FREE(buf);
+  free(buf);
 
   const char *resp_str = "<html><head><meta charset='utf-8'><meta http-equiv=\"refresh\" content=\"10;url=index.html\" "
                          "/></head><body><h1>Firmware upgrade of sibling in progress...</h1></body></html>";
@@ -951,8 +948,7 @@ upgrdsibling_get_handler(httpd_req_t *req)
   return ESP_OK;
 }
 
-
-  ///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // upgrdlocal_post_handler
 //
 // Handle OTA file upload
@@ -963,7 +959,7 @@ esp_err_t
 upgrdSiblingslocal_post_handler(httpd_req_t *req)
 {
   char buf[1000];
-  uint8_t sha_256[32]                   = { 0 };
+  uint8_t sha_256[32] = { 0 };
   esp_ota_handle_t ota_handle;
   int remaining = req->content_len;
 
@@ -980,7 +976,7 @@ upgrdSiblingslocal_post_handler(httpd_req_t *req)
 
     // Timeout Error: Just retry
     if (recv_len == HTTPD_SOCK_ERR_TIMEOUT) {
-      continue;      
+      continue;
     }
     else if (recv_len <= 0) {
       // Serious Error: Abort OTA
@@ -1011,7 +1007,7 @@ upgrdSiblingslocal_post_handler(httpd_req_t *req)
   esp_partition_get_sha256(ota_partition, sha_256);
 
   // Send new firmware to clients
-  app_firmware_send(req->content_len, sha_256);
+  // app_firmware_send(req->content_len, sha_256);
 
   ESP_LOGD(TAG, "Images sent to sibling(s)");
 
@@ -1022,7 +1018,6 @@ upgrdSiblingslocal_post_handler(httpd_req_t *req)
 
   return ESP_OK;
 }
-
 
 static const httpd_uri_t upgrdsiblinglocal = { .uri      = "/upgrdSiblingLocal",
                                                .method   = HTTP_POST,
@@ -1043,7 +1038,7 @@ provisioning_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
-  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
+  buf = (char *) calloc(1, CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -1055,12 +1050,12 @@ provisioning_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
   if (req_buf_len > 1) {
-    req_buf = ESP_MALLOC(req_buf_len);
+    req_buf = malloc(req_buf_len);
     // Copy null terminated value string into buffer
     if (httpd_req_get_hdr_value_str(req, "Host", req_buf, req_buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Host: %s", req_buf);
     }
-    ESP_FREE(req_buf);
+    free(req_buf);
   }
 
   sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "Node pairing");
@@ -1101,7 +1096,7 @@ provisioning_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  ESP_FREE(buf);
+  free(buf);
 
   return ESP_OK;
 }
@@ -1120,21 +1115,21 @@ doprov_get_handler(httpd_req_t *req)
   uint8_t *pmac = NULL;
   uint8_t *pkey = NULL;
 
-  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
+  buf = (char *) calloc(1, CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
 
-  pmac = (uint8_t *) ESP_CALLOC(1,6);
+  pmac = (uint8_t *) calloc(1, 6);
   if (NULL == pmac) {
-    ESP_FREE(buf);
+    free(buf);
     return ESP_ERR_NO_MEM;
   }
 
-  pkey = (uint8_t *) ESP_CALLOC(1,32);
+  pkey = (uint8_t *) calloc(1, 32);
   if (NULL == pkey) {
-    ESP_FREE(buf);
-    ESP_FREE(pmac);
+    free(buf);
+    free(pmac);
     return ESP_ERR_NO_MEM;
   }
 
@@ -1142,16 +1137,16 @@ doprov_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_url_query_len(req) + 1;
   if (req_buf_len > 1) {
-    req_buf = ESP_MALLOC(req_buf_len);
+    req_buf = malloc(req_buf_len);
     if (httpd_req_get_url_query_str(req, req_buf, req_buf_len) == ESP_OK) {
 
       ESP_LOGD(TAG, "Found URL query => %s", req_buf);
-      char *param = ESP_MALLOC(WEBPAGE_PARAM_SIZE);
+      char *param = malloc(WEBPAGE_PARAM_SIZE);
       if (NULL == param) {
-        ESP_FREE(req_buf);
-        ESP_FREE(buf);
-        ESP_FREE(pmac);
-        ESP_FREE(pkey);
+        free(req_buf);
+        free(buf);
+        free(pmac);
+        free(pkey);
         return ESP_ERR_ESPNOW_NO_MEM;
       }
 
@@ -1168,9 +1163,9 @@ doprov_get_handler(httpd_req_t *req)
       if (ESP_OK == (ret = httpd_query_key_value(req_buf, "mac", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          ESP_FREE(param);
-          ESP_FREE(buf);
-          ESP_FREE(pmac);
+          free(param);
+          free(buf);
+          free(pmac);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => mac=%s", pdecoded);
@@ -1179,7 +1174,7 @@ doprov_get_handler(httpd_req_t *req)
           ESP_LOGE(TAG, "Failed to parse MAC address. ev = %d", rv);
         }
         ESP_LOG_BUFFER_HEXDUMP(TAG, pmac, 6, ESP_LOG_INFO);
-        ESP_FREE(pdecoded);
+        free(pdecoded);
       }
       else {
         ESP_LOGE(TAG, "Error getting MAC => rv=%d", ret);
@@ -1194,18 +1189,18 @@ doprov_get_handler(httpd_req_t *req)
       else {
         ESP_LOGE(TAG, "Error getting node_name => rv=%d", ret);
       }
-      ESP_FREE(param);
+      free(param);
     }
 
-    ESP_FREE(req_buf);
+    free(req_buf);
   }
 
   // Start the provisioning of the client node
   // espnow_startServerProvisioning(pmac, pkey);
 
   // Parameters not needed anymore
-  ESP_FREE(pmac);
-  ESP_FREE(pkey);
+  free(pmac);
+  free(pkey);
 
   // Get application info data
   const esp_app_desc_t *appDescr = esp_app_get_description();
@@ -1231,7 +1226,7 @@ doprov_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  ESP_FREE(buf);
+  free(buf);
 
   return ESP_OK;
 }
@@ -1287,37 +1282,37 @@ hello_get_handler(httpd_req_t *req)
   // extra byte for null termination
   buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
   if (buf_len > 1) {
-    buf = ESP_MALLOC(buf_len);
+    buf = malloc(buf_len);
     // Copy null terminated value string into buffer
     if (httpd_req_get_hdr_value_str(req, "Host", buf, buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Host: %s", buf);
     }
-    ESP_FREE(buf);
+    free(buf);
   }
 
   buf_len = httpd_req_get_hdr_value_len(req, "Test-Header-2") + 1;
   if (buf_len > 1) {
-    buf = ESP_MALLOC(buf_len);
+    buf = malloc(buf_len);
     if (httpd_req_get_hdr_value_str(req, "Test-Header-2", buf, buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Test-Header-2: %s", buf);
     }
-    ESP_FREE(buf);
+    free(buf);
   }
 
   buf_len = httpd_req_get_hdr_value_len(req, "Test-Header-1") + 1;
   if (buf_len > 1) {
-    buf = ESP_MALLOC(buf_len);
+    buf = malloc(buf_len);
     if (httpd_req_get_hdr_value_str(req, "Test-Header-1", buf, buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Test-Header-1: %s", buf);
     }
-    ESP_FREE(buf);
+    free(buf);
   }
 
   // Read URL query string length and allocate memory for length + 1,
   // extra byte for null termination
   buf_len = httpd_req_get_url_query_len(req) + 1;
   if (buf_len > 1) {
-    buf = ESP_MALLOC(buf_len);
+    buf = malloc(buf_len);
     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found URL query => %s", buf);
       char param[32];
@@ -1332,7 +1327,7 @@ hello_get_handler(httpd_req_t *req)
         ESP_LOGD(TAG, "Found URL query parameter => query2=%s", param);
       }
     }
-    ESP_FREE(buf);
+    free(buf);
   }
 
   // Set some custom headers
@@ -1374,7 +1369,7 @@ mainpg_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
-  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
+  buf = (char *) calloc(1, CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -1386,12 +1381,12 @@ mainpg_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
   if (req_buf_len > 1) {
-    req_buf = ESP_MALLOC(req_buf_len);
+    req_buf = malloc(req_buf_len);
     // Copy null terminated value string into buffer
     if (httpd_req_get_hdr_value_str(req, "Host", req_buf, req_buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Host: %s", req_buf);
     }
-    ESP_FREE(req_buf);
+    free(req_buf);
   }
 
   sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "Main Page");
@@ -1401,7 +1396,8 @@ mainpg_get_handler(httpd_req_t *req)
           "<p><form id=but1 class=\"button\" action='config' method='get'><button>Configuration</button></form></p>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf, "<p><form id=but2 class=\"button\" action='info' method='get'><button>Node Information</button></form></p>");
+  sprintf(buf,
+          "<p><form id=but2 class=\"button\" action='info' method='get'><button>Node Information</button></form></p>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   sprintf(buf,
@@ -1424,7 +1420,7 @@ mainpg_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  ESP_FREE(buf);
+  free(buf);
 
   return ESP_OK;
 }
@@ -1448,7 +1444,7 @@ config_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
-  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
+  buf = (char *) calloc(1, CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -1460,12 +1456,12 @@ config_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
   if (req_buf_len > 1) {
-    req_buf = ESP_MALLOC(req_buf_len);
+    req_buf = malloc(req_buf_len);
     // Copy null terminated value string into buffer
     if (httpd_req_get_hdr_value_str(req, "Host", req_buf, req_buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Host: %s", req_buf);
     }
-    ESP_FREE(req_buf);
+    free(req_buf);
   }
 
   sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "Configuration");
@@ -1507,7 +1503,7 @@ config_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  ESP_FREE(buf);
+  free(buf);
 
   return ESP_OK;
 }
@@ -1531,7 +1527,7 @@ config_module_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
-  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
+  buf = (char *) calloc(1, CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -1543,12 +1539,12 @@ config_module_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
   if (req_buf_len > 1) {
-    req_buf = ESP_MALLOC(req_buf_len);
+    req_buf = malloc(req_buf_len);
     // Copy null terminated value string into buffer
     if (httpd_req_get_hdr_value_str(req, "Host", req_buf, req_buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Host: %s", req_buf);
     }
-    ESP_FREE(req_buf);
+    free(req_buf);
   }
 
   sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "Module Configuration");
@@ -1562,20 +1558,20 @@ config_module_get_handler(httpd_req_t *req)
           g_persistent.nodeName);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  char *pmkstr = ESP_MALLOC(65);
-  for (int i = 0; i < sizeof(g_persistent.pmk); i++) {
-    sprintf(pmkstr + 2 * i, "%02X", g_persistent.pmk[i]);
-  }
-  sprintf(buf,
-          "Primay key (32 bytes hex):<input type=\"password\" name=\"key\" maxlength=\"64\" size=\"20\" value=\"%s\" >",
-          pmkstr);
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  ESP_FREE(pmkstr);
+  // char *pmkstr = malloc(65);
+  // for (int i = 0; i < sizeof(g_persistent.pmk); i++) {
+  //   sprintf(pmkstr + 2 * i, "%02X", g_persistent.pmk[i]);
+  // }
+  // sprintf(buf,
+  //         "Primay key (32 bytes hex):<input type=\"password\" name=\"key\" maxlength=\"64\" size=\"20\" value=\"%s\"
+  //         >", pmkstr);
+  // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  // free(pmkstr);
 
-  sprintf(buf,
-          "Startup delay:<input type=\"text\" name=\"strtdly\" value=\"%d\" maxlength=\"2\" size=\"4\">",
-          g_persistent.startDelay);
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  // sprintf(buf,
+  //         "Startup delay:<input type=\"text\" name=\"strtdly\" value=\"%d\" maxlength=\"2\" size=\"4\">",
+  //         g_persistent.startDelay);
+  // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   sprintf(buf, "<button class=\"bgrn bgrn:hover\">Save</button></fieldset></form></div>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
@@ -1585,7 +1581,7 @@ config_module_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  ESP_FREE(buf);
+  free(buf);
 
   return ESP_OK;
 }
@@ -1610,13 +1606,13 @@ do_config_module_get_handler(httpd_req_t *req)
   // extra byte for null termination
   buf_len = httpd_req_get_url_query_len(req) + 1;
   if (buf_len > 1) {
-    buf = ESP_MALLOC(buf_len);
+    buf = malloc(buf_len);
     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
 
       ESP_LOGD(TAG, "Found URL query => %s", buf);
-      char *param = ESP_MALLOC(WEBPAGE_PARAM_SIZE);
+      char *param = malloc(WEBPAGE_PARAM_SIZE);
       if (NULL == param) {
-        ESP_FREE(buf);
+        free(buf);
         return ESP_ERR_ESPNOW_NO_MEM;
       }
 
@@ -1624,13 +1620,13 @@ do_config_module_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "node_name", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          ESP_FREE(param);
-          ESP_FREE(buf);
+          free(param);
+          free(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => name=%s", pdecoded);
         strncpy(g_persistent.nodeName, pdecoded, 31);
-        ESP_FREE(pdecoded);
+        free(pdecoded);
 
         // setAccessPointParameters();
 
@@ -1650,7 +1646,7 @@ do_config_module_get_handler(httpd_req_t *req)
         ESP_LOGD(TAG, "Found query parameter => key");
         memset(key_info, 0, APP_KEY_LEN);
         vscp_fwhlp_hex2bin(key_info, APP_KEY_LEN, param);
-        rv = espnow_set_key(key_info);
+        // rv = espnow_set_key(key_info);
         if (rv != ESP_OK) {
           ESP_LOGE(TAG, "Failed to write key. rv=%d", rv);
         }
@@ -1664,29 +1660,17 @@ do_config_module_get_handler(httpd_req_t *req)
         ESP_LOGE(TAG, "Error getting node_name => rv=%d", rv);
       }
 
-      // strtdly
-      if (ESP_OK == (rv = httpd_query_key_value(buf, "strtdly", param, WEBPAGE_PARAM_SIZE))) {
-        ESP_LOGD(TAG, "Found query parameter => strtdly=%s", param);
-        g_persistent.startDelay = atoi(param);
-        // Write changed value to persistent storage
-        rv = nvs_set_u8(g_nvsHandle, "start_delay", g_persistent.startDelay);
-        if (rv != ESP_OK) {
-          ESP_LOGE(TAG, "Failed to update start delay");
-        }
-      }
-      else {
-        ESP_LOGE(TAG, "Error getting strtdly => rv=%d", rv);
-      }
+      
 
       rv = nvs_commit(g_nvsHandle);
       if (rv != ESP_OK) {
         ESP_LOGE(TAG, "Failed to commit updates to nvs\n");
       }
 
-      ESP_FREE(param);
+      free(param);
     }
 
-    ESP_FREE(buf);
+    free(buf);
   }
   const char *resp_str =
     "<html><head><meta charset='utf-8'><meta http-equiv=\"refresh\" content=\"1;url=cfgmodule\" "
@@ -1810,7 +1794,7 @@ config_wifi_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
-  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
+  buf = (char *) calloc(1, CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -1822,12 +1806,12 @@ config_wifi_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
   if (req_buf_len > 1) {
-    req_buf = ESP_MALLOC(req_buf_len);
+    req_buf = malloc(req_buf_len);
     // Copy null terminated value string into buffer
     if (httpd_req_get_hdr_value_str(req, "Host", req_buf, req_buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Host: %s", req_buf);
     }
-    ESP_FREE(req_buf);
+    free(req_buf);
   }
 
   sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "Wifi Configuration");
@@ -1866,7 +1850,7 @@ config_wifi_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  ESP_FREE(buf);
+  free(buf);
 
   return ESP_OK;
 }
@@ -1886,13 +1870,13 @@ do_config_wifi_get_handler(httpd_req_t *req)
   // extra byte for null termination
   buf_len = httpd_req_get_url_query_len(req) + 1;
   if (buf_len > 1) {
-    buf = ESP_MALLOC(buf_len);
+    buf = malloc(buf_len);
     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
 
       ESP_LOGD(TAG, "Found URL query => %s", buf);
-      char *param = ESP_MALLOC(WEBPAGE_PARAM_SIZE);
+      char *param = malloc(WEBPAGE_PARAM_SIZE);
       if (NULL == param) {
-        ESP_FREE(buf);
+        free(buf);
         return ESP_ERR_ESPNOW_NO_MEM;
       }
 
@@ -1900,13 +1884,13 @@ do_config_wifi_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "node_name", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          ESP_FREE(param);
-          ESP_FREE(buf);
+          free(param);
+          free(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => name=%s", pdecoded);
         strncpy(g_persistent.nodeName, pdecoded, 31);
-        ESP_FREE(pdecoded);
+        free(pdecoded);
         // Write changed value to persistent storage
         rv = nvs_set_str(g_nvsHandle, "node_name", g_persistent.nodeName);
         if (rv != ESP_OK) {
@@ -1918,28 +1902,28 @@ do_config_wifi_get_handler(httpd_req_t *req)
       }
 
       // strtdly
-      if (ESP_OK == (rv = httpd_query_key_value(buf, "strtdly", param, WEBPAGE_PARAM_SIZE))) {
-        ESP_LOGD(TAG, "Found query parameter => strtdly=%s", param);
-        g_persistent.startDelay = atoi(param);
-        // Write changed value to persistent storage
-        rv = nvs_set_u8(g_nvsHandle, "start_delay", g_persistent.startDelay);
-        if (rv != ESP_OK) {
-          ESP_LOGE(TAG, "Failed to update start delay");
-        }
-      }
-      else {
-        ESP_LOGE(TAG, "Error getting strtdly => rv=%d", rv);
-      }
+      // if (ESP_OK == (rv = httpd_query_key_value(buf, "strtdly", param, WEBPAGE_PARAM_SIZE))) {
+      //   ESP_LOGD(TAG, "Found query parameter => strtdly=%s", param);
+      //   g_persistent.startDelay = atoi(param);
+      //   // Write changed value to persistent storage
+      //   rv = nvs_set_u8(g_nvsHandle, "start_delay", g_persistent.startDelay);
+      //   if (rv != ESP_OK) {
+      //     ESP_LOGE(TAG, "Failed to update start delay");
+      //   }
+      // }
+      // else {
+      //   ESP_LOGE(TAG, "Error getting strtdly => rv=%d", rv);
+      // }
 
       rv = nvs_commit(g_nvsHandle);
       if (rv != ESP_OK) {
         ESP_LOGE(TAG, "Failed to commit updates to nvs\n");
       }
 
-      ESP_FREE(param);
+      free(param);
     }
 
-    ESP_FREE(buf);
+    free(buf);
   }
   const char *resp_str =
     "<html><head><meta charset='utf-8'><meta http-equiv=\"refresh\" content=\"1;url=cfgwifi\" "
@@ -1965,7 +1949,7 @@ config_espnow_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
-  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
+  buf = (char *) calloc(1, CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -1977,52 +1961,18 @@ config_espnow_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
   if (req_buf_len > 1) {
-    req_buf = ESP_MALLOC(req_buf_len);
+    req_buf = malloc(req_buf_len);
     // Copy null terminated value string into buffer
     if (httpd_req_get_hdr_value_str(req, "Host", req_buf, req_buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Host: %s", req_buf);
     }
-    ESP_FREE(req_buf);
+    free(req_buf);
   }
 
   sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "ESPNOW Configuration");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   sprintf(buf, "<div><form id=but3 class=\"button\" action='/docfgespnow' method='get'><fieldset>");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-
-  // Enable
-  sprintf(buf, "<input type=\"checkbox\" name=\"enable\" value=\"true\" ");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf, "%s><label for=\"lr\"> Enable</label>", g_persistent.espnowEnable ? "checked" : "");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-
-  // Long range
-  sprintf(buf, "<br><input type=\"checkbox\" name=\"lr\" value=\"true\" ");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf, "%s><label for=\"lr\"> Enable Long Range</label>", g_persistent.espnowLongRange ? "checked" : "");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-
-  // Forward
-  sprintf(buf, "<br><input type=\"checkbox\" name=\"fw\" value=\"true\" ");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf, "%s><label for=\"fw\"> Enable Frame Forward</label>", g_persistent.espnowForwardEnable ? "checked" : "");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-
-  // Filter Adj Channel
-  sprintf(buf, "<br><input type=\"checkbox\" name=\"adjf\" value=\"true\" ");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf,
-          "%s><label for=\"adjf\"> Filter Adj. Channel</label>",
-          g_persistent.espnowFilterAdjacentChannel ? "checked" : "");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-
-  // Forward switch channel
-  sprintf(buf, "<br><input type=\"checkbox\" name=\"swchf\" value=\"true\" ");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf,
-          "%s><label for=\"swchf\"> Forward Switch Channel</label>",
-          g_persistent.espnowForwardSwitchChannel ? "checked" : "");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   /*
@@ -2049,20 +1999,15 @@ config_espnow_get_handler(httpd_req_t *req)
     httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
   */
 
-  sprintf(buf, "<br>Queue size (32):<input type=\"text\" name=\"qsize\" value=\"%d\" >", g_persistent.espnowSizeQueue);
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-
   sprintf(buf,
           "<br>Use channel (0 is current):<input type=\"text\" name=\"channel\" value=\"%d\" >",
-          g_persistent.espnowChannel);
+          g_persistent.channel);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf, "<br>Time to live (32):<input type=\"text\" name=\"ttl\" value=\"%d\" >", g_persistent.espnowTtl);
+  sprintf(buf, "<br>Time to live (32):<input type=\"text\" name=\"ttl\" value=\"%d\" >", g_persistent.ttl);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf,
-          "<br>Filter on RSSI (-67):<input type=\"text\" name=\"rssi\" value=\"%d\" >",
-          g_persistent.espnowFilterWeakSignal);
+  sprintf(buf, "<br>Filter on RSSI (-67):<input type=\"text\" name=\"rssi\" value=\"%d\" >", g_persistent.ttl);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   sprintf(buf, "<button class=\"bgrn bgrn:hover\">Save</button></fieldset></form></div><br>");
@@ -2073,7 +2018,7 @@ config_espnow_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  ESP_FREE(buf);
+  free(buf);
 
   return ESP_OK;
 }
@@ -2093,116 +2038,22 @@ do_config_espnow_get_handler(httpd_req_t *req)
   // extra byte for null termination
   buf_len = httpd_req_get_url_query_len(req) + 1;
   if (buf_len > 1) {
-    buf = ESP_MALLOC(buf_len);
+    buf = malloc(buf_len);
     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
 
       ESP_LOGD(TAG, "Found URL query => %s", buf);
-      char *param = ESP_MALLOC(WEBPAGE_PARAM_SIZE);
+      char *param = malloc(WEBPAGE_PARAM_SIZE);
       if (NULL == param) {
         return ESP_ERR_ESPNOW_NO_MEM;
-        ESP_FREE(param);
-      }
-
-      // Enable
-      if (ESP_OK == (rv = httpd_query_key_value(buf, "enable", param, WEBPAGE_PARAM_SIZE))) {
-        ESP_LOGD(TAG, "Found query parameter => enable=%s", param);
-        if (NULL != strstr(param, "true")) {
-          g_persistent.espnowEnable = true;
-        }
-      }
-      else {
-        g_persistent.espnowEnable = false;
-      }
-
-      // Write changed value to persistent storage
-      rv = nvs_set_u8(g_nvsHandle, "drop_enable", g_persistent.espnowEnable);
-      if (rv != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to update espnow enable");
-      }
-
-      // Long range
-      if (ESP_OK == (rv = httpd_query_key_value(buf, "lr", param, WEBPAGE_PARAM_SIZE))) {
-        ESP_LOGD(TAG, "Found query parameter => lr=%s", param);
-        if (NULL != strstr(param, "true")) {
-          g_persistent.espnowLongRange = true;
-        }
-      }
-      else {
-        g_persistent.espnowLongRange = false;
-      }
-
-      // Write changed value to persistent storage
-      rv = nvs_set_u8(g_nvsHandle, "drop_lr", g_persistent.espnowLongRange);
-      if (rv != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to update espnow long range");
-      }
-
-      // Forward
-      if (ESP_OK == (rv = httpd_query_key_value(buf, "fw", param, WEBPAGE_PARAM_SIZE))) {
-        ESP_LOGD(TAG, "Found query parameter => fw=%s", param);
-        if (NULL != strstr(param, "true")) {
-          g_persistent.espnowForwardEnable = true;
-        }
-        else {
-          g_persistent.espnowForwardEnable = false;
-        }
-      }
-      else {
-        g_persistent.espnowForwardEnable = false;
-      }
-
-      // Write changed value to persistent storage
-      rv = nvs_set_u8(g_nvsHandle, "drop_fw", g_persistent.espnowForwardEnable);
-      if (rv != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to update espnow forward");
-      }
-
-      // Filter Adj. Channel
-      if (ESP_OK == (rv = httpd_query_key_value(buf, "adjf", param, WEBPAGE_PARAM_SIZE))) {
-        ESP_LOGD(TAG, "Found query parameter => adjf=%s", param);
-        if (NULL != strstr(param, "true")) {
-          g_persistent.espnowFilterAdjacentChannel = true;
-        }
-        else {
-          g_persistent.espnowFilterAdjacentChannel = false;
-        }
-      }
-      else {
-        g_persistent.espnowFilterAdjacentChannel = false;
-      }
-
-      // Write changed value to persistent storage
-      rv = nvs_set_u8(g_nvsHandle, "drop_filt", g_persistent.espnowFilterAdjacentChannel);
-      if (rv != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to update espnow adj. freq. filter");
-      }
-
-      // Allow switching channel on forward
-      if (ESP_OK == (rv = httpd_query_key_value(buf, "swchf", param, WEBPAGE_PARAM_SIZE))) {
-        ESP_LOGD(TAG, "Found query parameter => swchf=%s", param);
-        if (NULL != strstr(param, "true")) {
-          g_persistent.espnowForwardSwitchChannel = true;
-        }
-        else {
-          g_persistent.espnowForwardSwitchChannel = false;
-        }
-      }
-      else {
-        g_persistent.espnowForwardSwitchChannel = false;
-      }
-
-      // Write changed value to persistent storage
-      rv = nvs_set_u8(g_nvsHandle, "drop_swchf", g_persistent.espnowForwardSwitchChannel);
-      if (rv != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to update espnow adj. freq. filter");
+        free(param);
       }
 
       // channel
       if (ESP_OK == (rv = httpd_query_key_value(buf, "channel", param, WEBPAGE_PARAM_SIZE))) {
         ESP_LOGD(TAG, "Found query parameter => channel=%s", param);
-        g_persistent.espnowChannel = atoi(param);
+        g_persistent.channel = atoi(param);
         // Write changed value to persistent storage
-        rv = nvs_set_u8(g_nvsHandle, "drop_ch", g_persistent.espnowChannel);
+        rv = nvs_set_u8(g_nvsHandle, "channel", g_persistent.channel);
         if (rv != ESP_OK) {
           ESP_LOGE(TAG, "Failed to update espnow channel");
         }
@@ -2214,9 +2065,9 @@ do_config_espnow_get_handler(httpd_req_t *req)
       // ttl
       if (ESP_OK == (rv = httpd_query_key_value(buf, "ttl", param, WEBPAGE_PARAM_SIZE))) {
         ESP_LOGD(TAG, "Found query parameter => ttl=%s", param);
-        g_persistent.espnowTtl = atoi(param);
+        g_persistent.ttl = atoi(param);
         // Write changed value to persistent storage
-        rv = nvs_set_u8(g_nvsHandle, "drop_ttl", g_persistent.espnowTtl);
+        rv = nvs_set_u8(g_nvsHandle, "ttl", g_persistent.ttl);
         if (rv != ESP_OK) {
           ESP_LOGE(TAG, "Failed to update espnow ttl");
         }
@@ -2228,12 +2079,12 @@ do_config_espnow_get_handler(httpd_req_t *req)
       // Queue size
       if (ESP_OK == (rv = httpd_query_key_value(buf, "qsize", param, WEBPAGE_PARAM_SIZE))) {
         ESP_LOGD(TAG, "Found query parameter => qsize=%s", param);
-        g_persistent.espnowSizeQueue = atoi(param);
-        // Write changed value to persistent storage
-        rv = nvs_set_u8(g_nvsHandle, "drop_qsize", g_persistent.espnowSizeQueue);
-        if (rv != ESP_OK) {
-          ESP_LOGE(TAG, "Failed to update espnow qsize");
-        }
+        // g_persistent.espnowSizeQueue = atoi(param);
+        // // Write changed value to persistent storage
+        // rv = nvs_set_u8(g_nvsHandle, "drop_qsize", g_persistent.espnowSizeQueue);
+        // if (rv != ESP_OK) {
+        //   ESP_LOGE(TAG, "Failed to update espnow qsize");
+        // }
       }
       else {
         ESP_LOGE(TAG, "Error getting espnow queue size => rv=%d", rv);
@@ -2242,16 +2093,16 @@ do_config_espnow_get_handler(httpd_req_t *req)
       // rssi
       if (ESP_OK == (rv = httpd_query_key_value(buf, "rssi", param, WEBPAGE_PARAM_SIZE))) {
         ESP_LOGD(TAG, "Found query parameter => rssi=%s", param);
-        g_persistent.espnowFilterWeakSignal = atoi(param);
-        // Make shure it's negative
-        if (g_persistent.espnowFilterWeakSignal > 0) {
-          g_persistent.espnowFilterWeakSignal *= -1;
-        }
-        // Write changed value to persistent storage
-        rv = nvs_set_i8(g_nvsHandle, "drop_rssi", g_persistent.espnowFilterWeakSignal);
-        if (rv != ESP_OK) {
-          ESP_LOGE(TAG, "Failed to update espnow rssi");
-        }
+        // g_persistent.espnowFilterWeakSignal = atoi(param);
+        // // Make shure it's negative
+        // if (g_persistent.espnowFilterWeakSignal > 0) {
+        //   g_persistent.espnowFilterWeakSignal *= -1;
+        // }
+        // // Write changed value to persistent storage
+        // rv = nvs_set_i8(g_nvsHandle, "drop_rssi", g_persistent.espnowFilterWeakSignal);
+        // if (rv != ESP_OK) {
+        //   ESP_LOGE(TAG, "Failed to update espnow rssi");
+        // }
       }
       else {
         ESP_LOGE(TAG, "Error getting espnow rssi => rv=%d", rv);
@@ -2276,10 +2127,10 @@ do_config_espnow_get_handler(httpd_req_t *req)
         ESP_LOGE(TAG, "Failed to commit updates to nvs\n");
       }
 
-      ESP_FREE(param);
+      free(param);
     }
 
-    ESP_FREE(buf);
+    free(buf);
   }
   const char *resp_str =
     "<html><head><meta charset='utf-8'><meta http-equiv=\"refresh\" content=\"1;url=cfgespnow\" "
@@ -2305,7 +2156,7 @@ config_vscplink_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
-  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
+  buf = (char *) calloc(1, CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -2317,12 +2168,12 @@ config_vscplink_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_hdr_value_len(req, "Name") + 1;
   if (req_buf_len > 1) {
-    req_buf = ESP_MALLOC(req_buf_len);
+    req_buf = malloc(req_buf_len);
     // Copy null terminated value string into buffer
     if (httpd_req_get_hdr_value_str(req, "Host", req_buf, req_buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Host: %s", req_buf);
     }
-    ESP_FREE(req_buf);
+    free(req_buf);
   }
 
   sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "VSCP Link Configuration");
@@ -2349,13 +2200,15 @@ config_vscplink_get_handler(httpd_req_t *req)
   sprintf(buf, "Password:<input type=\"password\" name=\"password\" value=\"%s\" >", g_persistent.vscplinkPassword);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  char *pmkstr = ESP_MALLOC(65);
+  char *pmkstr = malloc(65);
   for (int i = 0; i < 32; i++) {
     sprintf(pmkstr + 2 * i, "%02X", g_persistent.vscpLinkKey[i]);
   }
-  sprintf(buf, "Security key (32 bytes hex):<input type=\"password\" name=\"key\" maxlength=\"64\" value=\"%s\" >", pmkstr);
+  sprintf(buf,
+          "Security key (32 bytes hex):<input type=\"password\" name=\"key\" maxlength=\"64\" value=\"%s\" >",
+          pmkstr);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  ESP_FREE(pmkstr);
+  free(pmkstr);
 
   sprintf(buf, "<button class=\"bgrn bgrn:hover\">Save</button></fieldset></form></div>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
@@ -2365,7 +2218,7 @@ config_vscplink_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  ESP_FREE(buf);
+  free(buf);
 
   return ESP_OK;
 }
@@ -2385,14 +2238,14 @@ do_config_vscplink_get_handler(httpd_req_t *req)
   // extra byte for null termination
   buf_len = httpd_req_get_url_query_len(req) + 1;
   if (buf_len > 1) {
-    buf = ESP_MALLOC(buf_len);
+    buf = malloc(buf_len);
     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
 
       ESP_LOGD(TAG, "Found URL query => %s", buf);
-      char *param = ESP_MALLOC(WEBPAGE_PARAM_SIZE);
+      char *param = malloc(WEBPAGE_PARAM_SIZE);
       if (NULL == param) {
         return ESP_ERR_ESPNOW_NO_MEM;
-        ESP_FREE(param);
+        free(param);
       }
 
       // Enable
@@ -2444,8 +2297,8 @@ do_config_vscplink_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "user", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          ESP_FREE(param);
-          ESP_FREE(buf);
+          free(param);
+          free(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => user=%s", pdecoded);
@@ -2464,8 +2317,8 @@ do_config_vscplink_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "password", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          ESP_FREE(param);
-          ESP_FREE(buf);
+          free(param);
+          free(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => password=%s", pdecoded);
@@ -2501,10 +2354,10 @@ do_config_vscplink_get_handler(httpd_req_t *req)
         ESP_LOGE(TAG, "Failed to commit updates to nvs\n");
       }
 
-      ESP_FREE(param);
+      free(param);
     }
 
-    ESP_FREE(buf);
+    free(buf);
   }
   const char *resp_str =
     "<html><head><meta charset='utf-8'><meta http-equiv=\"refresh\" content=\"1;url=cfgvscplink\" "
@@ -2530,7 +2383,7 @@ config_mqtt_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
-  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
+  buf = (char *) calloc(1, CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -2542,12 +2395,12 @@ config_mqtt_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
   if (req_buf_len > 1) {
-    req_buf = ESP_MALLOC(req_buf_len);
+    req_buf = malloc(req_buf_len);
     // Copy null terminated value string into buffer
     if (httpd_req_get_hdr_value_str(req, "Host", req_buf, req_buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Host: %s", req_buf);
     }
-    ESP_FREE(req_buf);
+    free(req_buf);
   }
 
   sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "MQTT Configuration");
@@ -2591,7 +2444,7 @@ config_mqtt_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  ESP_FREE(buf);
+  free(buf);
 
   return ESP_OK;
 }
@@ -2611,14 +2464,14 @@ do_config_mqtt_get_handler(httpd_req_t *req)
   // extra byte for null termination
   buf_len = httpd_req_get_url_query_len(req) + 1;
   if (buf_len > 1) {
-    buf = ESP_MALLOC(buf_len);
+    buf = malloc(buf_len);
     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
 
       ESP_LOGD(TAG, "Found URL query => %s", buf);
-      char *param = ESP_MALLOC(WEBPAGE_PARAM_SIZE);
+      char *param = malloc(WEBPAGE_PARAM_SIZE);
       if (NULL == param) {
         return ESP_ERR_ESPNOW_NO_MEM;
-        ESP_FREE(param);
+        free(param);
       }
 
       // Enable
@@ -2642,13 +2495,13 @@ do_config_mqtt_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "url", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          ESP_FREE(param);
-          ESP_FREE(buf);
+          free(param);
+          free(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => url=%s", pdecoded);
         strncpy(g_persistent.mqttUrl, pdecoded, sizeof(g_persistent.mqttUrl) - 1);
-        ESP_FREE(pdecoded);
+        free(pdecoded);
         // Write changed value to persistent storage
         rv = nvs_set_str(g_nvsHandle, "mqtt_url", g_persistent.mqttUrl);
         if (rv != ESP_OK) {
@@ -2677,8 +2530,8 @@ do_config_mqtt_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "client", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          ESP_FREE(param);
-          ESP_FREE(buf);
+          free(param);
+          free(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => clientid=%s", pdecoded);
@@ -2697,8 +2550,8 @@ do_config_mqtt_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "user", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          ESP_FREE(param);
-          ESP_FREE(buf);
+          free(param);
+          free(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => user=%s", pdecoded);
@@ -2717,8 +2570,8 @@ do_config_mqtt_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "password", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          ESP_FREE(param);
-          ESP_FREE(buf);
+          free(param);
+          free(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => password=%s", pdecoded);
@@ -2737,13 +2590,13 @@ do_config_mqtt_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "sub", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          ESP_FREE(param);
-          ESP_FREE(buf);
+          free(param);
+          free(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => sub=%s", pdecoded);
         strncpy(g_persistent.mqttSub, pdecoded, sizeof(g_persistent.mqttSub) - 1);
-        ESP_FREE(pdecoded);
+        free(pdecoded);
         // Write changed value to persistent storage
         rv = nvs_set_str(g_nvsHandle, "mqtt_sub", g_persistent.mqttSub);
         if (rv != ESP_OK) {
@@ -2758,13 +2611,13 @@ do_config_mqtt_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "pub", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          ESP_FREE(param);
-          ESP_FREE(buf);
+          free(param);
+          free(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => pub=%s", pdecoded);
         strncpy(g_persistent.mqttPub, pdecoded, sizeof(g_persistent.mqttPub) - 1);
-        ESP_FREE(pdecoded);
+        free(pdecoded);
         // Write changed value to persistent storage
         rv = nvs_set_str(g_nvsHandle, "mqtt_pub", g_persistent.mqttPub);
         if (rv != ESP_OK) {
@@ -2780,10 +2633,10 @@ do_config_mqtt_get_handler(httpd_req_t *req)
         ESP_LOGE(TAG, "Failed to commit updates to nvs\n");
       }
 
-      ESP_FREE(param);
+      free(param);
     }
 
-    ESP_FREE(buf);
+    free(buf);
   }
   const char *resp_str =
     "<html><head><meta charset='utf-8'><meta http-equiv=\"refresh\" content=\"1;url=cfgmqtt\" "
@@ -2817,7 +2670,7 @@ config_web_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
-  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
+  buf = (char *) calloc(1, CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -2829,12 +2682,12 @@ config_web_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
   if (req_buf_len > 1) {
-    req_buf = ESP_MALLOC(req_buf_len);
+    req_buf = malloc(req_buf_len);
     // Copy null terminated value string into buffer
     if (httpd_req_get_hdr_value_str(req, "Host", req_buf, req_buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Host: %s", req_buf);
     }
-    ESP_FREE(req_buf);
+    free(req_buf);
   }
 
   sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "Web server Configuration");
@@ -2866,7 +2719,7 @@ config_web_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  ESP_FREE(buf);
+  free(buf);
 
   return ESP_OK;
 }
@@ -2886,14 +2739,14 @@ do_config_web_get_handler(httpd_req_t *req)
   // extra byte for null termination
   buf_len = httpd_req_get_url_query_len(req) + 1;
   if (buf_len > 1) {
-    buf = ESP_MALLOC(buf_len);
+    buf = malloc(buf_len);
     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
 
       ESP_LOGD(TAG, "Found URL query => %s", buf);
-      char *param = ESP_MALLOC(WEBPAGE_PARAM_SIZE);
+      char *param = malloc(WEBPAGE_PARAM_SIZE);
       if (NULL == param) {
         return ESP_ERR_ESPNOW_NO_MEM;
-        ESP_FREE(param);
+        free(param);
       }
 
       // Enable
@@ -2931,8 +2784,8 @@ do_config_web_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "user", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          ESP_FREE(param);
-          ESP_FREE(buf);
+          free(param);
+          free(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => user=%s", pdecoded);
@@ -2951,8 +2804,8 @@ do_config_web_get_handler(httpd_req_t *req)
       if (ESP_OK == (rv = httpd_query_key_value(buf, "password", param, WEBPAGE_PARAM_SIZE))) {
         char *pdecoded = urlDecode(param);
         if (NULL == pdecoded) {
-          ESP_FREE(param);
-          ESP_FREE(buf);
+          free(param);
+          free(buf);
           return ESP_ERR_ESPNOW_NO_MEM;
         }
         ESP_LOGD(TAG, "Found query parameter => password=%s", pdecoded);
@@ -2972,10 +2825,10 @@ do_config_web_get_handler(httpd_req_t *req)
         ESP_LOGE(TAG, "Failed to commit updates to nvs\n");
       }
 
-      ESP_FREE(param);
+      free(param);
     }
 
-    ESP_FREE(buf);
+    free(buf);
   }
   const char *resp_str =
     "<html><head><meta charset='utf-8'><meta http-equiv=\"refresh\" content=\"1;url=cfgweb\" "
@@ -3001,7 +2854,7 @@ config_log_get_handler(httpd_req_t *req)
   char *req_buf;
   size_t req_buf_len;
 
-  buf = (char *) ESP_CALLOC(1,CHUNK_BUFSIZE);
+  buf = (char *) calloc(1, CHUNK_BUFSIZE);
   if (NULL == buf) {
     return ESP_ERR_NO_MEM;
   }
@@ -3013,12 +2866,12 @@ config_log_get_handler(httpd_req_t *req)
   // extra byte for null termination
   req_buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
   if (req_buf_len > 1) {
-    req_buf = ESP_MALLOC(req_buf_len);
+    req_buf = malloc(req_buf_len);
     // Copy null terminated value string into buffer
     if (httpd_req_get_hdr_value_str(req, "Host", req_buf, req_buf_len) == ESP_OK) {
       ESP_LOGD(TAG, "Found header => Host: %s", req_buf);
     }
-    ESP_FREE(req_buf);
+    free(req_buf);
   }
 
   sprintf(buf, WEBPAGE_START_TEMPLATE, g_persistent.nodeName, "Logging Configuration");
@@ -3027,56 +2880,54 @@ config_log_get_handler(httpd_req_t *req)
   sprintf(buf, "<div><form id=but3 class=\"button\" action='/docfglog' method='get'><fieldset>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf, "<input type=\"checkbox\" id=\"stdout\"name=\"stdout\" value=\"true\" ");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf, "%s><label for=\"stdout\"> Log to stdout</label>", g_persistent.logwrite2Stdout ? "checked" : "");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  // sprintf(buf, "<input type=\"checkbox\" id=\"stdout\"name=\"stdout\" value=\"true\" ");
+  // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  // sprintf(buf, "%s><label for=\"stdout\"> Log to stdout</label>", g_persistent.logwrite2Stdout ? "checked" : "");
+  // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf, "<br /><br />Log to:<select  name=\"type\" ");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf, "<option value=\"0\" %s>none</option>", (ALPHA_LOG_NONE == g_persistent.logType) ? "selected" : "");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf, "<option value=\"1\" %s>stdout</option>", (ALPHA_LOG_STD == g_persistent.logType) ? "selected" : "");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf, "<option value=\"2\" %s>UDP</option>", (ALPHA_LOG_UDP == g_persistent.logType) ? "selected" : "");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf, "<option value=\"3\" %s>TCP</option>", (ALPHA_LOG_TCP == g_persistent.logType) ? "selected" : "");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf, "<option value=\"4\" %s>HTTP</option>", (ALPHA_LOG_HTTP == g_persistent.logType) ? "selected" : "");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf, "<option value=\"5\" %s>MQTT</option>", (ALPHA_LOG_MQTT == g_persistent.logType) ? "selected" : "");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf, "<option value=\"6\" %s>VSCP</option>", (ALPHA_LOG_VSCP == g_persistent.logType) ? "selected" : "");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf, "></select>");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  // sprintf(buf, "<br /><br />Log to:<select  name=\"type\" ");
+  // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  // sprintf(buf, "<option value=\"0\" %s>none</option>", (ALPHA_LOG_NONE == g_persistent.logType) ? "selected" : "");
+  // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  // sprintf(buf, "<option value=\"1\" %s>stdout</option>", (ALPHA_LOG_STD == g_persistent.logType) ? "selected" : "");
+  // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  // sprintf(buf, "<option value=\"2\" %s>UDP</option>", (ALPHA_LOG_UDP == g_persistent.logType) ? "selected" : "");
+  // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  // sprintf(buf, "<option value=\"3\" %s>TCP</option>", (ALPHA_LOG_TCP == g_persistent.logType) ? "selected" : "");
+  // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  // sprintf(buf, "<option value=\"4\" %s>HTTP</option>", (ALPHA_LOG_HTTP == g_persistent.logType) ? "selected" : "");
+  // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  // sprintf(buf, "<option value=\"5\" %s>MQTT</option>", (ALPHA_LOG_MQTT == g_persistent.logType) ? "selected" : "");
+  // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  // sprintf(buf, "<option value=\"6\" %s>VSCP</option>", (ALPHA_LOG_VSCP == g_persistent.logType) ? "selected" : "");
+  // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  // sprintf(buf, "></select>");
+  // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf, "Log level:<select name=\"level\" ");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf, "<option value=\"1\" %s>error</option>", (ESP_LOG_ERROR == g_persistent.logLevel) ? "selected" : "");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf, "<option value=\"2\" %s>warning</option>", (ESP_LOG_WARN == g_persistent.logLevel) ? "selected" : "");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf, "<option value=\"3\" %s>info</option>", (ESP_LOG_INFO == g_persistent.logLevel) ? "selected" : "");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf, "<option value=\"4\" %s>  debug</option>", (ESP_LOG_DEBUG == g_persistent.logLevel) ? "selected" : "");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf, "<option value=\"5\" %s>verbose</option>", (ESP_LOG_VERBOSE == g_persistent.logLevel) ? "selected" : "");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  sprintf(buf, "></select>");
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  // sprintf(buf, "Log level:<select name=\"level\" ");
+  // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  // sprintf(buf, "<option value=\"1\" %s>error</option>", (ESP_LOG_ERROR == g_persistent.logLevel) ? "selected" : "");
+  // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  // sprintf(buf, "<option value=\"2\" %s>warning</option>", (ESP_LOG_WARN == g_persistent.logLevel) ? "selected" : "");
+  // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  // sprintf(buf, "<option value=\"3\" %s>info</option>", (ESP_LOG_INFO == g_persistent.logLevel) ? "selected" : "");
+  // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  // sprintf(buf, "<option value=\"4\" %s>  debug</option>", (ESP_LOG_DEBUG == g_persistent.logLevel) ? "selected" :
+  // ""); httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN); sprintf(buf, "<option value=\"5\"
+  // %s>verbose</option>", (ESP_LOG_VERBOSE == g_persistent.logLevel) ? "selected" : ""); httpd_resp_send_chunk(req,
+  // buf, HTTPD_RESP_USE_STRLEN); sprintf(buf, "></select>"); httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf, "Max retries:<input type=\"text\" name=\"retries\" value=\"%d\" >", g_persistent.logRetries);
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  // sprintf(buf, "Max retries:<input type=\"text\" name=\"retries\" value=\"%d\" >", g_persistent.logRetries);
+  // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf, "Destination (IP Addr):<input type=\"text\" name=\"url\" value=\"%s\" >", g_persistent.logUrl);
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  // sprintf(buf, "Destination (IP Addr):<input type=\"text\" name=\"url\" value=\"%s\" >", g_persistent.logUrl);
+  // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf, "Port:<input type=\"text\" name=\"port\" value=\"%d\" >", g_persistent.logPort);
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  // sprintf(buf, "Port:<input type=\"text\" name=\"port\" value=\"%d\" >", g_persistent.logPort);
+  // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf, "MQTT log Topic:<input type=\"text\" name=\"topic\" value=\"%s\" >", g_persistent.logMqttTopic);
-  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  // sprintf(buf, "MQTT log Topic:<input type=\"text\" name=\"topic\" value=\"%s\" >", g_persistent.logMqttTopic);
+  // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   sprintf(buf, "<button class=\"bgrn bgrn:hover\">Save</button></fieldset></form></div>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
@@ -3086,7 +2937,7 @@ config_log_get_handler(httpd_req_t *req)
 
   httpd_resp_send_chunk(req, NULL, 0);
 
-  ESP_FREE(buf);
+  free(buf);
 
   return ESP_OK;
 }
@@ -3106,132 +2957,132 @@ do_config_log_get_handler(httpd_req_t *req)
   // extra byte for null termination
   buf_len = httpd_req_get_url_query_len(req) + 1;
   if (buf_len > 1) {
-    buf = ESP_MALLOC(buf_len);
+    buf = malloc(buf_len);
     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
 
       ESP_LOGD(TAG, "Found URL query => %s", buf);
-      char *param = ESP_MALLOC(WEBPAGE_PARAM_SIZE);
+      char *param = malloc(WEBPAGE_PARAM_SIZE);
       if (NULL == param) {
         return ESP_ERR_ESPNOW_NO_MEM;
-        ESP_FREE(param);
+        free(param);
       }
 
       // stdout
-      if (ESP_OK == (rv = httpd_query_key_value(buf, "stdout", param, WEBPAGE_PARAM_SIZE))) {
+      // if (ESP_OK == (rv = httpd_query_key_value(buf, "stdout", param, WEBPAGE_PARAM_SIZE))) {
 
-        ESP_LOGD(TAG, "Found query parameter => stdout=%s", param);
+      //   ESP_LOGD(TAG, "Found query parameter => stdout=%s", param);
 
-        if (NULL != strstr(param, "true")) {
-          g_persistent.logwrite2Stdout = 1;
-        }
-        else {
-          g_persistent.logwrite2Stdout = 0;
-        }
-      }
-      else {
-        g_persistent.logwrite2Stdout = 0;
-      }
+      //   if (NULL != strstr(param, "true")) {
+      //     g_persistent.logwrite2Stdout = 1;
+      //   }
+      //   else {
+      //     g_persistent.logwrite2Stdout = 0;
+      //   }
+      // }
+      // else {
+      //   g_persistent.logwrite2Stdout = 0;
+      // }
 
-      rv = nvs_set_u8(g_nvsHandle, "log_stdout", g_persistent.logwrite2Stdout);
-      if (rv != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to update log-stdout");
-      }
+      // rv = nvs_set_u8(g_nvsHandle, "log_stdout", g_persistent.logwrite2Stdout);
+      // if (rv != ESP_OK) {
+      //   ESP_LOGE(TAG, "Failed to update log-stdout");
+      // }
 
       // type
-      if (ESP_OK == (rv = httpd_query_key_value(buf, "type", param, WEBPAGE_PARAM_SIZE))) {
-        ESP_LOGD(TAG, "Found query parameter => type=%s", param);
-        g_persistent.logType = atoi(param);
+      // if (ESP_OK == (rv = httpd_query_key_value(buf, "type", param, WEBPAGE_PARAM_SIZE))) {
+      //   ESP_LOGD(TAG, "Found query parameter => type=%s", param);
+      //   g_persistent.logType = atoi(param);
 
-        rv = nvs_set_u8(g_nvsHandle, "log_type", g_persistent.logType);
-        if (rv != ESP_OK) {
-          ESP_LOGE(TAG, "Failed to update log type");
-        }
-      }
-      else {
-        ESP_LOGE(TAG, "Error getting log type => rv=%d", rv);
-      }
+      //   rv = nvs_set_u8(g_nvsHandle, "log_type", g_persistent.logType);
+      //   if (rv != ESP_OK) {
+      //     ESP_LOGE(TAG, "Failed to update log type");
+      //   }
+      // }
+      // else {
+      //   ESP_LOGE(TAG, "Error getting log type => rv=%d", rv);
+      // }
 
       // level
-      if (ESP_OK == (rv = httpd_query_key_value(buf, "level", param, WEBPAGE_PARAM_SIZE))) {
-        ESP_LOGD(TAG, "Found query parameter => level=%s", param);
-        g_persistent.logLevel = atoi(param);
+      // if (ESP_OK == (rv = httpd_query_key_value(buf, "level", param, WEBPAGE_PARAM_SIZE))) {
+      //   ESP_LOGD(TAG, "Found query parameter => level=%s", param);
+      //   g_persistent.logLevel = atoi(param);
 
-        rv = nvs_set_u8(g_nvsHandle, "log_level", g_persistent.logLevel);
-        if (rv != ESP_OK) {
-          ESP_LOGE(TAG, "Failed to update log level");
-        }
-      }
-      else {
-        ESP_LOGE(TAG, "Error getting log level => rv=%d", rv);
-      }
+      //   rv = nvs_set_u8(g_nvsHandle, "log_level", g_persistent.logLevel);
+      //   if (rv != ESP_OK) {
+      //     ESP_LOGE(TAG, "Failed to update log level");
+      //   }
+      // }
+      // else {
+      //   ESP_LOGE(TAG, "Error getting log level => rv=%d", rv);
+      // }
 
       // retries
-      if (ESP_OK == (rv = httpd_query_key_value(buf, "retries", param, WEBPAGE_PARAM_SIZE))) {
-        ESP_LOGD(TAG, "Found query parameter => retries=%s", param);
-        g_persistent.logRetries = atoi(param);
+      // if (ESP_OK == (rv = httpd_query_key_value(buf, "retries", param, WEBPAGE_PARAM_SIZE))) {
+      //   ESP_LOGD(TAG, "Found query parameter => retries=%s", param);
+      //   g_persistent.logRetries = atoi(param);
 
-        rv = nvs_set_u8(g_nvsHandle, "log_retries", g_persistent.logRetries);
-        if (rv != ESP_OK) {
-          ESP_LOGE(TAG, "Failed to update log retries");
-        }
-      }
-      else {
-        ESP_LOGE(TAG, "Error getting log retries => rv=%d", rv);
-      }
+      //   rv = nvs_set_u8(g_nvsHandle, "log_retries", g_persistent.logRetries);
+      //   if (rv != ESP_OK) {
+      //     ESP_LOGE(TAG, "Failed to update log retries");
+      //   }
+      // }
+      // else {
+      //   ESP_LOGE(TAG, "Error getting log retries => rv=%d", rv);
+      // }
 
       // port
-      if (ESP_OK == (rv = httpd_query_key_value(buf, "port", param, WEBPAGE_PARAM_SIZE))) {
-        ESP_LOGD(TAG, "Found query parameter => port=%s", param);
-        g_persistent.logPort = atoi(param);
+      // if (ESP_OK == (rv = httpd_query_key_value(buf, "port", param, WEBPAGE_PARAM_SIZE))) {
+      //   ESP_LOGD(TAG, "Found query parameter => port=%s", param);
+      //   g_persistent.logPort = atoi(param);
 
-        rv = nvs_set_u8(g_nvsHandle, "log_port", g_persistent.logPort);
-        if (rv != ESP_OK) {
-          ESP_LOGE(TAG, "Failed to update log port");
-        }
-      }
-      else {
-        ESP_LOGE(TAG, "Error getting log port => rv=%d", rv);
-      }
+      //   rv = nvs_set_u8(g_nvsHandle, "log_port", g_persistent.logPort);
+      //   if (rv != ESP_OK) {
+      //     ESP_LOGE(TAG, "Failed to update log port");
+      //   }
+      // }
+      // else {
+      //   ESP_LOGE(TAG, "Error getting log port => rv=%d", rv);
+      // }
 
       // url
-      if (ESP_OK == (rv = httpd_query_key_value(buf, "url", param, WEBPAGE_PARAM_SIZE))) {
-        ESP_LOGD(TAG, "Found query parameter => url=%s", param);
-        strncpy(g_persistent.logUrl, param, sizeof(g_persistent.logUrl));
+      // if (ESP_OK == (rv = httpd_query_key_value(buf, "url", param, WEBPAGE_PARAM_SIZE))) {
+      //   ESP_LOGD(TAG, "Found query parameter => url=%s", param);
+      //   strncpy(g_persistent.logUrl, param, sizeof(g_persistent.logUrl));
 
-        rv = nvs_set_str(g_nvsHandle, "log_url", g_persistent.logUrl);
-        if (rv != ESP_OK) {
-          ESP_LOGE(TAG, "Failed to save log URL");
-        }
-      }
-      else {
-        ESP_LOGE(TAG, "Error getting log port => rv=%d", rv);
-      }
+      //   rv = nvs_set_str(g_nvsHandle, "log_url", g_persistent.logUrl);
+      //   if (rv != ESP_OK) {
+      //     ESP_LOGE(TAG, "Failed to save log URL");
+      //   }
+      // }
+      // else {
+      //   ESP_LOGE(TAG, "Error getting log port => rv=%d", rv);
+      // }
 
       // MQTT topic
-      if (ESP_OK == (rv = httpd_query_key_value(buf, "topic", param, WEBPAGE_PARAM_SIZE))) {
-        char *pdecoded = urlDecode(param);
-        if (NULL == pdecoded) {
-          ESP_FREE(param);
-          ESP_FREE(buf);
-          return ESP_ERR_ESPNOW_NO_MEM;
-        }
-        ESP_LOGD(TAG, "Found query parameter => topic=%s", pdecoded);
-        strncpy(g_persistent.logMqttTopic, pdecoded, sizeof(g_persistent.logMqttTopic));
-        ESP_FREE(pdecoded);
+      // if (ESP_OK == (rv = httpd_query_key_value(buf, "topic", param, WEBPAGE_PARAM_SIZE))) {
+      //   char *pdecoded = urlDecode(param);
+      //   if (NULL == pdecoded) {
+      //     free(param);
+      //     free(buf);
+      //     return ESP_ERR_ESPNOW_NO_MEM;
+      //   }
+      //   ESP_LOGD(TAG, "Found query parameter => topic=%s", pdecoded);
+      //   strncpy(g_persistent.logMqttTopic, pdecoded, sizeof(g_persistent.logMqttTopic));
+      //   free(pdecoded);
 
-        rv = nvs_set_str(g_nvsHandle, "log_mqtt_topic", g_persistent.logMqttTopic);
-        if (rv != ESP_OK) {
-          ESP_LOGE(TAG, "Failed to save log topic");
-        }
-      }
-      else {
-        ESP_LOGE(TAG, "Error getting log topic => rv=%d", rv);
-      }
+      //   rv = nvs_set_str(g_nvsHandle, "log_mqtt_topic", g_persistent.logMqttTopic);
+      //   if (rv != ESP_OK) {
+      //     ESP_LOGE(TAG, "Failed to save log topic");
+      //   }
+      // }
+      // else {
+      //   ESP_LOGE(TAG, "Error getting log topic => rv=%d", rv);
+      // }
 
-      ESP_FREE(param);
+      free(param);
     }
 
-    ESP_FREE(buf);
+    free(buf);
   }
   const char *resp_str =
     "<html><head><meta charset='utf-8'><meta http-equiv=\"refresh\" content=\"1;url=cfglog\" "
@@ -3257,12 +3108,12 @@ do_config_log_get_handler(httpd_req_t *req)
 //   // extra byte for null termination
 //   buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
 //   if (buf_len > 1) {
-//     buf = ESP_MALLOC(buf_len);
+//     buf = malloc(buf_len);
 //     // Copy null terminated value string into buffer
 //     if (httpd_req_get_hdr_value_str(req, "Host", buf, buf_len) == ESP_OK) {
 //       ESP_LOGD(TAG, "Found header => Host: %s", buf);
 //     }
-//     ESP_FREE(buf)
+//     free(buf)
 //   }
 
 //   // Read URL query string length and allocate memory for length + 1,
@@ -3270,7 +3121,7 @@ do_config_log_get_handler(httpd_req_t *req)
 
 //   buf_len = httpd_req_get_url_query_len(req) + 1;
 //   if (buf_len > 1) {
-//     buf = ESP_MALLOC(buf_len);
+//     buf = malloc(buf_len);
 //     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
 //       ESP_LOGD(TAG, "Found URL query => %s", buf);
 //       char param[33];
@@ -3296,7 +3147,7 @@ do_config_log_get_handler(httpd_req_t *req)
 //         // Key 'blr' is not found
 //       }
 //     }
-//     ESP_FREE(buf)
+//     free(buf)
 //   }
 
 //   // httpd_resp_set_hdr(req, "Custom-Header-1", "Custom-Value-1");
@@ -3500,7 +3351,7 @@ default_get_handler(httpd_req_t *req)
     char *auth_credentials = http_auth_basic(CONFIG_APP_DEFAULT_USER, CONFIG_APP_DEFAULT_PASSWORD);
     if (!auth_credentials) {
       ESP_LOGE(TAG, "No enough memory for basic authorization credentials");
-      ESP_FREE(buf);
+      free(buf);
       return ESP_ERR_NO_MEM;
     }
 
@@ -3521,15 +3372,15 @@ default_get_handler(httpd_req_t *req)
       asprintf(&basic_auth_resp, "{\"authenticated\": true,\"user\": \"%s\"}", basic_auth_info->username);
       if (!basic_auth_resp) {
         ESP_LOGE(TAG, "No enough memory for basic authorization response");
-        ESP_FREE(auth_credentials);
-        ESP_FREE(buf)
+        free(auth_credentials);
+        free(buf)
         return ESP_ERR_NO_MEM;
       }
       httpd_resp_send(req, basic_auth_resp, strlen(basic_auth_resp));
-      ESP_FREE(basic_auth_resp); */
+      free(basic_auth_resp); */
     }
-    ESP_FREE(auth_credentials);
-    ESP_FREE(buf);
+    free(auth_credentials);
+    free(buf);
   }
   else {
     ESP_LOGE(TAG, "No auth header received.");

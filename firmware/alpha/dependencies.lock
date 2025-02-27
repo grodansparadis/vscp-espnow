@@ -23,20 +23,6 @@ dependencies:
       registry_url: https://components.espressif.com
       type: service
     version: 0.1.0
-  espressif/esp-now:
-    component_hash: 56f902e978ec0b70528ad30a45265b56bf2b91653d13e0badc78159f39f41ece
-    dependencies:
-    - name: idf
-      require: private
-      version: '>=4.4'
-    - name: espressif/cmake_utilities
-      registry_url: https://components.espressif.com
-      require: private
-      version: 0.*
-    source:
-      registry_url: https://components.espressif.com/
-      type: service
-    version: 2.5.2
   espressif/led_indicator:
     component_hash: daa844acf7886b78fa4ea25c9dd6a4fb3a83f793a307187026be1c237fba632a
     dependencies:
@@ -64,10 +50,9 @@ dependencies:
     version: 5.4.0
 direct_dependencies:
 - espressif/button
-- espressif/esp-now
 - espressif/led_indicator
 - espressif/qrcode
 - idf
-manifest_hash: 0935dc490bb39049a08670eba0b464fcc6bfb9cc1052662d4d6f65500e80aa00
+manifest_hash: f206c5fd7bd1d1e010c13518a09273f1b293ca5dc9ae31b73b53790a3758257d
 target: esp32
 version: 2.0.0

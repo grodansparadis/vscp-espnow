@@ -60,7 +60,7 @@
 #include <string.h>
 #include <sys/param.h>
 
-#include "alpha.h"
+#include "vscp-espnow.h"
 #include <vscp.h>
 
 #include "tcpsrv.h"

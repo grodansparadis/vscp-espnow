@@ -47,7 +47,7 @@
 //#include <vscp-link-protocol.h>
 #include <vscp-firmware-level2.h>
 
-#include "alpha.h"
+#include "vscp-espnow.h"
 
 // ****************************************************************************
 //                        VSCP protocol callbacks
@@ -163,10 +163,10 @@ vscp2_write_guid_cb(const void *pdata, uint8_t pos, uint8_t val)
 int
 vscp2_get_fw_ver_cb(int *major, int *minor, int *patch)
 {
-  const esp_app_desc_t *appDescr = esp_app_get_description();
-  if (3 != sscanf(appDescr->version,"%d.%d.%d", major, minor, patch)) {
-    return VSCP_ERROR_PARSING;
-  }
+  // const esp_app_desc_t *appDescr = esp_app_get_description();
+  // if (3 != sscanf(appDescr->version,"%d.%d.%d", major, minor, patch)) {
+  //   return VSCP_ERROR_PARSING;
+  // }
 
   return VSCP_ERROR_SUCCESS;
 }

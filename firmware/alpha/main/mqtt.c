@@ -51,7 +51,7 @@
 #include <vscp.h>
 #include <vscp-firmware-helper.h>
 
-#include <alpha.h>
+#include "vscp-espnow.h"
 #include "mqtt.h"
 
 // Global stuff
@@ -109,8 +109,8 @@ mqtt_topic_subst(char *newTopic, size_t len, const char *pTopic, const vscpEvent
   int rv;
   char workbuf[48];
 
-  ESP_PARAM_CHECK(newTopic);
-  ESP_PARAM_CHECK(pTopic);
+  // ESP_PARAM_CHECK(newTopic);
+  // ESP_PARAM_CHECK(pTopic);
 
   /*
     {{node}}        - Node name
@@ -145,7 +145,7 @@ mqtt_topic_subst(char *newTopic, size_t len, const char *pTopic, const vscpEvent
   //printf("newtopic=%s\n", newTopic);
   //fflush(stdout);
 
-  char *saveTopic = (char *)ESP_CALLOC(1,len);
+  char *saveTopic = (char *)calloc(1,len);
   if (NULL == saveTopic) {
     return VSCP_ERROR_MEMORY;
   }
@@ -155,9 +155,9 @@ mqtt_topic_subst(char *newTopic, size_t len, const char *pTopic, const vscpEvent
   strncpy(saveTopic, newTopic, MIN(strlen(newTopic), len));
 
   // GUID
-  uint8_t GUID[16];
-  vscp_espnow_get_node_guid(GUID);
-  vscp_fwhlp_writeGuidToString(workbuf, GUID);
+  uint8_t guid[16];
+  vscp_espnow_get_node_guid(guid);
+  vscp_fwhlp_writeGuidToString(workbuf, guid);
   vscp_fwhlp_strsubst(newTopic, len, saveTopic, "{{guid}}", workbuf);
   strcpy(saveTopic, newTopic);
 
@@ -180,7 +180,7 @@ mqtt_topic_subst(char *newTopic, size_t len, const char *pTopic, const vscpEvent
     strcpy(saveTopic, newTopic);
 
     // nickname
-    sprintf(workbuf, "%d", ((GUID[14] << 8) + (GUID[15])));
+    sprintf(workbuf, "%d", ((guid[14] << 8) + (guid[15])));
     vscp_fwhlp_strsubst(newTopic, len, saveTopic, "{{nickname}}", workbuf);
     strcpy(saveTopic, newTopic);
 
@@ -200,7 +200,7 @@ mqtt_topic_subst(char *newTopic, size_t len, const char *pTopic, const vscpEvent
     // strcpy(saveTopic, newTopic);
   }
 
-  ESP_FREE(saveTopic);
+  free(saveTopic);
 
   return VSCP_ERROR_SUCCESS;
 }
@@ -234,14 +234,14 @@ mqtt_send_vscp_event(const char *topic, const vscpEvent *pev)
   }
 
   // We publish VSCP event on JSON form
-  char *pbuf = ESP_MALLOC(MQTT_SUBST_BUF_LEN);
+  char *pbuf = malloc(MQTT_SUBST_BUF_LEN);
   if (NULL == pbuf) {
     ESP_LOGE(TAG, "Unable to allocate JSON buffer for conversion");
     return VSCP_ERROR_MEMORY;
   }
 
   if (VSCP_ERROR_SUCCESS != (rv = vscp_fwhlp_create_json(pbuf, 2048, pev))) {
-    ESP_FREE(pbuf);
+    free(pbuf);
     ESP_LOGE(TAG, "Failed to convert event to JSON rv = %d", rv);
     return rv;
   }
@@ -324,10 +324,10 @@ mqtt_send_vscp_event(const char *topic, const vscpEvent *pev)
   // vscp_fwhlp_strsubst(newTopic, sizeof(newTopic), saveTopic, "{{sindex}}", workbuf);
   // strcpy(saveTopic, newTopic);
 
-  char *newTopic = ESP_CALLOC(1,MQTT_SUBST_BUF_LEN);
+  char *newTopic = malloc(MQTT_SUBST_BUF_LEN);
   if (NULL == newTopic) {
     ESP_LOGE(TAG, "Unable to allocate memory.");
-    ESP_FREE(pbuf);
+    free(pbuf);
     return VSCP_ERROR_MEMORY;
   }
 
@@ -360,8 +360,8 @@ mqtt_send_vscp_event(const char *topic, const vscpEvent *pev)
              esp_mqtt_client_get_outbox_size(g_mqtt_client));
   }
 
-  ESP_FREE(newTopic);
-  ESP_FREE(pbuf);
+  free(newTopic);
+  free(pbuf);
 
   return VSCP_ERROR_SUCCESS;
 }
@@ -374,7 +374,7 @@ int
 mqtt_log(const char *msg)
 {
   char *pbuf = msg;
-  ESP_PARAM_CHECK(msg);
+  //ESP_PARAM_CHECK(msg);
 
   // Noting to do if no message
   if (!strlen(msg)) {
@@ -383,10 +383,10 @@ mqtt_log(const char *msg)
 
   if (strlen(g_persistent.mqttPubLog)) {
 
-    char *newTopic = ESP_CALLOC(1,MQTT_SUBST_BUF_LEN);
+    char *newTopic = malloc(MQTT_SUBST_BUF_LEN);
     if (NULL == newTopic) {
       ESP_LOGE(TAG, "Unable to allocate memory.");
-      ESP_FREE(pbuf);
+      free(pbuf);
       return VSCP_ERROR_MEMORY;
     }
 
@@ -406,7 +406,7 @@ mqtt_log(const char *msg)
                esp_mqtt_client_get_outbox_size(g_mqtt_client));
     }
 
-    ESP_FREE(newTopic);
+    free(newTopic);
   }
 
   

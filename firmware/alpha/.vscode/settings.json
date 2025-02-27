@@ -112,7 +112,10 @@
     "espnow_utils.h": "c",
     "espnow_storage.h": "c",
     "freertos.h": "c",
-    "led_indicator_blink_default.h": "c"
+    "led_indicator_blink_default.h": "c",
+    "typeinfo": "c",
+    "text_encoding": "c",
+    "cstdint": "c"
   },
 
   "idf.espIdfPath": "/home/akhe/development/esp/esp-idf-v5.4",

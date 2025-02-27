@@ -1,7 +1,5 @@
 dependencies:
   espressif/led_indicator: "^0.3.0"
-  esp-now:
-    version: '>=2.5.2'
   espressif/button:
     version: '>=4.0.0'
   idf:
