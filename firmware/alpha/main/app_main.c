@@ -92,12 +92,14 @@
 
 static const char *TAG = "app";
 
-static alpha_node_states_t s_stateNode = ALPHA_STATE_VIRGIN;
+static vscp_espnow_state_t s_stateNode = VSCP_ESPNOW_STATE_VIRGIN;
 
-static uint8_t s_vscp_broadcast_mac[ESP_NOW_ETH_ALEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+// Broadcast mac
+static const uint8_t s_broadcast_mac[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0Xff };
+
 static uint8_t s_addr_self[ESP_NOW_ETH_ALEN]          = { 0 };
 
-#define IS_BROADCAST_ADDR(addr) (memcmp(addr, s_vscp_broadcast_mac, ESP_NOW_ETH_ALEN) == 0)
+#define IS_BROADCAST_ADDR(addr) (memcmp(addr, s_broadcast_mac, ESP_NOW_ETH_ALEN) == 0)
 
 /**
  * Network time syncronization interval
@@ -717,7 +719,7 @@ app_wifi_prov_over_espnow_start_press_cb(void *arg, void *usr_data)
   ESP_LOGI(TAG, "espnow security exchange");
 
   s_timerKeyXChange = app_getMilliSeconds();
-  s_stateNode       = ALPHA_STATE_KEY_EXCHANGE;
+  s_stateNode       = VSCP_ESPNOW_STATE_KEY_EXCHANGE;
 
   // app_prov_responder_init();
   // vscp_espnow_sec_initiator();
@@ -1313,7 +1315,7 @@ app_system_event_handler(void *arg, esp_event_base_t event_base, int32_t event_i
 
       case ESP_HTTPS_OTA_START: {
         ESP_LOGI(TAG, "OTA https start");
-        s_stateNode = ALPHA_STATE_OTA;
+        s_stateNode = VSCP_ESPNOW_STATE_OTA;
         blink_switch_type(s_led_handle_green, BLINK_UPDATING);
       } break;
 
@@ -1343,7 +1345,7 @@ app_system_event_handler(void *arg, esp_event_base_t event_base, int32_t event_i
 
       case ESP_HTTPS_OTA_FINISH: {
         ESP_LOGI(TAG, "OTA https finish");
-        s_stateNode = ALPHA_STATE_IDLE;
+        s_stateNode = VSCP_ESPNOW_STATE_IDLE;
         blink_switch_type(s_led_handle_green, BLINK_CONNECTED);
       } break;
 
@@ -1361,7 +1363,7 @@ app_system_event_handler(void *arg, esp_event_base_t event_base, int32_t event_i
     ESP_LOGI(TAG, "Connected with IP Address: " IPSTR, IP2STR(&event->ip_info.ip));
 
     s_wifi_prov_status = APP_WIFI_PROV_SUCCESS;
-    s_stateNode        = ALPHA_STATE_IDLE;
+    s_stateNode        = VSCP_ESPNOW_STATE_IDLE;
     blink_switch_type(s_led_handle_green, BLINK_CONNECTED);
 
     // Signal main application to continue execution
@@ -1776,7 +1778,7 @@ app_main()
   tzset();
 
   // --------------------------------------------------------------------------
-  //                            ESPNOW
+  //                               ESPNOW
   // --------------------------------------------------------------------------
 
   s_vscp_espnow_queue = xQueueCreate(ESPNOW_QUEUE_SIZE, sizeof(vscp_espnow_event_t));
@@ -1810,15 +1812,28 @@ app_main()
   ex.data[5]    = 6;
 
   uint8_t buf[250];
+
   int size = vscp_espnow_getFrameBufSizeEx(&ex);
   ESP_LOGI(TAG, "Frame buffer size: %d", size);
+
   rv = vscp_espnow_exToFrame(buf, sizeof(buf), &ex);
   if (VSCP_ERROR_SUCCESS != rv) {
-    ESP_LOGE(TAG, "Failed to convert VSCP event to frame");
+    ESP_LOGE(TAG, "Failed to convert VSCP event ex to frame");
   }
   else {
     ESP_LOGI(TAG, "OK");
-    // ESP_LOG_BUFFER_HEXDUMP(TAG, buf, size, ESP_LOG_INFO);
+  }
+
+  ESP_LOGI(TAG, "Pre buf: %d", size);
+  ESP_LOG_BUFFER_HEXDUMP(TAG, buf, size, ESP_LOG_DEBUG);
+
+  rv = vscp_espnow_frameToEx(&ex, buf, size, s_broadcast_mac);
+  ;
+  if (VSCP_ERROR_SUCCESS != rv) {
+    ESP_LOGE(TAG, "Failed to convert VSCP frame to event ex");
+  }
+  else {
+    ESP_LOGI(TAG, "OK");
   }
 
   // --------------------------------------------------------------------------
@@ -1846,63 +1861,64 @@ app_main()
     //   }
     // }
 
-    //     time_sync++;
-    //     if (time_sync > TIME_SYNC_INTERVAL) {
-    //       time_sync      = 0;
-    //       vscpEvent *pev = vscp_fwhlp_newEvent();
-    //       if (NULL == pev) {
-    //         ESP_LOGE(TAG, "Unable to allocate VSCP event");
-    //         continue;
-    //       }
+    time_sync++;
+    if (time_sync > TIME_SYNC_INTERVAL) {
+      time_sync      = 0;
+      vscpEvent *pev = vscp_fwhlp_newEvent();
+      if (NULL == pev) {
+        ESP_LOGE(TAG, "Unable to allocate VSCP event");
+        continue;
+      }
 
-    //       pev->pdata = malloc(8);
-    //       if (NULL == pev->pdata) {
-    //         ESP_LOGE(TAG, "Unable to allocate event data");
-    //         continue;
-    //       }
+      pev->pdata = calloc(1,8);
+      if (NULL == pev->pdata) {
+        ESP_LOGE(TAG, "Unable to allocate event data");
+        vscp_fwhlp_deleteEvent(&pev);
+        continue;
+      }
 
-    // #ifdef __USE_TIME_BITS64
-    //       ESP_LOGE(TAG, "64 bit timer is not supported.");
-    // #endif
+#ifdef __USE_TIME_BITS64
+      ESP_LOGE(TAG, "64 bit timer is not supported.");
+#endif
 
-    //       // We send timesync only if we have fetched time from NTP server
-    //       // if (espnow_timesync_check()) {
-    //       //   time_t now;
-    //       //   char strftime_buf[64];
-    //       //   struct tm timeinfo;
+      // We send timesync only if we have fetched time from NTP server
+      if (0/*espnow_timesync_check()*/) {
+        time_t now;
+        char strftime_buf[64];
+        struct tm timeinfo;
 
-    //       //   time(&now);
+        time(&now);
 
-    //       //   localtime_r(&now, &timeinfo);
-    //       //   strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+        localtime_r(&now, &timeinfo);
+        strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
 
-    //       //   struct timeval tv_now;
-    //       //   gettimeofday(&tv_now, NULL);
-    //       //   int64_t time_us = (int64_t) tv_now.tv_sec * 1000000L + (int64_t) tv_now.tv_usec;
+        struct timeval tv_now;
+        gettimeofday(&tv_now, NULL);
+        int64_t time_us = (int64_t) tv_now.tv_sec * 1000000L + (int64_t) tv_now.tv_usec;
 
-    //       //   ESP_LOGI(TAG, ">>> The current date/time GMT is: %lld %s", tv_now.tv_sec, strftime_buf);
-    //       //   esp_mqtt_client_publish(g_mqtt_client, "esp-now/time", strftime_buf, 0, 0, 0);
+        ESP_LOGI(TAG, ">>> The current date/time GMT is: %lld %s", tv_now.tv_sec, strftime_buf);
+        esp_mqtt_client_publish(g_mqtt_client, "esp-now/time", strftime_buf, 0, 0, 0);
 
-    //       //   pev->vscp_class = VSCP_CLASS1_INFORMATION;
-    //       //   pev->vscp_type  = VSCP_TYPE_INFORMATION_TIME;
-    //       //   pev->sizeData   = 8;
-    //       //   pev->pdata[0]   = 0x00;                           // Index
-    //       //   pev->pdata[1]   = 0xff;                           // Zone
-    //       //   pev->pdata[2]   = 0xff;                           // Sub-Zone
-    //       //   pev->pdata[3]   = timeinfo.tm_hour;               // Hour
-    //       //   pev->pdata[4]   = timeinfo.tm_min;                // Minutes
-    //       //   pev->pdata[5]   = timeinfo.tm_sec;                // Seconds
-    //       //   pev->pdata[6]   = ((time_us / 1000) >> 8) & 0xff; // Milliseconds (MSB)
-    //       //   pev->pdata[7]   = (time_us / 1000) & 0xff;        // Milliseconds (LSB)
-    //       //   pev->timestamp  = esp_timer_get_time();
+        pev->vscp_class = VSCP_CLASS1_INFORMATION;
+        pev->vscp_type  = VSCP_TYPE_INFORMATION_TIME;
+        pev->sizeData   = 8;
+        pev->pdata[0]   = 0x00;                           // Index
+        pev->pdata[1]   = 0xff;                           // Zone
+        pev->pdata[2]   = 0xff;                           // Sub-Zone
+        pev->pdata[3]   = timeinfo.tm_hour;               // Hour
+        pev->pdata[4]   = timeinfo.tm_min;                // Minutes
+        pev->pdata[5]   = timeinfo.tm_sec;                // Seconds
+        pev->pdata[6]   = ((time_us / 1000) >> 8) & 0xff; // Milliseconds (MSB)
+        pev->pdata[7]   = (time_us / 1000) & 0xff;        // Milliseconds (LSB)
+        pev->timestamp  = esp_timer_get_time();
 
-    //       //   vscp_espnow_sendEvent(s_broadcast_mac, pev, true, pdMS_TO_TICKS(1000));
+        vscp_espnow_sendEvent(s_broadcast_mac, pev, pdMS_TO_TICKS(1000));
 
-    //       //   if (NULL != pev) {
-    //       //     vscp_fwhlp_deleteEvent(&pev);
-    //       //   }
-    //       // }
-    //     }
+        if (NULL != pev) {
+          vscp_fwhlp_deleteEvent(&pev);
+        }
+      }
+    }
 
   } // while  (main loop)
 

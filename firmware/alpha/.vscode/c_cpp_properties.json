@@ -3,9 +3,8 @@
         {
             "name": "Linux",
             "includePath": [
-              "${workspaceFolder}/**",
-              "${workspaceFolder}/../common/",
-              "./components/**",
+              "${workspaceFolder}/main/**",
+              "~/development/VSCP/vscp-firmware/common/**",
               "managed_components/**",
               "${IDF_PATH}/components/**",
               "${ESPNOW_PATH}/**",

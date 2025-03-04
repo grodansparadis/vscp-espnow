@@ -25,6 +25,8 @@
   SOFTWARE.
 */
 
+#pragma once
+
 #ifndef __VSCP_ESP_NOW_ALPHA_H__
 #define __VSCP_ESP_NOW_ALPHA_H__
 
@@ -40,27 +42,18 @@
 #define OTA_HASH_LEN 16 // SHA256 hash length in bytes
 #define APP_KEY_LEN  16
 
-#define VSCP_ESPNOW_DEFAULT_CHANNEL 6
-#define VSCP_ESPNOW_DEFAULT_TTL     10
+#define VSCP_ESPNOW_DEFAULT_CHANNEL 6   // Default wifi channel app uses
+#define VSCP_ESPNOW_DEFAULT_TTL     10  // Default hop count
+#define VSCP_ESPNOW_DEFAULT_RSSI    -95 // Default minimum RSSI
 
 #define VSCP_ESPNOW_EVENT_BASE 0x1000
 
 // ----------------------------------------------------------------------------
 
 typedef enum {
-  VSCP_ESPNOW_MODE_HEAVY, // Full mode (Wifi, Websrv, MQTT, VSCP Link etc)
+  VSCP_ESPNOW_MODE_FULL,  // Full mode (Wifi, Websrv, MQTT, VSCP Link etc)
   VSCP_ESPNOW_MODE_LIGHT, // Just esp-now
 } vscp_esp_now_mode_t;
-
-// Ligt node states
-typedef enum {
-  ALPHA_STATE_IDLE,         // Standard working state
-  ALPHA_STATE_VIRGIN,       // Node is uninitialized (needs provisioning)
-  ALPHA_STATE_KEY_EXCHANGE, // sec initiated
-  ALPHA_STATE_PROVISIONING, // Wifi provisioning in progress
-  ALPHA_STATE_OTA,          // OTA update in progress
-  ALPHA_STATE_MAX
-} alpha_node_states_t;
 
 // ----------------------------------------------------------------------------
 
@@ -68,18 +61,15 @@ typedef struct {
 
   // Module
   vscp_esp_now_mode_t mode; // VSCP_ESPNOPW_MODE_HEAVY=provision with web i/f etc,
-  // VSCP_ESPNOW_MODE_LIGHT=esp-now only
-  char nodeName[32]; // Friendly name for node
-  uint8_t key[16];   // Security key (16 bytes)
-  uint8_t encryption; // 0=none, 1=AES128, 2=AES192, 3=AES256
-  uint8_t channel;   // Channel to use (zero is current)
-  uint8_t ttl;       // Time to live for esp-now frames
-  uint8_t rssi;      // Minimum RSSI for received frames
-  uint16_t nickname; // Node nickname
-  uint8_t espnowEncryption; // TODO remove
+                            // VSCP_ESPNOW_MODE_LIGHT=esp-now only
+  char nodeName[32];        // Friendly name for node
+  uint8_t key[16];          // Security key (16 bytes)
+  uint16_t nickname;        // Node nickname
+  uint8_t encryption;       // 0=none, 1=AES128, 2=AES192, 3=AES256
+  uint8_t channel;          // Channel to use (zero is current)
+  uint8_t ttl;              // Time to live for esp-now frames
+  int8_t rssi;              // Minimum RSSI for received frames
 
-  // uint8_t pmk[16];    // Primary key (This key is static and set to VSCP default. Dont change!)
-  // uint8_t lmk[16];    // Local key (This key is static and set to VSCP default)
   uint32_t bootCnt; // Number of restarts (not editable)
 
   // VSCP Link
@@ -127,11 +117,16 @@ typedef struct {
 
 // Node states
 typedef enum {
-  MAIN_STATE_WORK, // Standard working state
-  MAIN_STATE_INIT, // Active state during init until wifi is connected
-  MAIN_STATE_PROV, // Active state during provisioning
-  MAIN_STATE_SET_DEFAULTS
-} vscp_espnow_node_states_t;
+  VSCP_ESPNOW_STATE_IDLE,   // Standard working state
+  VSCP_ESPNOW_STATE_VIRGIN, // Node is uninitialized (needs provisioning)
+  VSCP_ESPNOW_STATE_INIT,   // Active state during init until wifi is connected
+  VSCP_ESPNOW_STATE_SET_DEFAULTS,
+  VSCP_ESPNOW_STATE_KEY_EXCHANGE, // key exchange initiated
+  VSCP_ESPNOW_STATE_PROVISIONING, // Active state during provisioning
+  VSCP_ESPNOW_STATE_OTA,          // OTA update in progress
+  VSCP_ESPNOW_STATE_PROBE,        // Probe for new nodes
+  VSCP_ESPNOW_STATE_MAX
+} vscp_espnow_state_t;
 
 ESP_EVENT_DECLARE_BASE(VSCP_ESPNOW_EVENT); // declaration of the alpha events family
 
@@ -191,32 +186,32 @@ typedef enum {
   The frame vesion (see VSCP over UDP in VSCP specification.)
   https://grodansparadis.github.io/vscp-doc-spec/#/./vscp_over_udp
 */
-#define VSCP_ESPNOW_VERSION 1
+#define VSCP_ESPNOW_VERSION (1)
 
 // Frame id
 
-#define VSCP_ESPNOW_ID_MSB 0x55
-#define VSCP_ESPNOW_ID_LSB 0xAA
+#define VSCP_ESPNOW_ID_MSB (0x55)
+#define VSCP_ESPNOW_ID_LSB (0xAA)
 
 /**
  * @brief Frame positions for data in the VSCP esp-now frame
  */
 
 // Identify as vscp esp-now frame (0x55/0xAA)
-#define VSCP_ESPNOW_POS_ID 0
+#define VSCP_ESPNOW_POS_ID (0)
 
-#define VSCP_ESPNOW_POS_TTL 2 // Number of hops frame can travel
+#define VSCP_ESPNOW_POS_TTL (2) // Number of hops frame can travel
 
 // Sequence counter byte can be used to protect from replay attacks.
 // It is increase by on for each event sent
-#define VSCP_ESPNOW_POS_SEQ 3
+#define VSCP_ESPNOW_POS_SEQ (3)
 
 // 0xab where b = esp-now protocol version and a = type (alpha/beta...)
 // bit 7,6 5,4 - protocol version (1)
 // bit 3,2,1,0 - Encryption (0=none/1=AES128(/2=AES192/3=AES256))
-#define VSCP_ESPNOW_POS_TYPE_VER 4
+#define VSCP_ESPNOW_POS_TYPE_VER (4)
 
-#define VSCP_ESPNOW_POS_HEAD 5 // VSCP head bytes (2)
+#define VSCP_ESPNOW_POS_HEAD (5) // VSCP head bytes (2)
 
 // Time stamp is the time_t from the time() call. Not that
 // time_t can be 65 bits on some systems (__USE_TIME_BITS64)
@@ -246,26 +241,46 @@ typedef enum {
 
 // NOTE! This timestamp is not the same as the event timestamp and
 // is only relevant to vscp-espnow
-#define VSCP_ESPNOW_POS_TIME_STAMP  7  // 4 bytes
-#define VSCP_ESPNOW_POS_VSCP_CLASS  11 // VSCP class (2)
-#define VSCP_ESPNOW_POS_VSCP_TYPE   13 // VSCP Type (2)
-#define VSCP_ESPNOW_POS_VSCP_LENGTH 15 // Data size (1)
-#define VSCP_ESPNOW_POS_DATA        16 // VSCP data (max 217 bytes)
+#define VSCP_ESPNOW_POS_TIME_STAMP  (7)  // 4 bytes
+#define VSCP_ESPNOW_POS_VSCP_CLASS  (11) // VSCP class (2)
+#define VSCP_ESPNOW_POS_VSCP_TYPE   (13) // VSCP Type (2)
+#define VSCP_ESPNOW_POS_VSCP_LENGTH (15) // Data size (1)
+#define VSCP_ESPNOW_POS_DATA        (16) // VSCP data (max 217 bytes)
 // MSB of CRC is at 16 + (len of data)
 // LSB of CRC is at 17 + (len of data)
 
-#define VSCP_ESPNOW_MIN_FRAME                                                                                          \
-  (5 + 13 + 16) // (start (2) + ttl (1) seq (1) + pkt-type (1) vscp + IV (16)). Number of bytes in minimum frame
-                // (encrypted, no data)
+/*!
+  Size of VSCP part of frame (data should be added to this)
+
+  head (2)
+  timestamp (4)
+  vscp class/type (4)
+  data size (1)
+  crc (2)
+*/
+#define VSCP_ESPNOW_VSCP_MIN_FRAME (13)
+
+/*
+  Minimum frame size
+  5 bytes (0xAA 0x55 ttl seq pkt-type) + VSCP_ESPNOW_VSCP_MIN_FRAME (13) + 16 (IV)
+  5 + 13 + 16 = 34
+
+  Final fram has data size and padding
+*/
+#define VSCP_ESPNOW_MIN_FRAME (5 + VSCP_ESPNOW_VSCP_MIN_FRAME + 16)
 
 /*
   Max VSCP data (of possible 512 bytes) that a frame can hold
   VSCP_ESPNOW_MIN_FRAME + 211 = 13 + 211 = 224
   224 % 16 = 0  (Max frame size)
 */
-#define VSCP_ESPNOW_MAX_DATA 211
+#define VSCP_ESPNOW_MAX_DATA (211)
 
-#define VSCP_ESPNOW_ENCRYPTION_LENGTH VSCP_ESPNOW_MIN_FRAME - 5 - 16 // Length of encryption area - padded data size
+/*
+  Encryption length
+  This is the part of the frame that should be encrypted.
+*/
+#define VSCP_ESPNOW_ENCRYPTION_LENGTH (VSCP_ESPNOW_MIN_FRAME - 5 - 16)
 
 /*
   Note on max data size
@@ -276,25 +291,9 @@ typedef enum {
   So left for Droplet data is 250-16-18 = 216 bytes
 */
 
-#define VSCP_ESPNOW_IV_LEN 16
-
-/*
-  The idel state is the normal state a node is in. This is where it does all it's
-  work if it has been initialized.
-
-  Alpha nodes can only be in the idle or one of the SRV states.
-  Beta nodes can be both in one of the SRV states and in one of the CLIENT states and in idle.
-  Gamma nodes can only be in CLIENT state and idle.
-*/
-typedef enum {
-  VSCP_ESPNOW_STATE_VIRGIN, // A node that is uninitialized
-  VSCP_ESPNOW_STATE_IDLE,   // Normal state for all nodes. Initialized.
-  VSCP_ESPNOW_STATE_PROBE,  // Probe in progress (alpha/beta).
-  VSCP_ESPNOW_STATE_OTA,    // OTA in progress.
-} vscp_espnow_state_t;
+#define VSCP_ESPNOW_IV_LEN (16)
 
 // The event queue
-
 typedef enum { VSCP_ESPNOW_SEND, VSCP_ESPNOW_RECV } vscp_espnow_event_id_t;
 
 typedef struct {
@@ -364,14 +363,14 @@ typedef struct {
  *
  */
 typedef struct {
-  uint32_t nSend;          // # sent frames
-  uint32_t nSendFailures;  // Number of send failures
-  uint32_t nSendLock;      // Number of send lock give ups
-  uint32_t nRcv;           // # received frames
-  uint32_t nRcvVSCP;       // # received VSCP frames
-  uint32_t nRcvFrameFault; // Receive frame faults
-  uint32_t nRcvOverruns;   // Number of receive overruns
-  uint32_t nTimeDiffLarge; // Frames skipped with time diff to large
+  uint32_t nSend;             // # sent frames
+  uint32_t nSendFailures;     // Number of send failures
+  uint32_t nSendLock;         // Number of send lock give ups
+  uint32_t nRcv;              // # received frames
+  uint32_t nRcvVSCP;          // # received VSCP frames
+  uint32_t nRcvFrameFailures; // Receive frame failures
+  uint32_t nRcvOverruns;      // Number of receive overruns
+  uint32_t nTimeDiffLarge;    // Frames skipped with time diff to large
 } vscp_espnow_stats_t;
 
 /**
@@ -554,7 +553,7 @@ vscp_espnow_probe(void);
  * @return Return true if GUID is same as ours
  */
 bool
-vscp_espnow_to_me(const uint8_t *pguid);
+vscp_espnow_is_to_me(const uint8_t *pguid);
 
 /**
  * @brief Build full GUID from mac address
@@ -609,6 +608,12 @@ vscp_espnow_getFrameBufSizeEv(const vscpEvent *pev);
  *
  * @param pex Pointer to event ex
  * @return size_t Needed buffer size or zero for error (invalid event pointer).
+ *
+ * Gets the minimum buffer size for a VSCP ex event placed in a frame. This includes
+ * padding to go to a 16 byte boundary for the encrypted part of the frame (vscp-head -. crc).
+ * The total size is
+ *
+ * frame start bytes + vscp-even + vscp-event data + padding to 16 byte boundary + iv (16)
  */
 size_t
 vscp_espnow_getFrameBufSizeEx(const vscpEventEx *pex);

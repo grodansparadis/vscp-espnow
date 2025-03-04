@@ -115,7 +115,9 @@
     "led_indicator_blink_default.h": "c",
     "typeinfo": "c",
     "text_encoding": "c",
-    "cstdint": "c"
+    "cstdint": "c",
+    "hash_map": "c",
+    "format": "c"
   },
 
   "idf.espIdfPath": "/home/akhe/development/esp/esp-idf-v5.4",

@@ -1558,20 +1558,31 @@ config_module_get_handler(httpd_req_t *req)
           g_persistent.nodeName);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  // char *pmkstr = malloc(65);
-  // for (int i = 0; i < sizeof(g_persistent.pmk); i++) {
-  //   sprintf(pmkstr + 2 * i, "%02X", g_persistent.pmk[i]);
-  // }
-  // sprintf(buf,
-  //         "Primay key (32 bytes hex):<input type=\"password\" name=\"key\" maxlength=\"64\" size=\"20\" value=\"%s\"
-  //         >", pmkstr);
-  // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  // free(pmkstr);
+  char *pmkstr = malloc(65);
+  for (int i = 0; i < sizeof(g_persistent.key); i++) {
+    sprintf(pmkstr + 2 * i, "%02X", g_persistent.key[i]);
+  }
+  sprintf(buf,
+          "Primay key (32 bytes hex):<input type=\"password\" name=\"key\" maxlength=\"64\" size=\"20\" value=\"%s\">",
+          pmkstr);
+  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  free(pmkstr);
 
   // sprintf(buf,
-  //         "Startup delay:<input type=\"text\" name=\"strtdly\" value=\"%d\" maxlength=\"2\" size=\"4\">",
+  //         "Startup delay:<input type=\"text\" name=\"mode\" value=\"%d\" maxlength=\"2\" size=\"4\">",
   //         g_persistent.startDelay);
   // httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+
+  // Mode of operation
+  sprintf(buf, "<br />Mode of operation:<select  name=\"mode\" >");
+  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  sprintf(buf, "<option value=\"0\" %s>Full</option>", (VSCP_ESPNOW_MODE_FULL == g_persistent.mode) ? "selected" : "");
+  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  sprintf(buf, "<option value=\"1\" %s>Slim</option>", (VSCP_ESPNOW_MODE_LIGHT == g_persistent.mode) ? "selected" : "");
+  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+
+  sprintf(buf, "</select>");
+  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   sprintf(buf, "<button class=\"bgrn bgrn:hover\">Save</button></fieldset></form></div>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
@@ -1659,8 +1670,6 @@ do_config_module_get_handler(httpd_req_t *req)
       else {
         ESP_LOGE(TAG, "Error getting node_name => rv=%d", rv);
       }
-
-      
 
       rv = nvs_commit(g_nvsHandle);
       if (rv != ESP_OK) {
@@ -1977,29 +1986,27 @@ config_espnow_get_handler(httpd_req_t *req)
   sprintf(buf, "<div><form id=but3 class=\"button\" action='/docfgespnow' method='get'><fieldset>");
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-
-    // Encryption
-    sprintf(buf, "<br />Encryption:<select  name=\"enc\" >");
-    httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-    sprintf(buf,
-            "<option value=\"0\" %s>None</option>",
-            (VSCP_ENCRYPTION_NONE == g_persistent.espnowEncryption) ? "selected" : "");
-    httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-    sprintf(buf,
-            "<option value=\"1\" %s>AES-128</option>",
-            (VSCP_ENCRYPTION_AES128 == g_persistent.espnowEncryption) ? "selected" : "");
-    httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-    sprintf(buf,
-            "<option value=\"2\" %s>AES-192</option>",
-            (VSCP_ENCRYPTION_AES192 == g_persistent.espnowEncryption) ? "selected" : "");
-    httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-    sprintf(buf,
-            "<option value=\"3\" %s>AES-256</option>",
-            (VSCP_ENCRYPTION_AES256 == g_persistent.espnowEncryption) ? "selected" : "");
-    httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-    sprintf(buf, "</select>");
-    httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
-  
+  // Encryption
+  sprintf(buf, "<br />Encryption:<select  name=\"enc\" >");
+  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  sprintf(buf,
+          "<option value=\"0\" %s>None</option>",
+          (VSCP_ENCRYPTION_NONE == g_persistent.encryption) ? "selected" : "");
+  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  sprintf(buf,
+          "<option value=\"1\" %s>AES-128</option>",
+          (VSCP_ENCRYPTION_AES128 == g_persistent.encryption) ? "selected" : "");
+  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  sprintf(buf,
+          "<option value=\"2\" %s>AES-192</option>",
+          (VSCP_ENCRYPTION_AES192 == g_persistent.encryption) ? "selected" : "");
+  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  sprintf(buf,
+          "<option value=\"3\" %s>AES-256</option>",
+          (VSCP_ENCRYPTION_AES256 == g_persistent.encryption) ? "selected" : "");
+  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
+  sprintf(buf, "</select>");
+  httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   sprintf(buf,
           "<br>Use channel (0 is current):<input type=\"text\" name=\"channel\" value=\"%d\" >",
@@ -2009,7 +2016,7 @@ config_espnow_get_handler(httpd_req_t *req)
   sprintf(buf, "<br>Time to live (32):<input type=\"text\" name=\"ttl\" value=\"%d\" >", g_persistent.ttl);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
-  sprintf(buf, "<br>Filter on RSSI (-67):<input type=\"text\" name=\"rssi\" value=\"%d\" >", g_persistent.ttl);
+  sprintf(buf, "<br>Filter on RSSI (-67):<input type=\"text\" name=\"rssi\" value=\"%d\" >", g_persistent.rssi);
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   char *pmkstr = malloc(65);
@@ -2976,7 +2983,7 @@ config_log_get_handler(httpd_req_t *req)
 static esp_err_t
 do_config_log_get_handler(httpd_req_t *req)
 {
-  //esp_err_t rv;
+  // esp_err_t rv;
   char *buf;
   size_t buf_len;
 
