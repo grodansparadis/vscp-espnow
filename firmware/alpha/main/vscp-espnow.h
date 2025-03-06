@@ -113,7 +113,7 @@ typedef struct {
 #define ESPNOW_SIZE_TX_BUF 10  // Size for transmitt buffer
 #define ESPNOW_SIZE_RX_BUF 20  // Size for receive buffer
 #define ESPNOW_MAXDELAY    512 // Ticks to wait for send queue access
-#define ESPNOW_QUEUE_SIZE  6
+#define ESPNOW_QUEUE_SIZE  10  // Size of the send/receive queue
 
 // Node states
 typedef enum {
@@ -302,9 +302,11 @@ typedef struct {
 } vscp_espnow_event_send_info_t;
 
 typedef struct {
+  uint8_t channel; // Channel message was received on
+  uint8_t rssi;    // RSSI for received message
   uint8_t src_addr[ESP_NOW_ETH_ALEN];
   uint8_t *data;
-  int data_len;
+  int size;
 } vscp_espnow_event_rcv_info_t;
 
 typedef union {
@@ -336,7 +338,7 @@ typedef struct {
 
 typedef struct {
   uint8_t node_type; // VSCP_DROPLET_ALPHA / VSCP_DROPLET_BETA / VSCP_DROPLET_GAMMA
-  uint8_t freq;      // Heart beat frequency
+  uint8_t freq;      // Heart beat frequency in seconds
 } vscp_espnow_heart_beat_t;
 
 /**
@@ -399,7 +401,7 @@ typedef struct {
     (a)[26], (a)[27], (a)[28], (a)[29], (a)[30], (a)[31]
 
 #define VSCP_ESPNOW_MSG_CACHE_SIZE      32    // Size for magic cache
-#define VSCP_ESPNOW_HEART_BEAT_INTERVAL 30000 // Milliseconds between heartbeat events (30 seconds)
+#define VSCP_ESPNOW_HEART_BEAT_INTERVAL 10000 // Milliseconds between heartbeat events (30 seconds)
 
 ESP_EVENT_DECLARE_BASE(VSCP_ESPNOW_EVENT); // declaration of the vscp espnow events family
 
@@ -439,15 +441,6 @@ app_getMilliSeconds(void);
 
 bool
 app_get_device_guid(uint8_t *pguid);
-
-/**
- * @brief VSCP event over esp-now receive callback
- *
- * @param pev Pointer to received event.
- * @param userdata Pointer to user data.
- */
-void
-app_receive_cb(const vscpEvent *pev, void *userdata);
 
 /**
  * @fn app_initiate_firmware_upload(const char *url)
@@ -507,9 +500,6 @@ vscp_espnow_timestamp(void);
  * @return esp_err_t
  */
 
-// esp_err_t
-// vscp_espnow_sec_initiator(void);
-
 // ----------------------------------------------------------------------------
 
 /**
@@ -564,6 +554,14 @@ vscp_espnow_is_to_me(const uint8_t *pguid);
 int
 vscp_espnow_get_node_guid(uint8_t *pguid);
 
+/*!
+  Handler for received espnow frame
+  @param prcv Received frame
+  @return VSCP_ERROR_SUCCESS if all is OK. Error code on failure.
+*/
+int
+vscp_espnow_receive_message(const vscp_espnow_event_rcv_info_t *prcv);
+
 /**
  * @fn vscp_espnow_sendEvent
  * @brief  Send event on vscp_espnow network
@@ -572,7 +570,7 @@ vscp_espnow_get_node_guid(uint8_t *pguid);
  *  is sent to all hosts in table.
  * @param pev Event to send
  * @param wait_ms Time in milliseconds to wait for send
- * @return int Error code. VSCP_ERROR_SUCCESS if all is OK.
+ * @return VSCP_ERROR_SUCCESS if all is OK. Error code on failure.
  */
 
 int

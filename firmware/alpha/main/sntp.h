@@ -31,5 +31,12 @@
 #ifndef __VSCP_ESP_SNTP_H__
 #define __VSCP_ESP_SNTP_H__
 
+#define CONFIG_SNTP_TIME_SERVER "pool.ntp.org"
 
-#endif
+/*!
+  Get the current time from the NTP server
+*/
+void
+get_ntp_time(void);
+
+#endif // __VSCP_ESP_SNTP_H__

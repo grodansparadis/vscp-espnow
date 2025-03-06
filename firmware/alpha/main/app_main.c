@@ -28,6 +28,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <dirent.h>
+#include <time.h>
+#include <sys/time.h>
 #include <sys/param.h>
 #include <sys/unistd.h>
 
@@ -84,6 +86,7 @@
 #include "websrv.h"
 #include "mqtt.h"
 #include "tcpsrv.h"
+#include "sntp.h"
 
 #include "vscp-compiler.h"
 #include "vscp-projdefs.h"
@@ -97,7 +100,7 @@ static vscp_espnow_state_t s_stateNode = VSCP_ESPNOW_STATE_VIRGIN;
 // Broadcast mac
 static const uint8_t s_broadcast_mac[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0Xff };
 
-static uint8_t s_addr_self[ESP_NOW_ETH_ALEN]          = { 0 };
+static uint8_t s_addr_self[ESP_NOW_ETH_ALEN] = { 0 };
 
 #define IS_BROADCAST_ADDR(addr) (memcmp(addr, s_broadcast_mac, ESP_NOW_ETH_ALEN) == 0)
 
@@ -798,7 +801,7 @@ app_factory_reset_press_cb(void *arg, void *usr_data)
   // Reset provisioning
   ret = wifi_prov_mgr_reset_provisioning();
   if (ESP_OK != ret) {
-    ESP_LOGE(TAG, "Failed to reset provisioning %X", ret);
+    ESP_LOGE(TAG, "Failed to reset provisioning 0x%X %s", ret, esp_err_to_name(ret));
   }
 
   // Erase all settings
@@ -814,35 +817,12 @@ app_factory_reset_press_cb(void *arg, void *usr_data)
   // Disconnect from wifi
   ret = esp_wifi_disconnect();
   if (ESP_OK != ret) {
-    ESP_LOGE(TAG, "Failed to disconnect from wifi %X", ret);
+    ESP_LOGE(TAG, "Failed to disconnect from wifi 0x%X %s", ret, esp_err_to_name(ret));
   }
 
   // Restart system (set defaults)
   // espnow_reboot(pdMS_TO_TICKS(4000));
   // esp_restart();
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// vscp_espnow_data_cb
-//
-
-static void
-vscp_espnow_data_cb(uint8_t *src_addr, void *data, size_t size, wifi_pkt_rx_ctrl_t *rx_ctrl)
-{
-  esp_err_t ret;
-  uint8_t ch                = 0;
-  wifi_second_chan_t second = WIFI_SECOND_CHAN_NONE;
-  if (ESP_OK != (ret = esp_wifi_get_channel(&ch, &second))) {
-    ESP_LOGE(TAG, "Failed to get wifi channel, rv = %X", ret);
-  }
-
-  ESP_LOGI(TAG,
-           "esp-now data received. len=%zd ch=%d (%d) src=" MACSTR " rssi=%d",
-           size,
-           ch,
-           second,
-           MAC2STR(src_addr),
-           rx_ctrl->rssi);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -947,7 +927,7 @@ readPersistentConfigs(void)
     }
     rv = nvs_set_blob(g_nvsHandle, "key", g_persistent.key, 16);
     if (rv != ESP_OK) {
-      ESP_LOGE(TAG, "Failed to write node key to nvs. rv=%d", rv);
+      ESP_LOGE(TAG, "Failed to write node key to nvs. rv=%d %s", rv, esp_err_to_name(rv));
     }
   }
 
@@ -956,7 +936,7 @@ readPersistentConfigs(void)
   // VSCP Link enable
   rv = nvs_get_u8(g_nvsHandle, "vscp_enable", &val);
   if (rv != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to read 'VSCP link enable' will be set to default. ret=%d", rv);
+    ESP_LOGE(TAG, "Failed to read 'VSCP link enable' will be set to default. ret=%d %s", rv, esp_err_to_name(rv));
     val = (uint8_t) g_persistent.vscplinkEnable;
     rv  = nvs_set_u8(g_nvsHandle, "vscp_enable", g_persistent.vscplinkEnable);
     if (rv != ESP_OK) {
@@ -971,7 +951,7 @@ readPersistentConfigs(void)
   length = sizeof(g_persistent.vscplinkUrl);
   rv     = nvs_get_str(g_nvsHandle, "vscp_url", g_persistent.vscplinkUrl, &length);
   if (rv != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to read 'VSCP link host' will be set to default. ret=%d", rv);
+    ESP_LOGE(TAG, "Failed to read 'VSCP link host' will be set to default. ret=%d %s", rv, esp_err_to_name(rv));
     rv = nvs_set_str(g_nvsHandle, "vscp_url", CONFIG_APP_DEFAULT_USER);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to save VSCP link host");
@@ -991,7 +971,7 @@ readPersistentConfigs(void)
   length = sizeof(g_persistent.vscpLinkKey);
   rv     = nvs_get_blob(g_nvsHandle, "vscp_key", (char *) g_persistent.vscpLinkKey, &length);
   if (rv != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to read 'VSCP link_key' will be set to default. ret=%d", rv);
+    ESP_LOGE(TAG, "Failed to read 'VSCP link_key' will be set to default. ret=%d %s", rv, esp_err_to_name(rv));
     rv = nvs_set_blob(g_nvsHandle, "vscp_key", g_persistent.vscpLinkKey, sizeof(g_persistent.vscpLinkKey));
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to save VSCL link key");
@@ -1002,7 +982,7 @@ readPersistentConfigs(void)
   length = sizeof(g_persistent.vscplinkUsername);
   rv     = nvs_get_str(g_nvsHandle, "vscp_user", g_persistent.vscplinkUsername, &length);
   if (rv != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to read 'VSCP Username' will be set to default. ret=%d", rv);
+    ESP_LOGE(TAG, "Failed to read 'VSCP Username' will be set to default. ret=%d %s", rv, esp_err_to_name(rv));
     rv = nvs_set_str(g_nvsHandle, "vscp_user", CONFIG_APP_DEFAULT_USER);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to save VSCP username");
@@ -1013,7 +993,7 @@ readPersistentConfigs(void)
   length = sizeof(g_persistent.vscplinkPassword);
   rv     = nvs_get_str(g_nvsHandle, "vscp_password", g_persistent.vscplinkPassword, &length);
   if (rv != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to read 'VSCP password' will be set to default. ret=%d", rv);
+    ESP_LOGE(TAG, "Failed to read 'VSCP password' will be set to default. ret=%d %s", rv, esp_err_to_name(rv));
     nvs_set_str(g_nvsHandle, "vscp_password", CONFIG_APP_DEFAULT_PASSWORD);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to save VSCP password");
@@ -1026,7 +1006,7 @@ readPersistentConfigs(void)
   // MQTT enable
   rv = nvs_get_u8(g_nvsHandle, "mqtt_enable", &val);
   if (rv != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to read 'mqtt enable' will be set to default. ret=%d", rv);
+    ESP_LOGE(TAG, "Failed to read 'mqtt enable' will be set to default. ret=%d %s", rv, esp_err_to_name(rv));
     val = (uint8_t) g_persistent.mqttEnable;
     rv  = nvs_set_u8(g_nvsHandle, "mqtt_enable", g_persistent.mqttEnable);
     if (rv != ESP_OK) {
@@ -1041,7 +1021,7 @@ readPersistentConfigs(void)
   length = sizeof(g_persistent.mqttUrl);
   rv     = nvs_get_str(g_nvsHandle, "mqtt_url", g_persistent.mqttUrl, &length);
   if (rv != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to read 'MQTT host' will be set to default. ret=%d", rv);
+    ESP_LOGE(TAG, "Failed to read 'MQTT host' will be set to default. ret=%d %s", rv, esp_err_to_name(rv));
     rv = nvs_set_str(g_nvsHandle, "mqtt_url", g_persistent.mqttUrl);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to save MQTT host");
@@ -1062,7 +1042,7 @@ readPersistentConfigs(void)
   length = sizeof(g_persistent.mqttClientid);
   rv     = nvs_get_str(g_nvsHandle, "mqtt_cid", g_persistent.mqttClientid, &length);
   if (rv != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to read 'MQTT clientid' will be set to default. ret=%d", rv);
+    ESP_LOGE(TAG, "Failed to read 'MQTT clientid' will be set to default. ret=%d %s", rv, esp_err_to_name(rv));
     rv = nvs_set_str(g_nvsHandle, "mqtt_cid", g_persistent.mqttClientid);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to save MQTT clientid");
@@ -1073,7 +1053,7 @@ readPersistentConfigs(void)
   length = sizeof(g_persistent.mqttUsername);
   rv     = nvs_get_str(g_nvsHandle, "mqtt_user", g_persistent.mqttUsername, &length);
   if (rv != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to read 'MQTT user' will be set to default. ret=%d", rv);
+    ESP_LOGE(TAG, "Failed to read 'MQTT user' will be set to default. ret=%d %s", rv, esp_err_to_name(rv));
     rv = nvs_set_str(g_nvsHandle, "mqtt_user", CONFIG_APP_DEFAULT_USER);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to save MQTT username");
@@ -1084,7 +1064,7 @@ readPersistentConfigs(void)
   length = sizeof(g_persistent.mqttPassword);
   rv     = nvs_get_str(g_nvsHandle, "mqtt_password", g_persistent.mqttPassword, &length);
   if (rv != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to read 'MQTT password' will be set to default. ret=%d", rv);
+    ESP_LOGE(TAG, "Failed to read 'MQTT password' will be set to default. ret=%d %s", rv, esp_err_to_name(rv));
     nvs_set_str(g_nvsHandle, "mqtt_password", CONFIG_APP_DEFAULT_PASSWORD);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to save MQTT password");
@@ -1095,7 +1075,7 @@ readPersistentConfigs(void)
   length = sizeof(g_persistent.mqttSub);
   rv     = nvs_get_str(g_nvsHandle, "mqtt_sub", g_persistent.mqttSub, &length);
   if (rv != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to read 'MQTT sub' will be set to default. ret=%d", rv);
+    ESP_LOGE(TAG, "Failed to read 'MQTT sub' will be set to default. ret=%d %s", rv, esp_err_to_name(rv));
     rv = nvs_set_str(g_nvsHandle, "mqtt_sub", g_persistent.mqttSub);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to save MQTT sub");
@@ -1106,7 +1086,7 @@ readPersistentConfigs(void)
   length = sizeof(g_persistent.mqttPub);
   rv     = nvs_get_str(g_nvsHandle, "mqtt_pub", g_persistent.mqttPub, &length);
   if (rv != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to read 'MQTT pub' will be set to default. ret=%d", rv);
+    ESP_LOGE(TAG, "Failed to read 'MQTT pub' will be set to default. ret=%d %s", rv, esp_err_to_name(rv));
     rv = nvs_set_str(g_nvsHandle, "mqtt_pub", g_persistent.mqttPub);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to save MQTT pub");
@@ -1117,7 +1097,7 @@ readPersistentConfigs(void)
   length = sizeof(g_persistent.mqttPubLog);
   rv     = nvs_get_str(g_nvsHandle, "mqtt_pub_log", g_persistent.mqttPubLog, &length);
   if (rv != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to read 'MQTT pub log' will be set to default. ret=%d", rv);
+    ESP_LOGE(TAG, "Failed to read 'MQTT pub log' will be set to default. ret=%d %s", rv, esp_err_to_name(rv));
     rv = nvs_set_str(g_nvsHandle, "mqtt_pub_log", g_persistent.mqttPubLog);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to save MQTT pub log");
@@ -1129,7 +1109,7 @@ readPersistentConfigs(void)
   // WEB enable
   rv = nvs_get_u8(g_nvsHandle, "web_enable", &val);
   if (rv != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to read 'web enable' will be set to default. ret=%d", rv);
+    ESP_LOGE(TAG, "Failed to read 'web enable' will be set to default. ret=%d %s", rv, esp_err_to_name(rv));
     val = (uint8_t) g_persistent.webEnable;
     rv  = nvs_set_u8(g_nvsHandle, "web_enable", g_persistent.webEnable);
     if (rv != ESP_OK) {
@@ -1153,7 +1133,7 @@ readPersistentConfigs(void)
   length = sizeof(g_persistent.webUsername);
   rv     = nvs_get_str(g_nvsHandle, "web_user", g_persistent.webUsername, &length);
   if (rv != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to read 'Web server user' will be set to default. ret=%d", rv);
+    ESP_LOGE(TAG, "Failed to read 'Web server user' will be set to default. ret=%d %s", rv, esp_err_to_name(rv));
     rv = nvs_set_str(g_nvsHandle, "web_user", CONFIG_APP_DEFAULT_USER);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to save Web Server username");
@@ -1164,7 +1144,7 @@ readPersistentConfigs(void)
   length = sizeof(g_persistent.webPassword);
   rv     = nvs_get_str(g_nvsHandle, "web_password", g_persistent.webPassword, &length);
   if (rv != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to read 'Web server password' will be set to default. ret=%d", rv);
+    ESP_LOGE(TAG, "Failed to read 'Web server password' will be set to default. ret=%d %s", rv, esp_err_to_name(rv));
     nvs_set_str(g_nvsHandle, "web_password", CONFIG_APP_DEFAULT_PASSWORD);
     if (rv != ESP_OK) {
       ESP_LOGE(TAG, "Failed to save Web server password");
@@ -1235,7 +1215,7 @@ app_system_event_handler(void *arg, esp_event_base_t event_base, int32_t event_i
         // Save channel to persistent storage
         ret = nvs_set_u8(g_nvsHandle, "channel", g_persistent.channel);
         if (ret != ESP_OK) {
-          ESP_LOGE(TAG, "Failed to update espnow channel %X", ret);
+          ESP_LOGE(TAG, "Failed to update espnow channel 0x%X %s", ret, esp_err_to_name(ret));
         }
         s_sta_connected_flag = true;
         break;
@@ -1462,17 +1442,47 @@ vscp_wifi_init(void)
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));
   ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
-  // ESP_ERROR_CHECK(esp_wifi_set_mode(ESPNOW_WIFI_MODE));
-  esp_wifi_set_mode(WIFI_MODE_STA);
+
+  // Set station mode
+  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+
+  // Start wifi
   ESP_ERROR_CHECK(esp_wifi_start());
-  g_persistent.channel = 0;
-  err                  = esp_wifi_set_channel(g_persistent.channel, WIFI_SECOND_CHAN_NONE);
+
+  // Set wifi channel (0 == current)
+  err = esp_wifi_set_channel(0, WIFI_SECOND_CHAN_NONE);
   if (err != ESP_OK) {
     ESP_LOGW(TAG, "esp_event_loop_create_default() failed: %s", esp_err_to_name(err));
   }
 
-  ESP_ERROR_CHECK(esp_wifi_set_protocol(ESP_IF_WIFI_STA,
-                                        WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N | WIFI_PROTOCOL_LR));
+  // Set long range
+  ESP_ERROR_CHECK(
+    esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N | WIFI_PROTOCOL_LR));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// app_espnow_recv_cb
+//
+
+static void
+example_espnow_send_cb(const uint8_t *mac_addr, esp_now_send_status_t status)
+{
+  // example_espnow_event_t evt;
+  // example_espnow_event_send_cb_t *send_cb = &evt.info.send_cb;
+
+  if (mac_addr == NULL) {
+    ESP_LOGE(TAG, "Send cb arg error");
+    return;
+  }
+
+  ESP_LOGI(TAG, "Sent data to " MACSTR ", status: %d", MAC2STR(mac_addr), status);
+
+  // evt.id = EXAMPLE_ESPNOW_SEND_CB;
+  // memcpy(send_cb->mac_addr, mac_addr, ESP_NOW_ETH_ALEN);
+  // send_cb->status = status;
+  // if (xQueueSend(s_example_espnow_queue, &evt, ESPNOW_MAXDELAY) != pdTRUE) {
+  //   ESP_LOGW(TAG, "Send send queue fail");
+  // }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1492,17 +1502,30 @@ app_espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *data, in
     return;
   }
 
-  ESP_LOGD(TAG, "Receive packet from: " MACSTR ", len: %d", MAC2STR(src_addr), len);
-  ESP_LOGD(TAG, "Channel: %d, RSSI=%d", recv_info->rx_ctrl->channel, recv_info->rx_ctrl->rssi);
+  ESP_LOGD(TAG,
+           "Receive packet [%02x:%02x:%02x:%02x] len=%d from: " MACSTR ", [%s] len: %d Channel: %d, RSSI=%d",
+           len > 0 ? data[0] : 0,
+           len > 1 ? data[1] : 0,
+           len > 2 ? data[2] : 0,
+           len > 3 ? data[3] : 0,
+           len,
+           MAC2STR(src_addr),
+           IS_BROADCAST_ADDR(dest_addr) ? "Broadcast" : "Unicast",
+           len,
+           recv_info->rx_ctrl->channel,
+           recv_info->rx_ctrl->rssi);
 
-  if (IS_BROADCAST_ADDR(dest_addr)) {
-    ESP_LOGD(TAG, "Receive broadcast ESPNOW data");
-  }
-  else {
-    ESP_LOGD(TAG, "Receive unicast ESPNOW data");
+  ESP_LOG_BUFFER_HEXDUMP(TAG, data, len, ESP_LOG_VERBOSE);
+
+  // Check that len is resonable and that package id is correct
+  if (len < VSCP_ESPNOW_MIN_FRAME || (0x55 != data[0]) || (0xAA != data[1])) {
+    ESP_LOGI(TAG, "Receive unknown frame - we skip it, len=%d  Frame id: %02X %02X", len, data[0], data[1]);
+    return;
   }
 
-  evt.id = VSCP_ESPNOW_RECV;
+  evt.id             = VSCP_ESPNOW_RECV;
+  prcv_info->channel = recv_info->rx_ctrl->channel;
+  prcv_info->rssi    = recv_info->rx_ctrl->rssi;
   memcpy(prcv_info->src_addr, src_addr, ESP_NOW_ETH_ALEN);
   prcv_info->data = malloc(len);
   if (prcv_info->data == NULL) {
@@ -1510,20 +1533,23 @@ app_espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *data, in
     return;
   }
 
+  // Add data
   memcpy(prcv_info->data, data, len);
-  prcv_info->data_len = len;
+  prcv_info->size = len;
+
+  // Put on queue
   if (pdTRUE != xQueueSend(s_vscp_espnow_queue, &evt, ESPNOW_MAXDELAY)) {
-    ESP_LOGW(TAG, "Send receive queue fail");
+    ESP_LOGW(TAG, "Receive queue fail");
     free(prcv_info->data);
   }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// vscp_espnow_task
+// app_transmission_task
 //
 
 static void
-vscp_espnow_task(void *pParam)
+app_transmission_task(void *pParam)
 {
   vscp_espnow_event_t evt;
   uint8_t recv_state  = 0;
@@ -1545,6 +1571,8 @@ vscp_espnow_task(void *pParam)
   while (xQueueReceive(s_vscp_espnow_queue, &evt, portMAX_DELAY) == pdTRUE) {
 
     switch (evt.id) {
+
+      // Sending pending event
       case VSCP_ESPNOW_SEND: {
         vscp_espnow_event_send_info_t *send_cb = &evt.info.send;
         is_broadcast                           = IS_BROADCAST_ADDR(send_cb->dest_addr);
@@ -1556,12 +1584,15 @@ vscp_espnow_task(void *pParam)
         }
       } break;
 
+      // Handle received data
       case VSCP_ESPNOW_RECV: {
         vscp_espnow_event_rcv_info_t *prcv = &evt.info.rcv;
+        int rv                             = vscp_espnow_receive_message(&evt.info.rcv);
+        free(evt.info.rcv.data);
       } break;
 
       default:
-        ESP_LOGE(TAG, "Callback type error: %d", evt.id);
+        ESP_LOGE(TAG, "Callback type error: %d %s", evt.id, esp_err_to_name(evt.id));
         break;
 
     } // switch
@@ -1632,9 +1663,6 @@ app_main()
 
   // Setup and start wifi
   vscp_wifi_init();
-
-  // Init VSCP espnow subsystem
-  vscp_espnow_init();
 
   // --------------------------------------------------------------------------
 
@@ -1729,16 +1757,6 @@ app_main()
 
   // -------------------------------------------------------------------------------
 
-  // Setup VSCP esp-now
-
-  // espnow_set_config_for_data_type(ESPNOW_DATA_TYPE_DATA, true, vscp_espnow_data_cb);
-  // if (ESP_OK != ret) {
-  //   ESP_LOGE(TAG, "Failed to set VSCP event callback");
-  // }
-
-  // Start heartbeat task vscp_heartbeat_task
-  // xTaskCreate(&vscp_espnow_heartbeat_task, "vscp_hb", 1024 * 3, NULL, 1, NULL);
-
   // Start web server
   httpd_handle_t h_webserver;
   if (g_persistent.webEnable) {
@@ -1787,14 +1805,12 @@ app_main()
     // return ESP_FAIL;
   }
 
-  esp_now_init();
-
-  uint32_t espnowver;
-  esp_now_get_version(&espnowver);
-  ESP_LOGI(TAG, "ESP-NOW version: %lu", espnowver);
+  // Init VSCP espnow subsystem
+  vscp_espnow_init();
 
   // Register receive callback
-  // esp_now_register_recv_cb(app_espnow_recv_cb);
+  esp_now_register_recv_cb(app_espnow_recv_cb);
+  esp_now_register_send_cb(example_espnow_send_cb);
 
   // Frame and encryption test code
   vscpEventEx ex;
@@ -1836,6 +1852,29 @@ app_main()
     ESP_LOGI(TAG, "OK");
   }
 
+  time_t now;
+  struct tm timeinfo;
+  time(&now);
+  localtime_r(&now, &timeinfo);
+
+  // Get time from NTP server
+  get_ntp_time();
+
+  // update 'now' variable with current time
+  time(&now);
+
+  char strftime_buf[64];
+  setenv("TZ", "GMT", 1);
+  tzset();
+  localtime_r(&now, &timeinfo);
+  strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+  ESP_LOGI(TAG, "The current date/time GMT is: %s", strftime_buf);
+
+  ESP_LOGI(TAG, "Channel: %d", g_persistent.channel);
+
+  // Start the transmission task
+  xTaskCreate(&app_transmission_task, "espnow_task", 8192, NULL, 5, NULL);
+
   // --------------------------------------------------------------------------
   //                            Main loop
   // --------------------------------------------------------------------------
@@ -1870,7 +1909,7 @@ app_main()
         continue;
       }
 
-      pev->pdata = calloc(1,8);
+      pev->pdata = calloc(1, 8);
       if (NULL == pev->pdata) {
         ESP_LOGE(TAG, "Unable to allocate event data");
         vscp_fwhlp_deleteEvent(&pev);
@@ -1882,7 +1921,7 @@ app_main()
 #endif
 
       // We send timesync only if we have fetched time from NTP server
-      if (0/*espnow_timesync_check()*/) {
+      if (0 /*espnow_timesync_check()*/) {
         time_t now;
         char strftime_buf[64];
         struct tm timeinfo;
