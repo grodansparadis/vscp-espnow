@@ -44,6 +44,12 @@
 #define __BROADCAST_BLOOM_FILTER_H__
 
 /*!
+
+*/
+uint32_t
+murmurhash3(const void *key, size_t len, uint32_t seed);
+
+/*!
  * \brief Compute the hash of a bloom filter.
  * \param p Pointer to data to hash.
  * \param len Length of data to hash.
@@ -77,6 +83,6 @@ bloom_check(uint32_t hash);
  * \return true if the message was forwarded, false otherwise.
  */
 bool
-forward_message(const uint8_t *pdate, uint8_t len, int ttl);
+bloom_forward_message(const uint8_t *pdate, uint8_t len, int ttl);
 
 #endif

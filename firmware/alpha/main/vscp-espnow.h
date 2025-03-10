@@ -401,7 +401,7 @@ typedef struct {
     (a)[26], (a)[27], (a)[28], (a)[29], (a)[30], (a)[31]
 
 #define VSCP_ESPNOW_MSG_CACHE_SIZE      32    // Size for magic cache
-#define VSCP_ESPNOW_HEART_BEAT_INTERVAL 10000 // Milliseconds between heartbeat events (30 seconds)
+#define VSCP_ESPNOW_HEART_BEAT_INTERVAL 30000 // Milliseconds between heartbeat events (30 seconds)
 
 ESP_EVENT_DECLARE_BASE(VSCP_ESPNOW_EVENT); // declaration of the vscp espnow events family
 
@@ -414,6 +414,9 @@ typedef void (*vscp_event_handler_cb_t)(const vscpEvent *pev, void *userdata);
 typedef void (*vscp_espnow_attach_network_handler_cb_t)(wifi_pkt_rx_ctrl_t *prxdata, void *userdata);
 
 // ----------------------------------------------------------------------------
+
+uint16_t
+vscp_espnow_calculate_msg_checksum(const uint8_t *msg, uint8_t len);
 
 /**
  * @brief Read processor on chip temperature

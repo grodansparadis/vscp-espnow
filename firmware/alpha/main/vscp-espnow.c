@@ -202,7 +202,7 @@ static vscp_espnow_attach_network_handler_cb_t s_vscp_espnow_attach_network_hand
 // create fifo of uint16_t values
 #define FIFO_SIZE 100
 typedef struct {
-  uint8_t buf[FIFO_SIZE];
+  uint32_t buf[FIFO_SIZE];
   uint8_t head;
   uint8_t tail;
 } fifo_t;
@@ -237,7 +237,7 @@ static fifo_t s_fifo_resend_scan;
 
 // check if value is in fifo
 bool
-fifo_contains(fifo_t *fifo, uint8_t value)
+fifo_contains(fifo_t *fifo, uint32_t value)
 {
   for (int i = fifo->tail; i != fifo->head; i = (i + 1) & (FIFO_SIZE - 1)) {
     if (fifo->buf[i] == value) {
@@ -250,7 +250,7 @@ fifo_contains(fifo_t *fifo, uint8_t value)
 
 // Add value to fifo and remove oldest if fifo is full
 void
-fifo_add(fifo_t *fifo, uint8_t value)
+fifo_add(fifo_t *fifo, uint32_t value)
 {
   if (fifo_full((*fifo))) {
     fifo_pop((*fifo), value);
@@ -261,7 +261,7 @@ fifo_add(fifo_t *fifo, uint8_t value)
 
 // Get oldets value from fifo
 void
-fifo_get_oldest(fifo_t *fifo, uint8_t *value)
+fifo_get_oldest(fifo_t *fifo, uint32_t *value)
 {
   fifo_pop((*fifo), *value);
 }
@@ -888,9 +888,10 @@ vscp_espnow_frameToEx(vscpEventEx *pex, const uint8_t *buf, uint8_t len, const u
 // vscp_espnow_calculate_msg_checksum
 //
 
-static uint16_t
+uint16_t
 vscp_espnow_calculate_msg_checksum(const uint8_t *msg, uint8_t len)
 {
+  uint32_t ttt = murmurhash3(msg,len,5381);
   uint16_t checksum = 0;
   for (int i = VSCP_ESPNOW_POS_TYPE_VER; i < len; i++) {
     checksum += msg[i];
@@ -918,27 +919,28 @@ vscp_espnow_receive_message(const vscp_espnow_event_rcv_info_t *prcv)
 
    */
 
-  // uint16_t checksum =
-  //   vscp_espnow_calculate_msg_checksum(prcv->data + VSCP_ESPNOW_POS_TYPE_VER, prcv->size - VSCP_ESPNOW_POS_TYPE_VER);
-  // if (fifo_contains(&s_fifo_resend_scan, checksum)) {
-  //   ESP_LOGI(TAG, "Message already seen, we ignore it");
-  //   return VSCP_ERROR_SUCCESS;
-  // }
-
-  // // We have not seen this message - Add checksum to fifo
-  // fifo_add(&s_fifo_resend_scan, checksum);
-
-  prcv->data[VSCP_ESPNOW_POS_TTL]--;
-
-  // If we have seen this message before we don't forward it
-  if (!forward_message(prcv->data, prcv->size, prcv->data[VSCP_ESPNOW_POS_TTL])) {
+  uint32_t checksum =
+    vscp_espnow_calculate_msg_checksum(prcv->data + VSCP_ESPNOW_POS_TYPE_VER, prcv->size - VSCP_ESPNOW_POS_TYPE_VER);
+  if (fifo_contains(&s_fifo_resend_scan, checksum)) {
     ESP_LOGI(TAG, "Message already seen, we ignore it");
     return VSCP_ERROR_SUCCESS;
   }
 
+  // We have not seen this message - Add checksum to fifo
+  fifo_add(&s_fifo_resend_scan, checksum);
+
+  prcv->data[VSCP_ESPNOW_POS_TTL]--;
+
+  // If we have seen this message before we don't forward it
+  // if (!bloom_forward_message(prcv->data + VSCP_ESPNOW_POS_TYPE_VER, prcv->size - VSCP_ESPNOW_POS_TYPE_VER, 3)) {
+  //   ESP_LOGI(TAG, ">>>>>> Message already seen, we ignore it");
+  //   //return VSCP_ERROR_SUCCESS;
+  // }
+
   // Resend if there is hops left
-  if (prcv->data[2] > 0) {
-    ESP_LOGI(TAG, "Resending message - hops left=%d", prcv->data[2]);
+  if (prcv->data[VSCP_ESPNOW_POS_TTL] > 0) {
+
+    ESP_LOGI(TAG, "Resending message from " MACSTR "- hops left=%d", MAC2STR((prcv->src_addr)), prcv->data[VSCP_ESPNOW_POS_TTL]);
     esp_err_t ret = esp_now_send(s_broadcast_mac, prcv->data, prcv->size);
     if (ESP_OK != ret) {
 
@@ -961,9 +963,10 @@ vscp_espnow_receive_message(const vscp_espnow_event_rcv_info_t *prcv)
     }
 
     // Add to seen messages
-    uint16_t checksum =
+    uint32_t checksum =
       vscp_espnow_calculate_msg_checksum(prcv->data + VSCP_ESPNOW_POS_TYPE_VER, prcv->size - VSCP_ESPNOW_POS_TYPE_VER);
     fifo_add(&s_fifo_resend_scan, checksum);
+    // bloom_forward_message(prcv->data + VSCP_ESPNOW_POS_TYPE_VER, prcv->size - VSCP_ESPNOW_POS_TYPE_VER, 3);
   }
 
   // Handle the event
@@ -1052,10 +1055,11 @@ vscp_espnow_sendEvent(const uint8_t *destAddr, const vscpEvent *pev, uint32_t wa
   }
 
   // Add to seen messages
-  forward_message(pbuf, len, pbuf[VSCP_ESPNOW_POS_TTL]);
-  // uint16_t checksum =
-  //   vscp_espnow_calculate_msg_checksum(pbuf + VSCP_ESPNOW_POS_TYPE_VER, len - VSCP_ESPNOW_POS_TYPE_VER);
-  // fifo_add(&s_fifo_resend_scan, checksum);
+  // forward_message(pbuf+VSCP_ESPNOW_POS_TYPE_VER, len-VSCP_ESPNOW_POS_TYPE_VER, pbuf[VSCP_ESPNOW_POS_TTL]);
+  uint32_t checksum =
+    vscp_espnow_calculate_msg_checksum(pbuf + VSCP_ESPNOW_POS_TYPE_VER, len - VSCP_ESPNOW_POS_TYPE_VER);
+  fifo_add(&s_fifo_resend_scan, checksum);
+  // bloom_forward_message(pbuf + VSCP_ESPNOW_POS_TYPE_VER, len - VSCP_ESPNOW_POS_TYPE_VER, 3);
 
   rv = VSCP_ERROR_SUCCESS;
 
@@ -1131,10 +1135,10 @@ vscp_espnow_sendEventEx(const uint8_t *destAddr, const vscpEventEx *pex, uint32_
   }
 
   // Add to seen messages
-  forward_message(pbuf, len, pbuf[VSCP_ESPNOW_POS_TTL]);
-  // uint16_t checksum =
-  //   vscp_espnow_calculate_msg_checksum(pbuf + VSCP_ESPNOW_POS_TYPE_VER, len - VSCP_ESPNOW_POS_TYPE_VER);
-  // fifo_add(&s_fifo_resend_scan, checksum);
+  // forward_message(pbuf+VSCP_ESPNOW_POS_TYPE_VER, len-VSCP_ESPNOW_POS_TYPE_VER, pbuf[VSCP_ESPNOW_POS_TTL]);
+  uint32_t checksum =
+    vscp_espnow_calculate_msg_checksum(pbuf + VSCP_ESPNOW_POS_TYPE_VER, len - VSCP_ESPNOW_POS_TYPE_VER);
+  fifo_add(&s_fifo_resend_scan, checksum);
 
   rv = VSCP_ERROR_SUCCESS;
 

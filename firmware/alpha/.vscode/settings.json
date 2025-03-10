@@ -1,7 +1,7 @@
 {
   "idf.adapterTargetName": "esp32",
   "idf.flashType": "UART",
-  "idf.port": "/dev/ttyUSB1",
+  "idf.port": "/dev/ttyUSB0",
   "esp32.port": "-p ${config:idf.port}",
   // Use board or interface as needed for openocd functionality
   "esp32.openocd.board":"esp32c3-builtin.cfg",

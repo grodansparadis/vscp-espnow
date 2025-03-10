@@ -65,6 +65,7 @@
 
 #include "esp_now.h"
 
+#include "broadcast-bloom-filter.h"
 #include <mqtt_client.h>
 
 #include <iot_button.h>
@@ -246,8 +247,8 @@ app_getMilliSeconds(void)
 bool
 app_get_device_guid(uint8_t *pguid)
 {
-  esp_err_t rv;
-  size_t length = 16;
+  // esp_err_t rv;
+  // size_t length = 16;
 
   // Check pointer
   if (NULL == pguid) {
@@ -1588,6 +1589,9 @@ app_transmission_task(void *pParam)
       case VSCP_ESPNOW_RECV: {
         vscp_espnow_event_rcv_info_t *prcv = &evt.info.rcv;
         int rv                             = vscp_espnow_receive_message(&evt.info.rcv);
+        if (VSCP_ERROR_SUCCESS != rv) {
+          ESP_LOGE(TAG, "Failed to handle received data err=%d", rv);
+        }
         free(evt.info.rcv.data);
       } break;
 
@@ -1871,6 +1875,32 @@ app_main()
   ESP_LOGI(TAG, "The current date/time GMT is: %s", strftime_buf);
 
   ESP_LOGI(TAG, "Channel: %d", g_persistent.channel);
+
+  // while (1) {
+
+  //   // calculate checksum
+  //   uint16_t checksum =
+  //     vscp_espnow_calculate_msg_checksum(buf + VSCP_ESPNOW_POS_TYPE_VER, size - VSCP_ESPNOW_POS_TYPE_VER);
+
+  //   // If we have seen this message before we don't forward it
+  //   if (!forward_message(buf + VSCP_ESPNOW_POS_TYPE_VER, size - VSCP_ESPNOW_POS_TYPE_VER, buf[VSCP_ESPNOW_POS_TTL])) {
+  //     ESP_LOGI(TAG, "Message already seen, we ignore it %04X", checksum);
+  //   }
+  //   else {
+  //     ESP_LOGI(TAG, "Message sent %04X", checksum);
+  //   }
+
+  //   time(&now);
+
+  //   char strftime_buf[64];
+  //   setenv("TZ", "GMT", 1);
+  //   tzset();
+  //   localtime_r(&now, &timeinfo);
+  //   strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+  //   ESP_LOGI(TAG, "The current date/time GMT is: %s", strftime_buf);
+
+  //   vTaskDelay(1000 / portTICK_PERIOD_MS);
+  // }
 
   // Start the transmission task
   xTaskCreate(&app_transmission_task, "espnow_task", 8192, NULL, 5, NULL);
