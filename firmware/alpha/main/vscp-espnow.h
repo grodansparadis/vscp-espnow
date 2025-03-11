@@ -233,8 +233,14 @@ typedef enum {
   7 	    12				CLASS LSB
   8 	    13				TYPE MSB
   9  	    14				TYPE LSB
-  10      15        len data
-  11-n 	  16				data ... limited to max 217 bytes
+  10      15        Source address (mac) MSB
+  11      16        Source address (mac)
+  12      16        Source address (mac)
+  13      16        Source address (mac)
+  14      16        Source address (mac)
+  15      16        Source address (mac) LSB
+  16      15        len data
+  17-n 	  16				data ... limited to max 217 bytes
   len-2 	16 + len	CRC MSB (Calculated on HEAD + CLASS + TYPE + ADDRESS + SIZE + DATA…)
   len-1 	17 + len	CRC LSB
 */
@@ -244,10 +250,12 @@ typedef enum {
 #define VSCP_ESPNOW_POS_TIME_STAMP  (7)  // 4 bytes
 #define VSCP_ESPNOW_POS_VSCP_CLASS  (11) // VSCP class (2)
 #define VSCP_ESPNOW_POS_VSCP_TYPE   (13) // VSCP Type (2)
-#define VSCP_ESPNOW_POS_VSCP_LENGTH (15) // Data size (1)
-#define VSCP_ESPNOW_POS_DATA        (16) // VSCP data (max 217 bytes)
-// MSB of CRC is at 16 + (len of data)
-// LSB of CRC is at 17 + (len of data)
+#define VSCP_ESPNOW_POS_SRC_ADDR    (15) // Source address (6)
+#define VSCP_ESPNOW_POS_NICKNAME    (21) // Source address (2)
+#define VSCP_ESPNOW_POS_VSCP_LENGTH (23) // Data size (1)
+#define VSCP_ESPNOW_POS_DATA        (24) // VSCP data (max 217 bytes)
+// MSB of CRC is at 23 + (len of data)
+// LSB of CRC is at 24 + (len of data)
 
 /*!
   Size of VSCP part of frame (data should be added to this)
@@ -255,15 +263,17 @@ typedef enum {
   head (2)
   timestamp (4)
   vscp class/type (4)
+  source address (mac) (6)
+  nickname (2)
   data size (1)
   crc (2)
 */
-#define VSCP_ESPNOW_VSCP_MIN_FRAME (13)
+#define VSCP_ESPNOW_VSCP_MIN_FRAME (21)
 
 /*
   Minimum frame size
-  5 bytes (0xAA 0x55 ttl seq pkt-type) + VSCP_ESPNOW_VSCP_MIN_FRAME (13) + 16 (IV)
-  5 + 13 + 16 = 34
+  5 bytes (0xAA 0x55 ttl seq pkt-type) + VSCP_ESPNOW_VSCP_MIN_FRAME (21) + 16 (IV)
+  5 + 21 + 16 = 36
 
   Final fram has data size and padding
 */
@@ -271,10 +281,11 @@ typedef enum {
 
 /*
   Max VSCP data (of possible 512 bytes) that a frame can hold
-  VSCP_ESPNOW_MIN_FRAME + 211 = 13 + 211 = 224
-  224 % 16 = 0  (Max frame size)
+  VSCP_ESPNOW_MIN_FRAME + 211 = 21 + 203 = 224
+  Must be a multiple of 16
+  203 % 16 = 0  (Max frame size)
 */
-#define VSCP_ESPNOW_MAX_DATA (211)
+#define VSCP_ESPNOW_MAX_DATA (205)
 
 /*
   Encryption length
@@ -282,15 +293,7 @@ typedef enum {
 */
 #define VSCP_ESPNOW_ENCRYPTION_LENGTH (VSCP_ESPNOW_MIN_FRAME - 5 - 16)
 
-/*
-  Note on max data size
-  ---------------------
-  An esp-now frame can hold a payload of max 250 bytes
-  IV is 16 bytes
-  VSCP frame data is 18 -bytes
-  So left for Droplet data is 250-16-18 = 216 bytes
-*/
-
+// IV length
 #define VSCP_ESPNOW_IV_LEN (16)
 
 // The event queue

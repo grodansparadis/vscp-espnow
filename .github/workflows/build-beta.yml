@@ -12,7 +12,7 @@ jobs:
 
     steps:
     - name: Checkout repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: 'recursive'
   
@@ -23,7 +23,7 @@ jobs:
         target: esp32
         path: './firmware/beta/'
     
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: vscp_espnow_beta.bin
         path: ./firmware/beta/build/vscp_espnow_beta.bin

@@ -1503,8 +1503,8 @@ app_espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *data, in
     return;
   }
 
-  ESP_LOGD(TAG,
-           "Receive packet [%02x:%02x:%02x:%02x] len=%d from: " MACSTR ", [%s] len: %d Channel: %d, RSSI=%d",
+  ESP_LOGI(TAG,
+           "Receive frame [%02x:%02x:%02x:%02x] len=%d from: " MACSTR ", [%s] len: %d Channel: %d, RSSI=%d",
            len > 0 ? data[0] : 0,
            len > 1 ? data[1] : 0,
            len > 2 ? data[2] : 0,
@@ -1799,6 +1799,52 @@ app_main()
   setenv("TZ", "GMT", 1);
   tzset();
 
+  if (0) {
+
+    // Frame and encryption test code
+    vscpEventEx ex;
+    memset(&ex, 0, sizeof(vscpEventEx));
+    ex.vscp_class = 10;
+    ex.vscp_type  = 6;
+    ex.head       = VSCP_PRIORITY_NORMAL;
+    ex.timestamp  = esp_timer_get_time();
+    ex.sizeData   = 6;
+    ex.data[0]    = 1;
+    ex.data[1]    = 2;
+    ex.data[2]    = 3;
+    ex.data[3]    = 4;
+    ex.data[4]    = 5;
+    ex.data[5]    = 6;
+
+    uint8_t buf[250];
+
+    int size = vscp_espnow_getFrameBufSizeEx(&ex);
+    ESP_LOGI(TAG, "Frame buffer size: %d", size);
+
+    rv = vscp_espnow_exToFrame(buf, sizeof(buf), &ex);
+    if (VSCP_ERROR_SUCCESS != rv) {
+      ESP_LOGE(TAG, "Failed to convert VSCP event ex to frame");
+    }
+    else {
+      ESP_LOGI(TAG, "OK");
+    }
+
+    ESP_LOGI(TAG, "Pre buf: %d", size);
+    ESP_LOG_BUFFER_HEXDUMP(TAG, buf, size, ESP_LOG_DEBUG);
+
+    rv = vscp_espnow_frameToEx(&ex, buf, size, s_broadcast_mac);
+    if (VSCP_ERROR_SUCCESS != rv) {
+      ESP_LOGE(TAG, "Failed to convert VSCP frame to event ex");
+    }
+    else {
+      ESP_LOGI(TAG, "OK");
+    }
+
+    while (1) {
+      vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+  }
+
   // --------------------------------------------------------------------------
   //                               ESPNOW
   // --------------------------------------------------------------------------
@@ -1815,46 +1861,6 @@ app_main()
   // Register receive callback
   esp_now_register_recv_cb(app_espnow_recv_cb);
   esp_now_register_send_cb(example_espnow_send_cb);
-
-  // Frame and encryption test code
-  vscpEventEx ex;
-  memset(&ex, 0, sizeof(vscpEventEx));
-  ex.vscp_class = 10;
-  ex.vscp_type  = 6;
-  ex.head       = VSCP_PRIORITY_NORMAL;
-  ex.timestamp  = esp_timer_get_time();
-  ex.sizeData   = 6;
-  ex.data[0]    = 1;
-  ex.data[1]    = 2;
-  ex.data[2]    = 3;
-  ex.data[3]    = 4;
-  ex.data[4]    = 5;
-  ex.data[5]    = 6;
-
-  uint8_t buf[250];
-
-  int size = vscp_espnow_getFrameBufSizeEx(&ex);
-  ESP_LOGI(TAG, "Frame buffer size: %d", size);
-
-  rv = vscp_espnow_exToFrame(buf, sizeof(buf), &ex);
-  if (VSCP_ERROR_SUCCESS != rv) {
-    ESP_LOGE(TAG, "Failed to convert VSCP event ex to frame");
-  }
-  else {
-    ESP_LOGI(TAG, "OK");
-  }
-
-  ESP_LOGI(TAG, "Pre buf: %d", size);
-  ESP_LOG_BUFFER_HEXDUMP(TAG, buf, size, ESP_LOG_DEBUG);
-
-  rv = vscp_espnow_frameToEx(&ex, buf, size, s_broadcast_mac);
-  ;
-  if (VSCP_ERROR_SUCCESS != rv) {
-    ESP_LOGE(TAG, "Failed to convert VSCP frame to event ex");
-  }
-  else {
-    ESP_LOGI(TAG, "OK");
-  }
 
   time_t now;
   struct tm timeinfo;
@@ -1883,7 +1889,8 @@ app_main()
   //     vscp_espnow_calculate_msg_checksum(buf + VSCP_ESPNOW_POS_TYPE_VER, size - VSCP_ESPNOW_POS_TYPE_VER);
 
   //   // If we have seen this message before we don't forward it
-  //   if (!forward_message(buf + VSCP_ESPNOW_POS_TYPE_VER, size - VSCP_ESPNOW_POS_TYPE_VER, buf[VSCP_ESPNOW_POS_TTL])) {
+  //   if (!forward_message(buf + VSCP_ESPNOW_POS_TYPE_VER, size - VSCP_ESPNOW_POS_TYPE_VER, buf[VSCP_ESPNOW_POS_TTL]))
+  //   {
   //     ESP_LOGI(TAG, "Message already seen, we ignore it %04X", checksum);
   //   }
   //   else {

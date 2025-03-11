@@ -429,6 +429,9 @@ vscp_espnow_evToFrame(uint8_t *buf, uint8_t len, const vscpEvent *pev)
   buf[VSCP_ESPNOW_POS_VSCP_TYPE]     = (pev->vscp_type >> 8) & 0xff;
   buf[VSCP_ESPNOW_POS_VSCP_TYPE + 1] = pev->vscp_type & 0xff;
 
+  // Mac address
+  memcpy(buf + VSCP_ESPNOW_POS_SRC_ADDR, s_mac_self, 6);
+
   // Size of data
   if (pev->sizeData > VSCP_ESPNOW_MAX_DATA) {
     ESP_LOGE(TAG, "Size of data is to large, size: %d  Can be max: %d", pev->sizeData, VSCP_ESPNOW_MAX_DATA);
@@ -458,11 +461,11 @@ vscp_espnow_evToFrame(uint8_t *buf, uint8_t len, const vscpEvent *pev)
   uint8_t iv[16];
   esp_fill_random(iv, 16);
 
-  ESP_LOGV(TAG, "IV:");
-  ESP_LOG_BUFFER_HEXDUMP(TAG, iv, 16, ESP_LOG_VERBOSE);
+  //ESP_LOGD(TAG, "IV:");
+  //ESP_LOG_BUFFER_HEXDUMP(TAG, iv, 16, ESP_LOG_DEBUG);
 
-  ESP_LOGV(TAG, "Raw frame:");
-  ESP_LOG_BUFFER_HEXDUMP(TAG, buf, VSCP_ESPNOW_MIN_FRAME + pev->sizeData, ESP_LOG_VERBOSE);
+  //ESP_LOGD(TAG, "Raw frame:");
+  //ESP_LOG_BUFFER_HEXDUMP(TAG, buf, VSCP_ESPNOW_MIN_FRAME + pev->sizeData, ESP_LOG_DEBUG);
 
   /*
     Encrypt frame of VSCP_ESPNOW_ENCRYPTION_LENGTH + encoded_len + 1 from
@@ -575,6 +578,9 @@ vscp_espnow_exToFrame(uint8_t *buf, uint8_t len, const vscpEventEx *pex)
   buf[VSCP_ESPNOW_POS_VSCP_TYPE]     = (pex->vscp_type >> 8) & 0xff;
   buf[VSCP_ESPNOW_POS_VSCP_TYPE + 1] = pex->vscp_type & 0xff;
 
+  // Mac address
+  memcpy(buf + VSCP_ESPNOW_POS_SRC_ADDR, s_mac_self, 6);
+
   // Size of data
   if (pex->sizeData > VSCP_ESPNOW_MAX_DATA) {
     ESP_LOGE(TAG, "Size of data is to large, size: %d  Can be max: %d", pex->sizeData, VSCP_ESPNOW_MAX_DATA);
@@ -601,11 +607,11 @@ vscp_espnow_exToFrame(uint8_t *buf, uint8_t len, const vscpEventEx *pex)
   uint8_t iv[16];
   esp_fill_random(iv, 16);
 
-  ESP_LOGD(TAG, "IV:");
-  ESP_LOG_BUFFER_HEXDUMP(TAG, iv, 16, ESP_LOG_DEBUG);
+  ESP_LOGV(TAG, "IV:");
+  ESP_LOG_BUFFER_HEXDUMP(TAG, iv, 16, ESP_LOG_VERBOSE);
 
-  ESP_LOGD(TAG, "Raw frame:");
-  ESP_LOG_BUFFER_HEXDUMP(TAG, buf, VSCP_ESPNOW_MIN_FRAME + pex->sizeData - 16, ESP_LOG_DEBUG);
+  ESP_LOGV(TAG, "Raw frame:");
+  ESP_LOG_BUFFER_HEXDUMP(TAG, buf, VSCP_ESPNOW_MIN_FRAME + pex->sizeData - 16, ESP_LOG_VERBOSE);
 
   /*
     Encrypt frame of VSCP_ESPNOW_ENCRYPTION_LENGTH + encoded_len + 1 from
@@ -625,8 +631,8 @@ vscp_espnow_exToFrame(uint8_t *buf, uint8_t len, const vscpEventEx *pex)
                                           iv,
                                           VSCP_ENCRYPTION_AES128);
 
-  ESP_LOGD(TAG, "Encrypted frame: %d", enclen);
-  ESP_LOG_BUFFER_HEXDUMP(TAG, buf, enclen + 4, ESP_LOG_DEBUG);
+  ESP_LOGV(TAG, "Encrypted frame: %d", enclen);
+  ESP_LOG_BUFFER_HEXDUMP(TAG, buf, enclen + 4, ESP_LOG_VERBOSE);
 
   // -------------------------------------------------------------------------------------------
 
@@ -699,8 +705,8 @@ vscp_espnow_frameToEv(vscpEvent *pev, const uint8_t *buf, uint8_t len, const uin
     return VSCP_ERROR_INVALID_FRAME;
   }
 
-  ESP_LOGD(TAG, "Encrypted frame: %d", len);
-  ESP_LOG_BUFFER_HEXDUMP(TAG, buf, len, ESP_LOG_DEBUG);
+  //ESP_LOGD(TAG, "Encrypted frame: %d", len);
+  //ESP_LOG_BUFFER_HEXDUMP(TAG, buf, len, ESP_LOG_DEBUG);
 
   // Decrypt the frame
   uint8_t *encbuf = calloc(1, len);
@@ -714,7 +720,7 @@ vscp_espnow_frameToEv(vscpEvent *pev, const uint8_t *buf, uint8_t len, const uin
 
   if (VSCP_ERROR_SUCCESS != vscp_fwhlp_decryptFrame(encbuf + VSCP_ESPNOW_POS_TYPE_VER,
                                                     buf + VSCP_ESPNOW_POS_TYPE_VER,
-                                                    len - 4, // do not include frame start bytes
+                                                    len - VSCP_ESPNOW_POS_TYPE_VER, // do not include frame start bytes
                                                     g_persistent.key,
                                                     NULL,
                                                     VSCP_ENCRYPTION_FROM_TYPE_BYTE)) {
@@ -722,11 +728,11 @@ vscp_espnow_frameToEv(vscpEvent *pev, const uint8_t *buf, uint8_t len, const uin
     ESP_LOGE(TAG, "Failed to decrypt frame");
   }
 
-  ESP_LOGD(TAG, "Raw decrypted frame: %d", len - 16);
-  ESP_LOG_BUFFER_HEXDUMP(TAG, encbuf, len - 16, ESP_LOG_DEBUG);
+  //ESP_LOGD(TAG, "Raw decrypted frame: %d", len - 16);
+  //ESP_LOG_BUFFER_HEXDUMP(TAG, encbuf, len - 16, ESP_LOG_DEBUG);
 
   // Check CRC (calculated over crc should give zero)
-  ESP_LOGD(TAG, "Length of data=%d", encbuf[VSCP_ESPNOW_POS_VSCP_LENGTH]);
+  ESP_LOGV(TAG, "Length of data=%d", encbuf[VSCP_ESPNOW_POS_VSCP_LENGTH]);
   uint16_t crc = crcFast(encbuf + VSCP_ESPNOW_POS_HEAD, len - 16 - 3); // exclude start + seq
   if (crc) {
     free(encbuf);
@@ -738,13 +744,17 @@ vscp_espnow_frameToEv(vscpEvent *pev, const uint8_t *buf, uint8_t len, const uin
   memset(pev, 0, sizeof(vscpEvent));
 
   // GUID
-  if (NULL != mac) {
-    memcpy(pev->GUID, s_guid_prefix, 8);
-    memcpy(pev->GUID + 8, mac, 8);
-  }
+  // if (NULL != mac) {
+  //   memcpy(pev->GUID, s_guid_prefix, 8);
+  //   memcpy(pev->GUID + 8, mac, 8);
+  // }
+  // Copy in GUID prefix
+  memcpy(pev->GUID, s_guid_prefix, 8);
+  // Copy in GUID mac
+  memcpy(pev->GUID + 8, encbuf + VSCP_ESPNOW_POS_SRC_ADDR, 8);
 
   // Set VSCP size
-  pev->sizeData = MIN(VSCP_ESPNOW_MAX_DATA, len - VSCP_ESPNOW_MIN_FRAME);
+  pev->sizeData = MIN(VSCP_ESPNOW_MAX_DATA, encbuf[VSCP_ESPNOW_POS_VSCP_LENGTH]);
   if (pev->sizeData) {
 
     pev->pdata = malloc(pev->sizeData);
@@ -753,23 +763,23 @@ vscp_espnow_frameToEv(vscpEvent *pev, const uint8_t *buf, uint8_t len, const uin
     }
 
     // Copy in data
-    memcpy(pev->pdata, buf + VSCP_ESPNOW_POS_DATA, pev->sizeData);
+    memcpy(pev->pdata, encbuf + VSCP_ESPNOW_POS_DATA, pev->sizeData);
   }
 
   // Head
-  pev->head = construct_unsigned16(VSCP_ESPNOW_POS_HEAD, VSCP_ESPNOW_POS_HEAD + 1);
+  pev->head = construct_unsigned16(encbuf[VSCP_ESPNOW_POS_HEAD], encbuf[VSCP_ESPNOW_POS_HEAD + 1]);
 
   // Timestamp
-  pev->timestamp = construct_unsigned32(VSCP_ESPNOW_POS_TIME_STAMP,
-                                        VSCP_ESPNOW_POS_TIME_STAMP + 1,
-                                        VSCP_ESPNOW_POS_TIME_STAMP + 2,
-                                        VSCP_ESPNOW_POS_TIME_STAMP + 3);
+  pev->timestamp = construct_unsigned32(encbuf[VSCP_ESPNOW_POS_TIME_STAMP],
+                                        encbuf[VSCP_ESPNOW_POS_TIME_STAMP + 1],
+                                        encbuf[VSCP_ESPNOW_POS_TIME_STAMP + 2],
+                                        encbuf[VSCP_ESPNOW_POS_TIME_STAMP + 3]);
 
   // VSCP class
-  pev->vscp_class = construct_unsigned16(VSCP_ESPNOW_POS_VSCP_CLASS, VSCP_ESPNOW_POS_VSCP_CLASS + 1);
+  pev->vscp_class = construct_unsigned16(encbuf[VSCP_ESPNOW_POS_VSCP_CLASS], encbuf[VSCP_ESPNOW_POS_VSCP_CLASS + 1]);
 
   // VSCP type
-  pev->vscp_type = construct_unsigned16(VSCP_ESPNOW_POS_VSCP_TYPE, VSCP_ESPNOW_POS_VSCP_TYPE + 1);
+  pev->vscp_type = construct_unsigned16(encbuf[VSCP_ESPNOW_POS_VSCP_TYPE], encbuf[VSCP_ESPNOW_POS_VSCP_TYPE + 1]);
 
   free(encbuf); // Free the encoding buffer
 
@@ -813,8 +823,8 @@ vscp_espnow_frameToEx(vscpEventEx *pex, const uint8_t *buf, uint8_t len, const u
     return VSCP_ERROR_INVALID_FRAME;
   }
 
-  ESP_LOGV(TAG, "Encrypted frame: %d", len);
-  ESP_LOG_BUFFER_HEXDUMP(TAG, buf, len, ESP_LOG_VERBOSE);
+  //ESP_LOGD(TAG, "Encrypted frame: %d", len);
+  //ESP_LOG_BUFFER_HEXDUMP(TAG, buf, len, ESP_LOG_DEBUG);
 
   // Decrypt the frame
   uint8_t *encbuf = calloc(1, len);
@@ -828,7 +838,7 @@ vscp_espnow_frameToEx(vscpEventEx *pex, const uint8_t *buf, uint8_t len, const u
 
   if (VSCP_ERROR_SUCCESS != vscp_fwhlp_decryptFrame(encbuf + VSCP_ESPNOW_POS_TYPE_VER,
                                                     buf + VSCP_ESPNOW_POS_TYPE_VER,
-                                                    len - 4, // do not include frame start bytes
+                                                    len - VSCP_ESPNOW_POS_TYPE_VER, // do not include frame start bytes
                                                     g_persistent.key,
                                                     NULL,
                                                     VSCP_ENCRYPTION_FROM_TYPE_BYTE)) {
@@ -836,8 +846,8 @@ vscp_espnow_frameToEx(vscpEventEx *pex, const uint8_t *buf, uint8_t len, const u
     ESP_LOGE(TAG, "Failed to decrypt frame");
   }
 
-  ESP_LOGV(TAG, "Raw decrypted frame: %d", len - 16);
-  ESP_LOG_BUFFER_HEXDUMP(TAG, encbuf, len - 16, ESP_LOG_VERBOSE);
+  //ESP_LOGD(TAG, "Raw decrypted frame: %d", len - 16);
+  //ESP_LOG_BUFFER_HEXDUMP(TAG, encbuf, len - 16, ESP_LOG_DEBUG);
 
   // Check CRC (calculated over crc should give zero)
   ESP_LOGV(TAG, "Length of data=%d", encbuf[VSCP_ESPNOW_POS_VSCP_LENGTH]);
@@ -851,32 +861,36 @@ vscp_espnow_frameToEx(vscpEventEx *pex, const uint8_t *buf, uint8_t len, const u
   memset(pex, 0, sizeof(vscpEventEx));
 
   // GUID
-  if (NULL != mac) {
-    memcpy(pex->GUID, s_guid_prefix, 8);
-    memcpy(pex->GUID + 8, mac, 8);
-  }
+  // if (NULL != mac) {
+  //   memcpy(pex->GUID, s_guid_prefix, 8);
+  //   memcpy(pex->GUID + 8, mac, 8);
+  // }
+  // Copy in GUID prefix
+  memcpy(pex->GUID, s_guid_prefix, 8);
+  // Copy in GUID mac
+  memcpy(pex->GUID + 8, encbuf + VSCP_ESPNOW_POS_SRC_ADDR, 8);
 
   // Set VSCP size
-  pex->sizeData = MIN(VSCP_ESPNOW_MAX_DATA, len - VSCP_ESPNOW_MIN_FRAME);
+  pex->sizeData = MIN(VSCP_ESPNOW_MAX_DATA, encbuf[VSCP_ESPNOW_POS_VSCP_LENGTH]);
   if (pex->sizeData) {
     // Copy in data
-    memcpy(pex->data, buf + VSCP_ESPNOW_POS_DATA, pex->sizeData);
+    memcpy(pex->data, encbuf + VSCP_ESPNOW_POS_DATA, pex->sizeData);
   }
 
   // Head
-  pex->head = construct_unsigned16(VSCP_ESPNOW_POS_HEAD, VSCP_ESPNOW_POS_HEAD + 1);
+  pex->head = construct_unsigned16(encbuf[VSCP_ESPNOW_POS_HEAD], encbuf[VSCP_ESPNOW_POS_HEAD + 1]);
 
   // Timestamp
-  pex->timestamp = construct_unsigned32(VSCP_ESPNOW_POS_TIME_STAMP,
-                                        VSCP_ESPNOW_POS_TIME_STAMP + 1,
-                                        VSCP_ESPNOW_POS_TIME_STAMP + 2,
-                                        VSCP_ESPNOW_POS_TIME_STAMP + 3);
+  pex->timestamp = construct_unsigned32(encbuf[VSCP_ESPNOW_POS_TIME_STAMP],
+                                        encbuf[VSCP_ESPNOW_POS_TIME_STAMP + 1],
+                                        encbuf[VSCP_ESPNOW_POS_TIME_STAMP + 2],
+                                        encbuf[VSCP_ESPNOW_POS_TIME_STAMP + 3]);
 
   // VSCP class
-  pex->vscp_class = construct_unsigned16(VSCP_ESPNOW_POS_VSCP_CLASS, VSCP_ESPNOW_POS_VSCP_CLASS + 1);
+  pex->vscp_class = construct_unsigned16(encbuf[VSCP_ESPNOW_POS_VSCP_CLASS], encbuf[VSCP_ESPNOW_POS_VSCP_CLASS + 1]);
 
   // VSCP type
-  pex->vscp_type = construct_unsigned16(VSCP_ESPNOW_POS_VSCP_TYPE, VSCP_ESPNOW_POS_VSCP_TYPE + 1);
+  pex->vscp_type = construct_unsigned16(encbuf[VSCP_ESPNOW_POS_VSCP_TYPE], encbuf[VSCP_ESPNOW_POS_VSCP_TYPE + 1]);
 
   // Free the encoding buffer
   free(encbuf);
@@ -891,7 +905,7 @@ vscp_espnow_frameToEx(vscpEventEx *pex, const uint8_t *buf, uint8_t len, const u
 uint16_t
 vscp_espnow_calculate_msg_checksum(const uint8_t *msg, uint8_t len)
 {
-  uint32_t ttt = murmurhash3(msg,len,5381);
+  uint32_t ttt      = murmurhash3(msg, len, 5381);
   uint16_t checksum = 0;
   for (int i = VSCP_ESPNOW_POS_TYPE_VER; i < len; i++) {
     checksum += msg[i];
@@ -922,7 +936,7 @@ vscp_espnow_receive_message(const vscp_espnow_event_rcv_info_t *prcv)
   uint32_t checksum =
     vscp_espnow_calculate_msg_checksum(prcv->data + VSCP_ESPNOW_POS_TYPE_VER, prcv->size - VSCP_ESPNOW_POS_TYPE_VER);
   if (fifo_contains(&s_fifo_resend_scan, checksum)) {
-    ESP_LOGI(TAG, "Message already seen, we ignore it");
+    ESP_LOGI(TAG, "Message already seen, we ignore it. From: " MACSTR, MAC2STR(prcv->src_addr));
     return VSCP_ERROR_SUCCESS;
   }
 
@@ -940,7 +954,10 @@ vscp_espnow_receive_message(const vscp_espnow_event_rcv_info_t *prcv)
   // Resend if there is hops left
   if (prcv->data[VSCP_ESPNOW_POS_TTL] > 0) {
 
-    ESP_LOGI(TAG, "Resending message from " MACSTR "- hops left=%d", MAC2STR((prcv->src_addr)), prcv->data[VSCP_ESPNOW_POS_TTL]);
+    ESP_LOGI(TAG,
+             "Resending message from " MACSTR " - hops left=%d",
+             MAC2STR((prcv->src_addr)),
+             prcv->data[VSCP_ESPNOW_POS_TTL]);
     esp_err_t ret = esp_now_send(s_broadcast_mac, prcv->data, prcv->size);
     if (ESP_OK != ret) {
 
@@ -969,14 +986,19 @@ vscp_espnow_receive_message(const vscp_espnow_event_rcv_info_t *prcv)
     // bloom_forward_message(prcv->data + VSCP_ESPNOW_POS_TYPE_VER, prcv->size - VSCP_ESPNOW_POS_TYPE_VER, 3);
   }
 
+  ESP_LOG_BUFFER_HEXDUMP(TAG, prcv->data, prcv->size, ESP_LOG_VERBOSE);
+
   // Handle the event
 
   vscpEventEx ex;
-  int rv = vscp_espnow_frameToEx(&ex, prcv->data, prcv->size, s_broadcast_mac);
-  ;
+  int rv = vscp_espnow_frameToEx(&ex, prcv->data, prcv->size, prcv->src_addr);
   if (VSCP_ERROR_SUCCESS != rv) {
     ESP_LOGE(TAG, "Failed to convert VSCP frame to event ex");
   }
+
+  // Event received
+  ESP_LOGI(TAG, "Event from " MACSTR " - Class=%d Type=%d size=%d", MAC2STR(ex.GUID + 8), ex.vscp_class, ex.vscp_type, ex.sizeData);
+  ESP_LOG_BUFFER_HEXDUMP(TAG, prcv->data, prcv->size, ESP_LOG_VERBOSE);
 
   return VSCP_ERROR_SUCCESS;
 }
@@ -1027,7 +1049,7 @@ vscp_espnow_sendEvent(const uint8_t *destAddr, const vscpEvent *pev, uint32_t wa
 
   // ESP_LOG_BUFFER_HEXDUMP(TAG, pbuf, len, ESP_LOG_DEBUG);
 
-  ESP_LOGD(TAG, "Send mac: " MACSTR ", version: %d", MAC2STR(destAddr), VSCP_ESPNOW_VERSION);
+  ESP_LOGI(TAG, "Send  event: MAC: " MACSTR ", version: %d", MAC2STR(destAddr), VSCP_ESPNOW_VERSION);
 
   esp_err_t ret = esp_now_send(destAddr, pbuf, len);
   if (ESP_OK != ret) {
