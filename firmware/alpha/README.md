@@ -1,5 +1,8 @@
 # VSCP ESP-Now Alpha node example
 
+
+** THIS IS EXPERIMENTAL CODE AND SHOULD NOT BE USED IN PRODUCTION **
+
 This example provides the solution to use `ESP-NOW` multiple features in one project.
 
 - Provision WiFi on initiator device through APP and then configure responders WiFi network by espnow provisioning.
