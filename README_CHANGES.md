@@ -1,0 +1,62 @@
+# Changes in vscp-espnow
+
+Every change that goes into a release is listed here, newest release first.
+Add each change under **Unreleased** when it is made. When a release is
+tagged, rename **Unreleased** to the version and date, and start a new
+**Unreleased** section above it.
+
+## Unreleased
+
+- Added node about the code state (330af4f)
+- Added nickname and mac to frame (1392b55)
+- Changed hash from sum to murmurhash (5c7c141)
+- Added bloom filters for resend preventions of messages alread received/seen (2e3421c)
+- Adding sntp code (59cacb4)
+- Fixed web pages (4e57764)
+- Added VSCP standard encryption/decryption to frames (2c93b1c)
+- Removed beta module (149a9a0)
+- Fixed warnings (d46ae6f)
+- Fixed GUID setting (3486006)
+- Removed unnecessary info (b455344)
+- Updated projects to latest VSCP code (b01d584)
+- Fixed formatting (4f27a04)
+- Updated beta code so it compiles again (53f2997)
+- Updated copyright year (a40433f)
+- Pulled down update to submodule_dir (16601b5)
+- Updated vscp-firmware (d0071f4)
+- Updated to esp-idf v5.0.2 (89481cc)
+- Initial MDF and some user regs (d43d4a0)
+- Fixed compile error for beta for high end server probe (ddab2e5)
+- Added VSCP standard register read (9011dbe)
+- Fixed init button (54b03f4)
+- Added error status (ec7c33d)
+- Fixed broken secure key and channel transfere (7ca8d33)
+- kconfig in place (3d0afad)
+- Renamed defines to work with new config (d050162)
+- Configuration for beta nodes moved to Kconfig (8700fa7)
+- Moved general configs to KConfig for alpha nodes (2036109)
+- Broken MQTT log fixed (8d833f1)
+- Fixed readme (4c86059)
+- Refined replay protection code (6601bc2)
+- Changed provisioning to node-pairing (615be4f)
+- Adding missing images (1bfcd91)
+- Added link to VSCP Works (6264b60)
+- Added some images to the initial docs. (ed0f5ae)
+- Added latest espnow security patch (9192108)
+- Patch added for security in espnow (b085c68)
+- Fixed heartbeat  data size for alpha nodes (bc8b5eb)
+- Added initial readme for tools (5d7dc1e)
+- Added security patch from Espressif (1324a45)
+- Revert upper levele components as the folder is not regnized by the component manager and we get double folders for espnow (53896b1)
+- Top common component folder added (2e91a21)
+- Removed unneeded files (0ab82a3)
+- Decoding esp-now frames on Linux (0bc41bd)
+- Updated esp-now component to 2.1.1 (e8ade7e)
+- Updated docs (3989407)
+- Updated upstream code to latest (0439a02)
+- Added protection around OTA start (d000f32)
+- Added OTA sibling update from server and local file (158bc13)
+- Fixed OTA on alpha (785c577)
+- ...and 30 earlier commits (see `git log`)
+
+No release has been tagged yet.
