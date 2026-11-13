@@ -23,8 +23,19 @@ jobs:
         target: esp32
         path: './firmware/beta/'
     
+    - name: Write SHA256SUMS
+      id: sha256sums_26
+      continue-on-error: true
+      shell: bash
+      run: |
+        bash .github/scripts/write-sha256sums.sh "SHA256SUMS-vscp_espnow_beta.bin" <<'SHA256SUMS_PATTERNS'
+        ./firmware/beta/build/vscp_espnow_beta.bin
+        SHA256SUMS_PATTERNS
+
     - uses: actions/upload-artifact@v4
       with:
         name: vscp_espnow_beta.bin
-        path: ./firmware/beta/build/vscp_espnow_beta.bin
+        path: |
+          ./firmware/beta/build/vscp_espnow_beta.bin
+          ${{ steps.sha256sums_26.outputs.file }}
         retention-days: 7

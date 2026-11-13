@@ -7,6 +7,8 @@ tagged, rename **Unreleased** to the version and date, and start a new
 
 ## Unreleased
 
+- Add scripts/download-artifacts.sh to download and verify the newest CI build artifacts
+- CI writes a SHA256SUMS-<artifact> checksum file into every uploaded build artifact
 - Added node about the code state (330af4f)
 - Added nickname and mac to frame (1392b55)
 - Changed hash from sum to murmurhash (5c7c141)
