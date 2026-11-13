@@ -33,7 +33,7 @@ jobs:
       continue-on-error: true
       shell: bash
       run: |
-        bash .github/scripts/write-sha256sums.sh "SHA256SUMS-vscp_espnow_alpha.bin" <<'SHA256SUMS_PATTERNS'
+        bash "${GITHUB_WORKSPACE//\\//}/.github/scripts/write-sha256sums.sh" "SHA256SUMS-vscp_espnow_alpha.bin" <<'SHA256SUMS_PATTERNS'
         ./firmware/alpha/build/vscp_espnow_alpha.bin
         SHA256SUMS_PATTERNS
 
