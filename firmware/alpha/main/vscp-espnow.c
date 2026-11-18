@@ -91,7 +91,6 @@
 #include <freertos/queue.h>
 #include <freertos/task.h>
 
-#include <mbedtls/aes.h>
 
 #include <esp_check.h>
 #include <esp_crc.h>

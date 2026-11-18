@@ -1,20 +1,30 @@
 dependencies:
   espressif/button:
-    component_hash: a405a99689f636e84cd67da34a85a88d0d3a1aa514a28f60d18bd370c1378e0b
+    component_hash: 26345e8700d3c6435925f9a8f246d224f9c1b99f937c243fe400844eec514b4a
     dependencies:
     - name: espressif/cmake_utilities
       registry_url: https://components.espressif.com
       require: private
-      version: 0.*
+      version: '*'
     - name: idf
       require: private
       version: '>=4.0'
     source:
       registry_url: https://components.espressif.com/
       type: service
-    version: 4.0.0
+    version: 4.2.3
+  espressif/cjson:
+    component_hash: e788323270d90738662d66fffa910bfe1fba019bba087f01557e70c40485b469
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.7.19~2
   espressif/cmake_utilities:
-    component_hash: 6983933aa165d5c1bd8ff3716f8873b4dd8577020d9176d22d8568b139ff8753
+    component_hash: afc935d5a93cda71ce3223b817de128d07484439d585e6fe613bde820e17f36a
     dependencies:
     - name: idf
       require: private
@@ -22,21 +32,66 @@ dependencies:
     source:
       registry_url: https://components.espressif.com
       type: service
-    version: 0.1.0
+    version: 1.4.1
+  espressif/json_generator:
+    component_hash: 7433f3e206d8ed81dc8335b77710a5186f36c9e8c8b5375b277d6f2b9b430496
+    dependencies: []
+    source:
+      registry_url: https://components.espressif.com
+      type: service
+    version: 2.1.0
   espressif/led_indicator:
-    component_hash: daa844acf7886b78fa4ea25c9dd6a4fb3a83f793a307187026be1c237fba632a
+    component_hash: 0694f655b0f0b7694592cfbb5a44ba33840847c5ca44eb639eec8570a4094cd4
     dependencies:
-    - name: idf
-      require: private
-      version: '>=4.0'
     - name: espressif/cmake_utilities
       registry_url: https://components.espressif.com
       require: private
-      version: ~0.1.0
+      version: '*'
+    - name: idf
+      require: private
+      version: '>=5.0'
+    - name: espressif/led_strip
+      registry_url: https://components.espressif.com
+      require: public
+      version: 3.*
     source:
       registry_url: https://components.espressif.com/
       type: service
-    version: 0.3.0
+    version: 2.1.2
+  espressif/led_strip:
+    component_hash: 027f68f2b57b0dca1d68dff6cc1139d9093825aa808c2bc3ca42bb2ce530fce9
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.2'
+    source:
+      registry_url: https://components.espressif.com
+      type: service
+    version: 3.1.1
+  espressif/mqtt:
+    component_hash: fb18bc3b65aa8c94693a9811ffc322cca8a65d92d5ec84983d3e385080e3969c
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.3'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.1.0
+  espressif/network_provisioning:
+    component_hash: ac8dc8e10dd26b0307697049f6358caa1d17696db2e23903512098b7ad86f848
+    dependencies:
+    - name: espressif/json_generator
+      registry_url: https://components.espressif.com
+      require: private
+      version: ^2.0.0
+    - name: idf
+      require: private
+      version: '>=5.1'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.4.0
   espressif/qrcode:
     component_hash: 3b493771bc5d6ad30cbf87c25bf784aada8a08c941504355b55d6b75518ed7bc
     dependencies: []
@@ -47,12 +102,15 @@ dependencies:
   idf:
     source:
       type: idf
-    version: 5.4.0
+    version: 6.1.0
 direct_dependencies:
 - espressif/button
+- espressif/cjson
 - espressif/led_indicator
+- espressif/mqtt
+- espressif/network_provisioning
 - espressif/qrcode
 - idf
-manifest_hash: f206c5fd7bd1d1e010c13518a09273f1b293ca5dc9ae31b73b53790a3758257d
+manifest_hash: bc4a22fe0693f97d210b80a910bfc5626e6f18163be496aa2d62c6af9536a6c8
 target: esp32
-version: 2.0.0
+version: 3.0.0

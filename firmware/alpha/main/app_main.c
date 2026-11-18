@@ -44,6 +44,7 @@
 #include <driver/gpio.h>
 
 #include <esp_check.h>
+#include <esp_timer.h>
 #include "esp_log.h"
 #include "esp_netif.h"
 #include "esp_system.h"
@@ -57,7 +58,7 @@
 #include <esp_https_ota.h>
 #include <esp_http_server.h>
 
-#include <wifi_provisioning/manager.h>
+#include <network_provisioning/manager.h>
 #include "wifi_prov.h"
 
 #include <esp_tls_crypto.h>
@@ -73,6 +74,7 @@
 
 // https://docs.espressif.com/projects/espressif-esp-iot-solution/en/latest/display/led_indicator.html
 #include "led_indicator.h"
+#include "led_indicator_gpio.h"
 #include "vscp_led_indicator_blink.h"
 
 #include "net_logging.h"
@@ -258,7 +260,7 @@ app_get_device_guid(uint8_t *pguid)
   uint8_t eth_guid[8] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe };
   memset(pguid, 0, 16);
   memcpy(pguid, eth_guid, 8);
-  esp_wifi_get_mac(ESP_IF_WIFI_STA, pguid + 8);
+  esp_wifi_get_mac(WIFI_IF_STA, pguid + 8);
 
   return true;
 }
@@ -270,45 +272,31 @@ app_get_device_guid(uint8_t *pguid)
 static void
 app_led_init(void)
 {
+  // Both LEDs use the same blink lists
+  led_indicator_config_t indicator_config = {
+    .blink_lists    = vscp_led_indicator_blink_lists,
+    .blink_list_num = VSCP_BLINK_LIST_NUM,
+  };
+
+  // Initialize red (operation) LED indicator
   led_indicator_gpio_config_t led_indicator_gpio_red_config = {
     .gpio_num             = CONFIG_APP_VSCP_GPIO_OPERATION_LED, /**< num of GPIO */
     .is_active_level_high = 1,
   };
 
-  // Initialize red LED indicator
-  led_indicator_config_t indicator_config_red = {
-    .mode                      = LED_GPIO_MODE,
-    .led_indicator_gpio_config = &led_indicator_gpio_red_config,
-    .blink_lists               = vscp_led_indicator_blink_lists,
-    .blink_list_num            = VSCP_BLINK_LIST_NUM,
-  };
-
-  // s_led_handle_red = led_indicator_create(PRJDEF_INDICATOR_LED_PIN_GREEN, &indicator_config_green);
-  s_led_handle_red = led_indicator_create(&indicator_config_red);
-  if (NULL == s_led_handle_red) {
-    ESP_LOGE(TAG, "Failed to create status LED indicator green");
+  if (ESP_OK != led_indicator_new_gpio_device(&indicator_config, &led_indicator_gpio_red_config, &s_led_handle_red)) {
+    s_led_handle_red = NULL;
+    ESP_LOGE(TAG, "Failed to create LED indicator red");
   }
 
+  // Initialize green (status) LED indicator
   led_indicator_gpio_config_t led_indicator_gpio_green_config = {
     .gpio_num             = CONFIG_APP_VSCP_GPIO_STATUS_LED, /**< num of GPIO */
     .is_active_level_high = 1,
   };
 
-  // Initialize green LED indicator
-  led_indicator_config_t indicator_config_green = {
-    .mode                      = LED_GPIO_MODE,
-    .led_indicator_gpio_config = &led_indicator_gpio_green_config,
-    .blink_lists               = vscp_led_indicator_blink_lists,
-    .blink_list_num            = VSCP_BLINK_LIST_NUM,
-  };
-  // led_indicator_config_t indicator_config_red = {
-  //   .off_level = 0, // if zero, attach led positive side to esp32 gpio pin
-  //   .mode      = LED_GPIO_MODE,
-  // };
-
-  // s_led_handle_red = led_indicator_create(PRJDEF_INDICATOR_LED_PIN_RED, &indicator_config_red);
-  s_led_handle_green = led_indicator_create(&indicator_config_green);
-  if (NULL == s_led_handle_red) {
+  if (ESP_OK != led_indicator_new_gpio_device(&indicator_config, &led_indicator_gpio_green_config, &s_led_handle_green)) {
+    s_led_handle_green = NULL;
     ESP_LOGE(TAG, "Failed to create LED indicator green");
   }
 }
@@ -387,6 +375,12 @@ _http_event_handler(esp_http_client_event_t *evt)
     case HTTP_EVENT_DISCONNECTED:
       ESP_LOGI(TAG, "HTTP_EVENT_DISCONNECTED");
       break;
+    case HTTP_EVENT_ON_HEADERS_COMPLETE:
+      ESP_LOGI(TAG, "HTTP_EVENT_ON_HEADERS_COMPLETE");
+      break;
+    case HTTP_EVENT_ON_STATUS_CODE:
+      ESP_LOGI(TAG, "HTTP_EVENT_ON_STATUS_CODE");
+      break;
     case HTTP_EVENT_REDIRECT:
       ESP_LOGI(TAG, "HTTP_EVENT_REDIRECT");
       break;
@@ -431,7 +425,6 @@ ota_task(void *pvParameter)
   esp_https_ota_config_t config = {
     .http_config           = &config_http,
     .bulk_flash_erase      = true,
-    .partial_http_download = false,
     //.max_http_request_size
   };
 
@@ -800,7 +793,7 @@ app_factory_reset_press_cb(void *arg, void *usr_data)
   blink_switch_type(s_led_handle_green, BLINK_FACTORY_RESET);
 
   // Reset provisioning
-  ret = wifi_prov_mgr_reset_provisioning();
+  ret = network_prov_mgr_reset_wifi_provisioning();
   if (ESP_OK != ret) {
     ESP_LOGE(TAG, "Failed to reset provisioning 0x%X %s", ret, esp_err_to_name(ret));
   }
@@ -1244,16 +1237,16 @@ app_system_event_handler(void *arg, esp_event_base_t event_base, int32_t event_i
     }
   }
 
-  else if (event_base == WIFI_PROV_EVENT) {
+  else if (event_base == NETWORK_PROV_EVENT) {
 
     switch (event_id) {
 
-      case WIFI_PROV_START:
+      case NETWORK_PROV_START:
         ESP_LOGI(TAG, "--> Provisioning started");
         blink_switch_type(s_led_handle_green, BLINK_PROVISIONING);
         break;
 
-      case WIFI_PROV_CRED_RECV: {
+      case NETWORK_PROV_WIFI_CRED_RECV: {
         wifi_sta_config_t *wifi_sta_cfg = (wifi_sta_config_t *) event_data;
         ESP_LOGI(TAG,
                  "Received Wi-Fi credentials"
@@ -1263,25 +1256,25 @@ app_system_event_handler(void *arg, esp_event_base_t event_base, int32_t event_i
         break;
       }
 
-      case WIFI_PROV_CRED_FAIL: {
-        wifi_prov_sta_fail_reason_t *reason = (wifi_prov_sta_fail_reason_t *) event_data;
+      case NETWORK_PROV_WIFI_CRED_FAIL: {
+        network_prov_wifi_sta_fail_reason_t *reason = (network_prov_wifi_sta_fail_reason_t *) event_data;
         ESP_LOGE(TAG,
                  "Provisioning failed!\n\tReason : %s"
                  "\n\tPlease reset to factory and retry provisioning",
-                 (*reason == WIFI_PROV_STA_AUTH_ERROR) ? "Wi-Fi station authentication failed"
+                 (*reason == NETWORK_PROV_WIFI_STA_AUTH_ERROR) ? "Wi-Fi station authentication failed"
                                                        : "Wi-Fi access-point not found");
         break;
       }
 
-      case WIFI_PROV_CRED_SUCCESS:
+      case NETWORK_PROV_WIFI_CRED_SUCCESS:
         ESP_LOGI(TAG, "Provisioning successful");
         blink_switch_type(s_led_handle_green, BLINK_PROVISIONED);
         break;
 
-      case WIFI_PROV_END:
+      case NETWORK_PROV_END:
         ESP_LOGI(TAG, "Provisioning end");
         /* De-initialize manager once provisioning is finished */
-        wifi_prov_mgr_deinit();
+        network_prov_mgr_deinit();
         break;
 
       default:
@@ -1466,11 +1459,12 @@ vscp_wifi_init(void)
 //
 
 static void
-example_espnow_send_cb(const uint8_t *mac_addr, esp_now_send_status_t status)
+example_espnow_send_cb(const esp_now_send_info_t *tx_info, esp_now_send_status_t status)
 {
   // example_espnow_event_t evt;
   // example_espnow_event_send_cb_t *send_cb = &evt.info.send_cb;
 
+  const uint8_t *mac_addr = (NULL != tx_info) ? tx_info->des_addr : NULL;
   if (mac_addr == NULL) {
     ESP_LOGE(TAG, "Send cb arg error");
     return;
@@ -1645,7 +1639,7 @@ app_main()
   s_wifi_event_group = xEventGroupCreate();
 
   bool bProvisioned = false;
-  ret               = wifi_prov_mgr_is_provisioned(&bProvisioned);
+  ret               = network_prov_mgr_is_wifi_provisioned(&bProvisioned);
   if (ret != ESP_OK) {
     ESP_LOGE(TAG, "Failed to get provisioning status %s", esp_err_to_name(ret));
   }
@@ -1682,7 +1676,7 @@ app_main()
   // Register our event handler for Wi-Fi, IP and Provisioning related events
   ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &app_system_event_handler, NULL));
   ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &app_system_event_handler, NULL));
-  ESP_ERROR_CHECK(esp_event_handler_register(WIFI_PROV_EVENT, ESP_EVENT_ANY_ID, &app_system_event_handler, NULL));
+  ESP_ERROR_CHECK(esp_event_handler_register(NETWORK_PROV_EVENT, ESP_EVENT_ANY_ID, &app_system_event_handler, NULL));
   // ESP_ERROR_CHECK(esp_event_handler_register(ALPHA_EVENT, ESP_EVENT_ANY_ID, &system_event_handler, NULL));
   ESP_ERROR_CHECK(esp_event_handler_register(ESP_HTTPS_OTA_EVENT, ESP_EVENT_ANY_ID, &app_system_event_handler, NULL));
   // ESP_ERROR_CHECK(esp_event_handler_register(ESP_EVENT_ESPNOW, ESP_EVENT_ANY_ID, &app_system_event_handler, NULL));
@@ -1792,7 +1786,7 @@ app_main()
   ESP_LOGI(TAG, "Going to work now");
   blink_switch_type(s_led_handle_green, BLINK_CONNECTED);
 
-  esp_wifi_get_mac(ESP_IF_WIFI_STA, s_addr_self);
+  esp_wifi_get_mac(WIFI_IF_STA, s_addr_self);
   ESP_LOGI(TAG, "mac: " MACSTR ", version: %d", MAC2STR(s_addr_self), 0);
 
   // Set timezone to GMT

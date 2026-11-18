@@ -7,6 +7,7 @@ tagged, rename **Unreleased** to the version and date, and start a new
 
 ## Unreleased
 
+- firmware/alpha builds with ESP-IDF 6.1, and CI is pinned to IDF v6.1 (it used `latest`). IDF 6 moved several components out of ESP-IDF, so the project now gets `espressif/network_provisioning` (replaces `wifi_provisioning`, APIs renamed from `wifi_prov_*` to `network_prov_*`), `espressif/cjson` and `espressif/mqtt` from the component registry. `espressif/button` is 4.2 and `espressif/led_indicator` is 2.1 (the LEDs are created with `led_indicator_new_gpio_device`). Also adapted: the ESP-NOW send callback signature, `WIFI_IF_STA`, two new HTTP client events, and the OTA config (`partial_http_download` is off by default). IDF 5 is no longer supported
 - vscp and vscp-firmware are fetched with CMake FetchContent when firmware/alpha is configured (pinned commits, SHA-256 checked); the third_party submodules are removed and CI no longer checks out submodules
 - firmware/alpha uses vscp-firmware ab829cd, which fixes the `sf  if` typo in common/vscp-link-protocol.c that the previous submodule commit (f6b4282) did not compile with
 - alpha0.json is valid JSON again (pasted C code and notes removed, commas fixed)

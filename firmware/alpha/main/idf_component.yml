@@ -1,8 +1,14 @@
 dependencies:
-  espressif/led_indicator: "^0.3.0"
+  espressif/led_indicator: "^2.1.2"
   espressif/button:
-    version: '>=4.0.0'
+    version: '^4.1.0'
   idf:
-    version: '>=5.0'
+    version: '>=6.0'
   qrcode:
     version: ^0.1.0
+  espressif/network_provisioning:
+    version: "^1.1.0"
+  espressif/cjson:
+    version: "^1.7.19"
+  espressif/mqtt:
+    version: "*"

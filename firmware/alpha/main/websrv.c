@@ -51,7 +51,7 @@
 #include <esp_vfs.h>
 #include <esp_spiffs.h>
 #include <esp_http_server.h>
-#include <wifi_provisioning/manager.h>
+#include <network_provisioning/manager.h>
 
 #include <vscp.h>
 #include <vscp-firmware-helper.h>
@@ -62,11 +62,11 @@
 #include "websrv.h"
 
 #ifdef CONFIG_EXAMPLE_PROV_TRANSPORT_BLE
-#include <wifi_provisioning/scheme_ble.h>
+#include <network_provisioning/scheme_ble.h>
 #endif /* PROV_EXAMPLE_TRANSPORT_BLE */
 
 #ifdef CONFIG_EXAMPLE_PROV_TRANSPORT_SOFTAP
-#include <wifi_provisioning/scheme_softap.h>
+#include <network_provisioning/scheme_softap.h>
 #endif /* PROV_EXAMPLE_TRANSPORT_SOFTAP */
 
 // #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -527,7 +527,7 @@ info_get_handler(httpd_req_t *req)
   httpd_resp_send_chunk(req, buf, HTTPD_RESP_USE_STRLEN);
 
   uint8_t mac[6];
-  esp_wifi_get_mac(ESP_IF_WIFI_STA, mac);
+  esp_wifi_get_mac(WIFI_IF_STA, mac);
   // printf("Wifi STA MAC address: " MACSTR "\n", MAC2STR(mac));
   sprintf(buf,
           "<tr><td class=\"name\">Wifi STA MAC address:</td><td class=\"prop\">" MACSTR "</td></tr>",
@@ -2683,7 +2683,7 @@ do_config_mqtt_get_handler(httpd_req_t *req)
   // esp_wifi_deinit();
   //  Configuration for the provisioning manager
   // esp_wifi_restore();
-  // wifi_prov_mgr_reset_provisioning();
+  // network_prov_mgr_reset_wifi_provisioning();
 
   return ESP_OK;
 }

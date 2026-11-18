@@ -40,6 +40,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <esp_timer.h>
+
 #include "vscp-compiler.h"
 #include "vscp-projdefs.h"
 
