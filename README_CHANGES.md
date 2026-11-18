@@ -7,6 +7,9 @@ tagged, rename **Unreleased** to the version and date, and start a new
 
 ## Unreleased
 
+- vscp and vscp-firmware are fetched with CMake FetchContent when firmware/alpha is configured (pinned commits, SHA-256 checked); the third_party submodules are removed and CI no longer checks out submodules
+- firmware/alpha uses vscp-firmware ab829cd, which fixes the `sf  if` typo in common/vscp-link-protocol.c that the previous submodule commit (f6b4282) did not compile with
+- alpha0.json is valid JSON again (pasted C code and notes removed, commas fixed)
 - The vscp submodule (third_party/vscp) points to the latest vscp master (d75d4f5c6)
 - Fix the CI checksum step: readable SHA256SUMS files, bash 3.2 on macOS, and jobs that run in a subfolder
 - Add scripts/download-artifacts.sh to download and verify the newest CI build artifacts
