@@ -1242,7 +1242,6 @@
         "access": "rw",
         "page" :"9",
         "offset" :98,
-        "rowpos": "0x44",
         "bgcolor" :"0x999999",
         "fgcolor" :"0xAAAAAA",
         
