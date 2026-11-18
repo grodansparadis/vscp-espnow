@@ -507,36 +507,6 @@
           "comment" : "This register is also a remote variable. name/key values set from register name/key pairs."
         },
 
-        case :
-      // printf("ESP32\n");
-      sprintf(buf, "<td class=\"prop\">ESP32</td></tr>");
-      break;
-
-    case :
-      // printf("ESP32-S2\n");
-      sprintf(buf, "<td class=\"prop\">ESP32-S2</td></tr>");
-      break;
-
-    case :
-      // printf("ESP32-S3\n");
-      sprintf(buf, "<td class=\"prop\">ESP32-S3</td></tr>");
-      break;
-
-    case :
-      // printf("ESP32-C3\n");
-      sprintf(buf, "<td class=\"prop\">ESP32-C3</td></tr>");
-      break;
-
-    case :
-      // printf("ESP32-H2\n");
-      sprintf(buf, "<td class=\"prop\">ESP32-H2</td></tr>");
-      break;
-
-    case :
-      // printf("ESP32-C2\n");
-      sprintf(buf, "<td class=\"prop\">ESP32-C2</td></tr>");
-      break;
-
         "valuelist" : [
           {
             "value" : 0,
@@ -816,7 +786,7 @@
         },
         "remotevar" : {
           "type": "string" 
-        },
+        }
       },
 
       {
@@ -837,7 +807,7 @@
         },
         "remotevar" : {
           "comment" : "This register is also a remote variable. name/key values set from register name/key pairs."
-        }
+        },
         "valuelist" : [
           {
             "value" : 0,
@@ -882,48 +852,7 @@
         "remotevar" : {
           "comment" : "This register is also a remote variable. name/key values set from register name/key pairs."
         }
-      }
-
-      Auth mode
-      case :
-      sprintf(temp, "\n");
-      break;
-
-    case :
-      sprintf(temp, "\n");
-      break;
-
-    case :
-      sprintf(temp, "\n");
-      break;
-
-    case :
-      sprintf(temp, "\n");
-      break;
-
-    case :
-      sprintf(temp, "\n");
-      break;
-
-    case :
-      sprintf(temp, "\n");
-      break;
-
-    case :
-      sprintf(temp, "\n");
-      break;
-
-    case :
-      sprintf(temp, "\n");
-      break;
-
-    case :
-      sprintf(temp, "\n");
-      break;
-
-    case :
-    sprintf(temp, "\n");
-      break;
+      },
 
       {
         "offset": "0x00000054",
@@ -1016,17 +945,7 @@
             }
           }
         ]
-      }
-
-      bssid  (6)
-      ssid   (32)
-      channel 
-      Signal strength
-      ip-address
-      subnet-mask
-      gateway
-      dns1
-      dns2
+      },
 
       {
         "offset": "0x00011000",
@@ -1047,7 +966,7 @@
         },
         "remotevar" : {
           "type": "uint32" 
-        },
+        }
       },
       {
         "offset": "0x00011000",
@@ -1067,7 +986,7 @@
         },
         "remotevar" : {
           "type": "uint32" 
-        },
+        }
       },
       {
         "offset": "0x00011000",
@@ -1087,7 +1006,7 @@
         },
         "remotevar" : {
           "type": "uint32" 
-        },
+        }
       },
       {
         "offset": "0x00010004",
@@ -1108,7 +1027,7 @@
         },
         "remotevar" : {
           "type": "uint32" 
-        },
+        }
       },
       {
         "offset": "0x00010004",
@@ -1129,7 +1048,7 @@
         },
         "remotevar" : {
           "type": "uint32" 
-        },
+        }
       },
       {
         "offset": "0x00010004",
@@ -1149,8 +1068,8 @@
         },
         "remotevar" : {
           "type": "uint32" 
-        },
-      },
+        }
+      }
     ],
 
     "sep5" : "------------------------------------------------------------------------------------------------",
@@ -1167,11 +1086,11 @@
         
         "description" : {
           "en": "Name of device",
-          "se": "Namn för enhet",
+          "se": "Namn för enhet"
         },
         "infourl" : {
           "gb": "English help remotevar 1",
-          "se": "Svensk hjälp remotevar 1",
+          "se": "Svensk hjälp remotevar 1"
         }
       },
       {
@@ -1335,9 +1254,9 @@
           }
         ]
       }    
-    ]
+    ],
 
-    "sep6" : "------------------------------------------------------------------------------------------------",
+    "sep6" : "------------------------------------------------------------------------------------------------"
 
 
   } 
